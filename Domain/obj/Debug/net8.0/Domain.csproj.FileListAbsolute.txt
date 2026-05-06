@@ -1,0 +1,11 @@
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\bin\Debug\net8.0\Domain.deps.json
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\bin\Debug\net8.0\Domain.dll
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\bin\Debug\net8.0\Domain.pdb
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\Domain.GeneratedMSBuildEditorConfig.editorconfig
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\Domain.AssemblyInfoInputs.cache
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\Domain.AssemblyInfo.cs
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\Domain.csproj.CoreCompileInputs.cache
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\Domain.dll
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\refint\Domain.dll
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\Domain.pdb
+e:\HungNDM\SourceCodeApiBase-master\SourceCodeApiBase-master\Domain\obj\Debug\net8.0\ref\Domain.dll
