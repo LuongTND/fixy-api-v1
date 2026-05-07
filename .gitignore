@@ -13,3 +13,8 @@ obj/
 
 # Logs
 *.log
+
+# App settings
+appsettings.json
+/API/appsettings.json
+/API/appsettings.json
