@@ -484,3 +484,4 @@ $RECYCLE.BIN/
 #obj and build folders
 bin/
 obj/
+API/appsettings.Development.json

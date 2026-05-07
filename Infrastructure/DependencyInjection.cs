@@ -70,8 +70,10 @@ namespace Infrastructure
 
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();
-
             services.AddScoped<IJwtService, JwtService>();
+            services.AddScoped<IOtpService, OtpService>();
+
+            services.AddScoped<IAuthService, AuthService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
