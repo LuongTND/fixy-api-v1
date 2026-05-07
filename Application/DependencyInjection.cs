@@ -1,6 +1,5 @@
-using Application.Common.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Application
 {
@@ -10,12 +9,11 @@ namespace Application
         {
             // Đăng ký các services từ Assembly
             services.AddAutoMapper(Assembly.GetExecutingAssembly());
-            
+
             // Có thể thêm MediatR ở đây nếu cần
             // services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
-            
+
             return services;
         }
     }
 }
-

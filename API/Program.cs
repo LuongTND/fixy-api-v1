@@ -1,7 +1,8 @@
-using Infrastructure.Persistence;
 using API.Middlewares;
 using Application;
 using Infrastructure;
+using Infrastructure.Persistence;
+using Infrastructure.Persistence.Seeds;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,11 +11,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
-    { 
-        Title = "FIXY API", 
-        Version = "v1" 
-    });
+    c.SwaggerDoc(
+        "v1",
+        new Microsoft.OpenApi.Models.OpenApiInfo { Title = "FIXY API", Version = "v1" }
+    );
 });
 
 // Add Application Layer
@@ -37,6 +37,7 @@ app.UseHttpsRedirection();
 // Exception handling middleware
 app.UseExceptionMiddleware();
 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
@@ -54,5 +55,10 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while creating the database.");
     }
 }
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+    await RoleSeeder.SeedAsync(context);
+}
 app.Run();
