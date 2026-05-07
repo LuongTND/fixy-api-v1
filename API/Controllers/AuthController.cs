@@ -74,4 +74,36 @@ public class AuthController : ControllerBase
 
         return Ok(result);
     }
+
+    // =========================
+    // CHANGE PASSWORD
+    // =========================
+
+    [HttpPost("password/change")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+    {
+        await _authService.ChangePasswordAsync(request);
+
+        return Ok(new { message = "Password changed successfully" });
+    }
+
+    // =========================
+    // FORGOT PASSWORD
+    // =========================
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequestDto request)
+    {
+        await _authService.ForgotPasswordAsync(request);
+        return Ok(new { message = "OTP sent if account exists" });
+    }
+
+    // =========================
+    // RESET PASSWORD
+    // =========================
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequestDto request)
+    {
+        await _authService.ResetPasswordAsync(request);
+        return NoContent();
+    }
 }
