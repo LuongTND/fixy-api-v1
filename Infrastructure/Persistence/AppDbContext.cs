@@ -16,6 +16,7 @@ namespace Infrastructure.Persistence
 
         public DbSet<UserRole> UserRoles => Set<UserRole>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<OtpVerification> OtpVerifications => Set<OtpVerification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

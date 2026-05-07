@@ -1,0 +1,195 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Application.DTOs.Auth;
+using Application.Interfaces;
+using Application.Interfaces.Services.Auth;
+using Domain.Entity.Identity;
+using Domain.Enum;
+using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Services.Auth
+{
+    public class AuthService : IAuthService
+    {
+        private readonly IUnitOfWork _unitOfWork;
+
+        private readonly IPasswordHasher _passwordHasher;
+
+        private readonly IJwtService _jwtService;
+
+        public AuthService(
+            IUnitOfWork unitOfWork,
+            IPasswordHasher passwordHasher,
+            IJwtService jwtService
+        )
+        {
+            _unitOfWork = unitOfWork;
+            _passwordHasher = passwordHasher;
+            _jwtService = jwtService;
+        }
+
+        public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request)
+        {
+            var verifiedOtp = await _unitOfWork
+                .OtpVerifications.OrderByDescending(x => x.CreatedDate)
+                .FirstOrDefaultAsync(x =>
+                    x.Target == request.Target && x.Type == request.Type && x.IsVerified
+                );
+
+            if (verifiedOtp is null)
+            {
+                throw new BusinessException("OTP is not verified");
+            }
+
+            var existedUser = await _unitOfWork.Users.FirstOrDefaultAsync(x =>
+                x.PhoneNumber == request.Target || x.Email == request.Target
+            );
+
+            if (existedUser is not null)
+            {
+                throw new BusinessException("Account already exists");
+            }
+
+            var user = new User
+            {
+                FullName = request.FullName,
+                PasswordHash = _passwordHasher.HashPassword(request.Password),
+            };
+
+            if (request.Type == OtpType.Sms)
+            {
+                user.PhoneNumber = request.Target;
+            }
+            else
+            {
+                user.Email = request.Target;
+            }
+
+            await _unitOfWork.Users.AddAsync(user);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            var customerRole = await _unitOfWork.Roles.FirstAsync(x => x.Code == "CUSTOMER");
+
+            var userRole = new UserRole { UserId = user.Id, RoleId = customerRole.Id };
+
+            await _unitOfWork.UserRoles.AddAsync(userRole);
+
+            var accessToken = _jwtService.GenerateAccessToken(
+                user,
+                new List<string> { customerRole.Code }
+            );
+
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            await _unitOfWork.RefreshTokens.AddAsync(
+                new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                }
+            );
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return new AuthResponseDto { AccessToken = accessToken, RefreshToken = refreshToken };
+        }
+
+        public async Task<AuthResponseDto> LoginAsync(LoginRequestDto request)
+        {
+            var user = await _unitOfWork
+                .Users.Include(x => x.UserRoles)
+                    .ThenInclude(x => x.Role)
+                .FirstOrDefaultAsync(x =>
+                    x.PhoneNumber == request.Target || x.Email == request.Target
+                );
+
+            if (user is null)
+            {
+                throw new BusinessException("Invalid credentials");
+            }
+
+            var isValidPassword = _passwordHasher.VerifyPassword(
+                request.Password,
+                user.PasswordHash
+            );
+
+            if (!isValidPassword)
+            {
+                throw new BusinessException("Invalid credentials");
+            }
+
+            var roles = user.UserRoles.Select(x => x.Role.Code).ToList();
+
+            var accessToken = _jwtService.GenerateAccessToken(user, roles);
+
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            await _unitOfWork.RefreshTokens.AddAsync(
+                new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                }
+            );
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return new AuthResponseDto { AccessToken = accessToken, RefreshToken = refreshToken };
+        }
+
+        public async Task<AuthResponseDto> RefreshTokenAsync(string refreshToken)
+        {
+            var existedRefreshToken = await _unitOfWork
+                .RefreshTokens.Include(x => x.User)
+                    .ThenInclude(x => x.UserRoles)
+                        .ThenInclude(x => x.Role)
+                .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+            if (existedRefreshToken is null)
+            {
+                throw new BusinessException("Invalid refresh token");
+            }
+
+            if (existedRefreshToken.ExpiryDate < DateTime.UtcNow)
+            {
+                throw new BusinessException("Refresh token expired");
+            }
+
+            var user = existedRefreshToken.User;
+
+            var roles = user.UserRoles.Select(x => x.Role.Code).ToList();
+
+            var newAccessToken = _jwtService.GenerateAccessToken(user, roles);
+
+            var newRefreshToken = _jwtService.GenerateRefreshToken();
+
+            // revoke old token
+            _unitOfWork.RefreshTokens.Remove(existedRefreshToken);
+
+            // add new token
+            await _unitOfWork.RefreshTokens.AddAsync(
+                new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = newRefreshToken,
+                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                }
+            );
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+            };
+        }
+    }
+}

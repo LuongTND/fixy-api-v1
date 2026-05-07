@@ -15,6 +15,7 @@ namespace Infrastructure.Persistence.Configurations.Identity
             builder.HasOne(x => x.User).WithMany(x => x.UserRoles).HasForeignKey(x => x.UserId);
 
             builder.HasOne(x => x.Role).WithMany(x => x.UserRoles).HasForeignKey(x => x.RoleId);
+            builder.HasQueryFilter(x => !x.User.IsDeleted);
         }
     }
 }

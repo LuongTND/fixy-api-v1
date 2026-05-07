@@ -15,6 +15,7 @@ namespace Infrastructure.Persistence.Configurations.Identity
             builder.Property(x => x.Token).IsRequired();
 
             builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            builder.HasQueryFilter(x => !x.User.IsDeleted);
         }
     }
 }
