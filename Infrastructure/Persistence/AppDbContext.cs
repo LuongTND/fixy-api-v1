@@ -1,7 +1,12 @@
 ﻿using System.Reflection;
 using Domain.Common;
+<<<<<<< HEAD
 using Domain.Entity.Identity;
 using Microsoft.EntityFrameworkCore;
+=======
+using Domain.Entity;
+using System.Reflection;
+>>>>>>> dev-v1
 
 namespace Infrastructure.Persistence
 {
@@ -9,6 +14,54 @@ namespace Infrastructure.Persistence
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options) { }
+
+        public DbSet<User> Users { get; set; }
+        public DbSet<UserOtp> UserOtps { get; set; }
+        public DbSet<UserSession> UserSessions { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
+
+        public DbSet<WorkerProfile> WorkerProfiles { get; set; }
+        public DbSet<WorkerCertificate> WorkerCertificates { get; set; }
+        public DbSet<WorkerServiceArea> WorkerServiceAreas { get; set; }
+        public DbSet<WorkerSchedule> WorkerSchedules { get; set; }
+        public DbSet<WorkerService> WorkerServices { get; set; }
+        public DbSet<WorkerPayoutAccount> WorkerPayoutAccounts { get; set; }
+        public DbSet<WorkerFeaturedOrder> WorkerFeaturedOrders { get; set; }
+
+        public DbSet<CustomerProfile> CustomerProfiles { get; set; }
+        public DbSet<CustomerAddress> CustomerAddresses { get; set; }
+
+        public DbSet<ServiceCategory> ServiceCategories { get; set; }
+
+        public DbSet<Booking> Bookings { get; set; }
+        public DbSet<WorkerMatchingQueue> WorkerMatchingQueues { get; set; }
+        public DbSet<Voucher> Vouchers { get; set; }
+        public DbSet<BookingVoucher> BookingVouchers { get; set; }
+
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+
+        public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<WalletTransaction> WalletTransactions { get; set; }
+        public DbSet<PaymentOrder> PaymentOrders { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<WorkerEarning> WorkerEarnings { get; set; }
+        public DbSet<PayoutRequest> PayoutRequests { get; set; }
+
+        public DbSet<Review> Reviews { get; set; }
+
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<NotificationSetting> NotificationSettings { get; set; }
+
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<SupportMessage> SupportMessages { get; set; }
+
+        public DbSet<PlatformConfig> PlatformConfigs { get; set; }
+        public DbSet<EventLog> EventLogs { get; set; }
+        public DbSet<Media> Media { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

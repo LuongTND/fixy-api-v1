@@ -2,7 +2,6 @@ using API.Middlewares;
 using Application;
 using Infrastructure;
 using Infrastructure.Persistence;
-using Infrastructure.Persistence.Seeds;
 
 var builder = WebApplication.CreateBuilder(args);
 
