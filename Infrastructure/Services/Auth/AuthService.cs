@@ -64,12 +64,12 @@ namespace Infrastructure.Services.Auth
             if (IsPhone(request.Target))
             {
                 user.PhoneNumber = request.Target;
-                user.IsEmailVerified = true;
+                user.IsPhoneVerified = true;
             }
             else if (IsEmail(request.Target))
             {
                 user.Email = request.Target;
-                user.IsPhoneVerified = true;
+                user.IsEmailVerified = true;
             }
 
             await _unitOfWork.Users.AddAsync(user);
