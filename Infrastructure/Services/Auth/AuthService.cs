@@ -37,7 +37,9 @@ namespace Infrastructure.Services.Auth
         {
             var verifiedOtp = await _unitOfWork
                 .OtpVerifications.OrderByDescending(x => x.CreatedDate)
-                .FirstOrDefaultAsync(x => x.Target == request.Target && x.IsVerified);
+                .FirstOrDefaultAsync(x =>
+                    x.Target == request.Target && x.ExpiryDate < DateTime.UtcNow && x.IsVerified
+                );
 
             if (verifiedOtp is null)
             {
