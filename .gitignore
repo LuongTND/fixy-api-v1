@@ -1,0 +1,20 @@
+﻿# Build folders
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider / VSCode
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# App settings
+appsettings.json
+/API/appsettings.json
+/API/appsettings.json
