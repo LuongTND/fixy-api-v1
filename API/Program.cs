@@ -1,8 +1,12 @@
 using API.Middlewares;
 using Application;
+using Application.Settings;
 using Infrastructure;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +21,29 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1" 
     });
 });
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+        if (jwtSettings == null || string.IsNullOrWhiteSpace(jwtSettings.Secret))
+        {
+            throw new InvalidOperationException("Jwt settings are not configured");
+        }
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 // Add Application Layer
 builder.Services.AddApplication();
@@ -38,6 +65,7 @@ app.UseHttpsRedirection();
 // Exception handling middleware
 app.UseExceptionMiddleware();
 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
