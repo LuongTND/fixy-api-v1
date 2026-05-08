@@ -4,11 +4,30 @@ namespace Application.Interfaces.Services.Auth
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(RegisterRequestDto request);
+        Task<AuthResponseDto> RegisterAsync(
+            RegisterRequestDto request,
+            CancellationToken cancellationToken
+        );
 
-        Task<AuthResponseDto> LoginAsync(LoginRequestDto request);
-        Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
-        Task ChangePasswordAsync(ChangePasswordRequestDto request);
-        Task ResetPasswordAsync(ResetPasswordRequestDto request);
+        Task<AuthResponseDto> LoginAsync(
+            LoginRequestDto request,
+            CancellationToken cancellationToken
+        );
+        Task<AuthResponseDto> GoogleLoginAsync(
+            GoogleLoginRequestDto requestDto,
+            CancellationToken cancellationToken
+        );
+        Task<AuthResponseDto> RefreshTokenAsync(
+            string refreshToken,
+            CancellationToken cancellationToken
+        );
+        Task ChangePasswordAsync(
+            ChangePasswordRequestDto request,
+            CancellationToken cancellationToken
+        );
+        Task ResetPasswordAsync(
+            ResetPasswordRequestDto request,
+            CancellationToken cancellationToken
+        );
     }
 }
