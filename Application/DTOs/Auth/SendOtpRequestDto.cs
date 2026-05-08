@@ -5,7 +5,6 @@ namespace Application.DTOs.Auth
     public class SendOtpRequestDto
     {
         public string Target { get; set; } = default!;
-
-        public OtpType Type { get; set; }
+        public EmailPurpose Purpose { get; set; } = default!;
     }
 }

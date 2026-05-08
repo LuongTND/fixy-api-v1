@@ -2,10 +2,12 @@ using System.Text;
 using Application.Common.Interfaces;
 using Application.Interfaces;
 using Application.Interfaces.Services.Auth;
+using Application.Interfaces.Services.Email;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
 using Infrastructure.Services.Auth;
+using Infrastructure.Services.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -41,7 +43,8 @@ namespace Infrastructure
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
 
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
-
+            // SMTP Settings
+            services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
             // Authentication
             services
                 .AddAuthentication(options =>
@@ -72,6 +75,9 @@ namespace Infrastructure
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IJwtService, JwtService>();
             services.AddScoped<IOtpService, OtpService>();
+            services.AddScoped<IEmailService, EmailService>();
+
+            services.AddSingleton<ITemplateEngine, RazorTemplateEngine>();
 
             services.AddScoped<IAuthService, AuthService>();
 

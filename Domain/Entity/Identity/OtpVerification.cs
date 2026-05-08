@@ -9,8 +9,6 @@ namespace Domain.Entity.Identity
 
         // phone number OR email
 
-        public OtpType Type { get; set; }
-
         public string OtpCode { get; set; } = default!;
 
         public DateTime ExpiryDate { get; set; }

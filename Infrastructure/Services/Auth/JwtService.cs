@@ -24,7 +24,7 @@ namespace Infrastructure.Services.Auth
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new(JwtRegisteredClaimNames.UniqueName, user.PhoneNumber),
+                new(JwtRegisteredClaimNames.UniqueName, user.PhoneNumber ?? user.Email!),
                 new(ClaimTypes.Name, user.FullName),
             };
 

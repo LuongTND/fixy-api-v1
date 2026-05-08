@@ -1,0 +1,114 @@
+﻿@model Application.Common.Models.Email.OtpEmailModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng ký Vua Thợ</title>
+</head>
+<body style="margin:0;padding:0;background-color:#fff5f0;font-family:Arial,sans-serif;">
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:20px;background-color:#fff5f0;">
+        <tr>
+            <td align="center">
+
+                <table width="600" cellpadding="0" cellspacing="0"
+                       style="background-color:white;border-radius:12px;overflow:hidden;
+                              box-shadow:0 4px 12px rgba(255,140,0,0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding:24px 32px;
+                                   background:linear-gradient(135deg,#ff8c00 0%,#ff7700 100%);">
+
+                            <h1 style="margin:0;color:white;font-size:28px;">
+                                🔧 Vua Thợ
+                            </h1>
+
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding:32px;">
+
+B
+
+                            <p style="font-size:16px;color:#4a4a4a;line-height:1.6;margin-bottom:28px;">
+                                Cảm ơn bạn đã đăng ký tài khoản tại <b>Vua Thợ</b>.
+                                Vui lòng sử dụng mã OTP bên dưới để hoàn tất quá trình đăng ký.
+                            </p>
+
+                            <!-- OTP Box -->
+                            <div style="
+                                background:linear-gradient(135deg,#fff5f0 0%,#ffe8d6 100%);
+                                border:2px solid #ff8c00;
+                                border-radius:12px;
+                                padding:24px;
+                                text-align:center;
+                                margin:24px 0;">
+
+                                <p style="
+                                    font-size:40px;
+                                    font-weight:bold;
+                                    color:#ff6600;
+                                    margin:0;
+                                    letter-spacing:8px;">
+                                    @Model.Otp
+                                </p>
+
+                            </div>
+
+                            <!-- Notice -->
+                            <div style="
+                                background-color:#fff5f0;
+                                border-left:4px solid #ff8c00;
+                                border-radius:0 8px 8px 0;
+                                padding:16px;
+                                margin:24px 0;">
+
+                                <p style="
+                                    font-size:14px;
+                                    color:#ff6600;
+                                    margin:0;
+                                    font-weight:500;">
+
+                                    ⏰ Mã OTP sẽ hết hạn sau 5 phút.
+
+                                </p>
+
+                            </div>
+
+                            <p style="font-size:14px;color:#888;margin-top:20px;">
+                                Nếu bạn không thực hiện đăng ký, vui lòng bỏ qua email này.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="
+                            padding:20px 32px;
+                            background:linear-gradient(135deg,#ff8c00 0%,#ff7700 100%);
+                            color:white;
+                            text-align:center;
+                            font-size:12px;">
+
+                            <p style="margin:0;">© Vua Thợ</p>
+
+                            <p style="margin-top:6px;opacity:0.85;">
+                                Nền tảng kết nối thợ và khách hàng nhanh chóng, tiện lợi.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

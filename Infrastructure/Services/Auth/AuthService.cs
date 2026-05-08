@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Application.DTOs.Auth;
 using Application.Interfaces;
@@ -36,9 +37,7 @@ namespace Infrastructure.Services.Auth
         {
             var verifiedOtp = await _unitOfWork
                 .OtpVerifications.OrderByDescending(x => x.CreatedDate)
-                .FirstOrDefaultAsync(x =>
-                    x.Target == request.Target && x.Type == request.Type && x.IsVerified
-                );
+                .FirstOrDefaultAsync(x => x.Target == request.Target && x.IsVerified);
 
             if (verifiedOtp is null)
             {
@@ -58,15 +57,19 @@ namespace Infrastructure.Services.Auth
             {
                 FullName = request.FullName,
                 PasswordHash = _passwordHasher.HashPassword(request.Password),
+                Gender = Gender.Other,
+                Status = UserStatus.Active,
             };
 
-            if (request.Type == OtpType.Sms)
+            if (IsPhone(request.Target))
             {
                 user.PhoneNumber = request.Target;
+                user.IsEmailVerified = true;
             }
-            else
+            else if (IsEmail(request.Target))
             {
                 user.Email = request.Target;
+                user.IsPhoneVerified = true;
             }
 
             await _unitOfWork.Users.AddAsync(user);
@@ -194,22 +197,6 @@ namespace Infrastructure.Services.Auth
 
         public async Task ChangePasswordAsync(ChangePasswordRequestDto request)
         {
-            var otp = await _unitOfWork
-                .OtpVerifications.OrderByDescending(x => x.CreatedDate)
-                .FirstOrDefaultAsync(x =>
-                    x.Target == request.Target && x.Type == request.Type && x.IsVerified
-                );
-
-            if (otp is null)
-            {
-                throw new BusinessException("OTP verification required");
-            }
-
-            if (otp.ExpiryDate < DateTime.UtcNow)
-            {
-                throw new BusinessException("OTP expired");
-            }
-
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(x =>
                 x.Email == request.Target || x.PhoneNumber == request.Target
             );
@@ -218,53 +205,24 @@ namespace Infrastructure.Services.Auth
             {
                 throw new NotFoundException("User not found");
             }
+            if (!_passwordHasher.VerifyPassword(request.OldPassword, user.PasswordHash))
+            {
+                throw new BusinessException("Old password is not correct");
+            }
+            if (_passwordHasher.VerifyPassword(request.NewPassword, user.PasswordHash))
+            {
+                throw new BusinessException("Match with old password");
+            }
 
             user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
 
-            user.UpdatedDate = DateTime.UtcNow;
-
-            // prevent OTP reuse
-            _unitOfWork.OtpVerifications.Remove(otp);
-
             await _unitOfWork.SaveChangesAsync();
-        }
-
-        public async Task ForgotPasswordAsync(ForgotPasswordRequestDto request)
-        {
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(x =>
-                x.Email == request.Target || x.PhoneNumber == request.Target
-            );
-
-            if (user is null)
-            {
-                return;
-            }
-
-            var otpCode = new Random().Next(100000, 999999).ToString();
-
-            var otp = new OtpVerification
-            {
-                Target = request.Target,
-                Type = request.Type,
-                OtpCode = otpCode,
-                IsVerified = false,
-                ExpiryDate = DateTime.UtcNow.AddMinutes(5),
-                CreatedDate = DateTime.UtcNow,
-            };
-
-            await _unitOfWork.OtpVerifications.AddAsync(otp);
-            await _unitOfWork.SaveChangesAsync();
-
-            // TODO: gửi OTP qua Email/SMS service
         }
 
         public async Task ResetPasswordAsync(ResetPasswordRequestDto request)
         {
             var otp = await _unitOfWork.OtpVerifications.FirstOrDefaultAsync(x =>
-                x.Target == request.Target
-                && x.Type == request.Type
-                && x.OtpCode == request.Otp
-                && !x.IsVerified
+                x.Target == request.Target && x.OtpCode == request.Otp && !x.IsVerified
             );
 
             if (otp is null)
@@ -287,14 +245,22 @@ namespace Infrastructure.Services.Auth
             }
 
             user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
-            user.UpdatedDate = DateTime.UtcNow;
-
             otp.IsVerified = true;
 
             // revoke OTP sau khi dùng
             _unitOfWork.OtpVerifications.Remove(otp);
 
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        private bool IsEmail(string target)
+        {
+            return Regex.IsMatch(target, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+        }
+
+        private bool IsPhone(string target)
+        {
+            return Regex.IsMatch(target, @"^\d{9,11}$");
         }
     }
 }

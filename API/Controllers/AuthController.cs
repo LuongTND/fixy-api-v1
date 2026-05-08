@@ -1,6 +1,6 @@
 ﻿using Application.DTOs.Auth;
 using Application.Interfaces.Services.Auth;
-using Microsoft.AspNetCore.Authorization;
+using Application.Interfaces.Services.Email;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
     [HttpPost("otp/send")]
     public async Task<IActionResult> SendOtp([FromBody] SendOtpRequestDto request)
     {
-        await _otpService.SendOtpAsync(request.Target, request.Type);
+        await _otpService.SendOtpAsync(request.Target, request.Purpose);
 
         return Ok(new { message = "OTP sent successfully" });
     }
@@ -34,7 +34,7 @@ public class AuthController : ControllerBase
     [HttpPost("otp/verify")]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
     {
-        await _otpService.VerifyOtpAsync(request.Target, request.Type, request.OtpCode);
+        await _otpService.VerifyOtpAsync(request.Target, request.OtpCode);
 
         return Ok(new { message = "OTP verified successfully" });
     }
@@ -85,16 +85,6 @@ public class AuthController : ControllerBase
         await _authService.ChangePasswordAsync(request);
 
         return Ok(new { message = "Password changed successfully" });
-    }
-
-    // =========================
-    // FORGOT PASSWORD
-    // =========================
-    [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequestDto request)
-    {
-        await _authService.ForgotPasswordAsync(request);
-        return Ok(new { message = "OTP sent if account exists" });
     }
 
     // =========================

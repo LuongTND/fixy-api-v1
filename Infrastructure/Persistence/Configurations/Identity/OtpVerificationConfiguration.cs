@@ -16,13 +16,11 @@ namespace Infrastructure.Persistence.Configurations.Identity
 
             builder.Property(x => x.OtpCode).HasMaxLength(10).IsRequired();
 
-            builder.Property(x => x.Type).IsRequired();
-
             builder.Property(x => x.IsUsed).HasDefaultValue(false);
 
             builder.Property(x => x.IsVerified).HasDefaultValue(false);
 
-            builder.HasIndex(x => new { x.Target, x.Type });
+            builder.HasIndex(x => x.Target);
         }
     }
 }

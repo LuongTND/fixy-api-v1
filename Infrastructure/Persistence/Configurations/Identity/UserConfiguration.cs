@@ -14,7 +14,7 @@ namespace Infrastructure.Persistence.Configurations.Identity
 
             builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
 
-            builder.Property(x => x.PhoneNumber).HasMaxLength(20).IsRequired();
+            builder.Property(x => x.PhoneNumber).HasMaxLength(20);
 
             builder.HasIndex(x => x.PhoneNumber).IsUnique();
 
@@ -24,6 +24,9 @@ namespace Infrastructure.Persistence.Configurations.Identity
 
             builder.Property(x => x.PasswordHash).IsRequired();
             builder.HasQueryFilter(x => !x.IsDeleted);
+
+            builder.Property(x => x.Gender).HasConversion<string>();
+            builder.Property(x => x.Status).HasConversion<string>();
         }
     }
 }

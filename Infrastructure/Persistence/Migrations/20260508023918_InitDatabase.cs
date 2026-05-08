@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Infrastructure.Migrations
+namespace Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class CreateAuthEntity : Migration
+    public partial class InitDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,7 +17,6 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Target = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    Type = table.Column<int>(type: "int", nullable: false),
                     OtpCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     IsUsed = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
@@ -53,14 +52,14 @@ namespace Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     IsPhoneVerified = table.Column<bool>(type: "bit", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     IsEmailVerified = table.Column<bool>(type: "bit", nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Gender = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DeletedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -124,9 +123,9 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_OtpVerifications_Target_Type",
+                name: "IX_OtpVerifications_Target",
                 table: "OtpVerifications",
-                columns: new[] { "Target", "Type" });
+                column: "Target");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_UserId",
@@ -155,7 +154,8 @@ namespace Infrastructure.Migrations
                 name: "IX_Users_PhoneNumber",
                 table: "Users",
                 column: "PhoneNumber",
-                unique: true);
+                unique: true,
+                filter: "[PhoneNumber] IS NOT NULL");
         }
 
         /// <inheritdoc />

@@ -9,7 +9,6 @@ namespace Application.Interfaces.Services.Auth
         Task<AuthResponseDto> LoginAsync(LoginRequestDto request);
         Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
         Task ChangePasswordAsync(ChangePasswordRequestDto request);
-        Task ForgotPasswordAsync(ForgotPasswordRequestDto request);
         Task ResetPasswordAsync(ResetPasswordRequestDto request);
     }
 }
