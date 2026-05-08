@@ -9,16 +9,16 @@ namespace Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<UserOtp> builder)
         {
             builder.HasKey(x => x.Id);
-            builder.Property(x => x.OtpHash).IsRequired();
-            builder.Property(x => x.Type).HasConversion<string>();
-            builder.Property(x => x.ExpiresAt).IsRequired();
-            builder.HasIndex(x => new { x.UserId, x.Type, x.IsUsed }).HasDatabaseName("idx_otp_lookup");
-            builder.HasIndex(x => x.ExpiresAt).HasDatabaseName("idx_otp_expires");
 
-            builder.HasOne(x => x.User)
-                .WithMany(x => x.UserOtps)
-                .HasForeignKey(x => x.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+            builder.Property(x => x.Target).HasMaxLength(255).IsRequired();
+
+            builder.Property(x => x.OtpCode).HasMaxLength(10).IsRequired();
+
+            builder.Property(x => x.IsUsed).HasDefaultValue(false);
+
+            builder.Property(x => x.IsVerified).HasDefaultValue(false);
+
+            builder.HasIndex(x => x.Target);
         }
     }
 }

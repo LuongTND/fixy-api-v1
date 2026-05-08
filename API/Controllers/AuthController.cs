@@ -44,9 +44,12 @@ public class AuthController : ControllerBase
     // =========================
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+    public async Task<IActionResult> Register(
+        [FromBody] RegisterRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _authService.RegisterAsync(request);
+        var result = await _authService.RegisterAsync(request, cancellationToken);
 
         return Ok(result);
     }
@@ -56,9 +59,12 @@ public class AuthController : ControllerBase
     // =========================
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _authService.LoginAsync(request);
+        var result = await _authService.LoginAsync(request, cancellationToken);
 
         return Ok(result);
     }
@@ -68,9 +74,12 @@ public class AuthController : ControllerBase
     // =========================
 
     [HttpPost("token/refresh")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
+    public async Task<IActionResult> RefreshToken(
+        [FromBody] RefreshTokenRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
+        var result = await _authService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
 
         return Ok(result);
     }
@@ -80,9 +89,12 @@ public class AuthController : ControllerBase
     // =========================
 
     [HttpPost("password/change")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        await _authService.ChangePasswordAsync(request);
+        await _authService.ChangePasswordAsync(request, cancellationToken);
 
         return Ok(new { message = "Password changed successfully" });
     }
@@ -91,9 +103,12 @@ public class AuthController : ControllerBase
     // RESET PASSWORD
     // =========================
     [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword(ResetPasswordRequestDto request)
+    public async Task<IActionResult> ResetPassword(
+        ResetPasswordRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        await _authService.ResetPasswordAsync(request);
+        await _authService.ResetPasswordAsync(request, cancellationToken);
         return NoContent();
     }
 }

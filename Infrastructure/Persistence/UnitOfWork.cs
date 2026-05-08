@@ -1,5 +1,5 @@
 ﻿using Application.Interfaces;
-using Domain.Entity.Identity;
+using Domain.Entity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
@@ -21,7 +21,7 @@ namespace Infrastructure.Persistence
 
         public DbSet<RefreshToken> RefreshTokens => _context.RefreshTokens;
 
-        public DbSet<OtpVerification> OtpVerifications => _context.OtpVerifications;
+        public DbSet<UserOtp> Otps => _context.UserOtps;
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

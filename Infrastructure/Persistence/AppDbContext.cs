@@ -1,12 +1,7 @@
 ﻿using System.Reflection;
 using Domain.Common;
-<<<<<<< HEAD
-using Domain.Entity.Identity;
-using Microsoft.EntityFrameworkCore;
-=======
 using Domain.Entity;
-using System.Reflection;
->>>>>>> dev-v1
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
 {

@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using Application.Common.Models.Email;
 using Application.Interfaces;
 using Application.Interfaces.Services.Email;
-using Domain.Entity.Identity;
+using Domain.Entity;
 using Domain.Enum;
 using Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +30,7 @@ namespace Infrastructure.Services.Email
         public async Task SendOtpAsync(string target, EmailPurpose purpose)
         {
             var oldOtps = await _unitOfWork
-                .OtpVerifications.Where(x => x.Target == target && !x.IsUsed)
+                .Otps.Where(x => x.Target == target && !x.IsUsed)
                 .ToListAsync();
 
             foreach (var otp in oldOtps)
@@ -41,7 +41,7 @@ namespace Infrastructure.Services.Email
             // 2. generate secure OTP
             var otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
 
-            var otpEntity = new OtpVerification
+            var otpEntity = new UserOtp
             {
                 Target = target,
                 OtpCode = otpCode,
@@ -51,7 +51,7 @@ namespace Infrastructure.Services.Email
                 CreatedDate = DateTime.UtcNow,
             };
 
-            await _unitOfWork.OtpVerifications.AddAsync(otpEntity);
+            await _unitOfWork.Otps.AddAsync(otpEntity);
             await _unitOfWork.SaveChangesAsync();
             if (IsEmail(target))
             {
@@ -83,7 +83,7 @@ namespace Infrastructure.Services.Email
         public async Task VerifyOtpAsync(string target, string otpCode)
         {
             var otp = await _unitOfWork
-                .OtpVerifications.OrderByDescending(x => x.CreatedDate)
+                .Otps.OrderByDescending(x => x.CreatedDate)
                 .FirstOrDefaultAsync(x => x.Target == target && x.OtpCode == otpCode && !x.IsUsed);
 
             if (otp is null)

@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Application.Interfaces.Services.Auth;
 using Application.Settings;
-using Domain.Entity.Identity;
+using Domain.Entity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -24,8 +24,11 @@ namespace Infrastructure.Services.Auth
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new(JwtRegisteredClaimNames.UniqueName, user.PhoneNumber ?? user.Email!),
-                new(ClaimTypes.Name, user.FullName),
+                new(JwtRegisteredClaimNames.UniqueName, user.Phone ?? user.Email!),
+                new(
+                    ClaimTypes.Name,
+                    user.CustomerProfile != null ? user.CustomerProfile.FullName : "No Name"
+                ),
             };
 
             foreach (var role in roles)

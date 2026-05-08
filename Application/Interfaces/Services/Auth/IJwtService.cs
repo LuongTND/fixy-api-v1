@@ -1,4 +1,4 @@
-﻿using Domain.Entity.Identity;
+﻿using Domain.Entity;
 
 namespace Application.Interfaces.Services.Auth
 {

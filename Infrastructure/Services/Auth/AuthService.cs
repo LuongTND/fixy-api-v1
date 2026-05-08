@@ -3,7 +3,7 @@ using Application.DTOs.Auth;
 using Application.Interfaces;
 using Application.Interfaces.Services.Auth;
 using Application.Settings;
-using Domain.Entity.Identity;
+using Domain.Entity;
 using Domain.Enum;
 using Domain.Exceptions;
 using Google.Apis.Auth;
@@ -40,7 +40,7 @@ namespace Infrastructure.Services.Auth
         )
         {
             var verifiedOtp = await _unitOfWork
-                .OtpVerifications.OrderByDescending(x => x.CreatedDate)
+                .Otps.OrderByDescending(x => x.CreatedDate)
                 .FirstOrDefaultAsync(
                     x =>
                         x.Target == request.Target
@@ -55,7 +55,7 @@ namespace Infrastructure.Services.Auth
             }
 
             var existedUser = await _unitOfWork.Users.FirstOrDefaultAsync(
-                x => x.PhoneNumber == request.Target || x.Email == request.Target,
+                x => x.Phone == request.Target || x.Email == request.Target,
                 cancellationToken
             );
 
@@ -66,15 +66,13 @@ namespace Infrastructure.Services.Auth
 
             var user = new User
             {
-                FullName = request.FullName,
                 PasswordHash = _passwordHasher.HashPassword(request.Password),
-                Gender = Gender.Other,
-                Status = UserStatus.Active,
+                CustomerProfile = new CustomerProfile { FullName = request.FullName },
             };
 
             if (IsPhone(request.Target))
             {
-                user.PhoneNumber = request.Target;
+                user.Phone = request.Target;
                 user.IsPhoneVerified = true;
             }
             else if (IsEmail(request.Target))
@@ -88,7 +86,7 @@ namespace Infrastructure.Services.Auth
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var customerRole = await _unitOfWork.Roles.FirstAsync(
-                x => x.Code == "CUSTOMER",
+                x => x.Name == "CUSTOMER",
                 cancellationToken
             );
 
@@ -98,7 +96,7 @@ namespace Infrastructure.Services.Auth
 
             var accessToken = _jwtService.GenerateAccessToken(
                 user,
-                new List<string> { customerRole.Code }
+                new List<string> { customerRole.Name }
             );
 
             var refreshToken = _jwtService.GenerateRefreshToken();
@@ -107,8 +105,8 @@ namespace Infrastructure.Services.Auth
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    Token = refreshToken,
-                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                    TokenHash = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
                 },
                 cancellationToken
             );
@@ -127,7 +125,7 @@ namespace Infrastructure.Services.Auth
                 .Users.Include(x => x.UserRoles)
                     .ThenInclude(x => x.Role)
                 .FirstOrDefaultAsync(
-                    x => x.PhoneNumber == request.Target || x.Email == request.Target,
+                    x => x.Phone == request.Target || x.Email == request.Target,
                     cancellationToken
                 );
 
@@ -146,9 +144,9 @@ namespace Infrastructure.Services.Auth
                 throw new BusinessException("Invalid credentials");
             }
 
-            var roles = user.UserRoles.Select(x => x.Role.Code).ToList();
+            var roles = user.UserRoles.Select(x => x.Role?.Name).ToList();
 
-            var accessToken = _jwtService.GenerateAccessToken(user, roles);
+            var accessToken = _jwtService.GenerateAccessToken(user, roles!);
 
             var refreshToken = _jwtService.GenerateRefreshToken();
 
@@ -156,8 +154,8 @@ namespace Infrastructure.Services.Auth
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    Token = refreshToken,
-                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                    TokenHash = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
                 },
                 cancellationToken
             );
@@ -191,13 +189,13 @@ namespace Infrastructure.Services.Auth
                 user = new User
                 {
                     Email = payload.Email,
-                    FullName = payload.Name,
                     IsEmailVerified = true,
+                    CustomerProfile = new CustomerProfile { FullName = payload.Name },
                 };
                 await _unitOfWork.Users.AddAsync(user, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
-            var customerRole = await _unitOfWork.Roles.FirstAsync(x => x.Code == "CUSTOMER");
+            var customerRole = await _unitOfWork.Roles.FirstAsync(x => x.Name == "CUSTOMER");
 
             var userRole = new UserRole { UserId = user.Id, RoleId = customerRole.Id };
 
@@ -205,7 +203,7 @@ namespace Infrastructure.Services.Auth
 
             var accessToken = _jwtService.GenerateAccessToken(
                 user,
-                new List<string> { customerRole.Code }
+                new List<string> { customerRole.Name }
             );
 
             var refreshToken = _jwtService.GenerateRefreshToken();
@@ -214,8 +212,8 @@ namespace Infrastructure.Services.Auth
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    Token = refreshToken,
-                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                    TokenHash = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
                 }
             );
 
@@ -230,24 +228,28 @@ namespace Infrastructure.Services.Auth
         )
         {
             var existedRefreshToken = await _unitOfWork
-                .RefreshTokens.Include(x => x.User)
+                .RefreshTokens.Include(x => x.User!)
                     .ThenInclude(x => x.UserRoles)
                         .ThenInclude(x => x.Role)
-                .FirstOrDefaultAsync(x => x.Token == refreshToken, cancellationToken);
+                .FirstOrDefaultAsync(x => x.TokenHash == refreshToken, cancellationToken);
 
             if (existedRefreshToken is null)
             {
                 throw new BusinessException("Invalid refresh token");
             }
 
-            if (existedRefreshToken.ExpiryDate < DateTime.UtcNow)
+            if (existedRefreshToken.ExpiresAt < DateTime.UtcNow)
             {
                 throw new BusinessException("Refresh token expired");
             }
 
-            var user = existedRefreshToken.User;
+            var user = existedRefreshToken.User ?? throw new BusinessException("User not found");
 
-            var roles = user.UserRoles.Select(x => x.Role.Code).ToList();
+            var roles = user
+                .UserRoles.Select(x => x.Role?.Name)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .ToList();
 
             var newAccessToken = _jwtService.GenerateAccessToken(user, roles);
 
@@ -261,8 +263,8 @@ namespace Infrastructure.Services.Auth
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    Token = newRefreshToken,
-                    ExpiryDate = DateTime.UtcNow.AddDays(7),
+                    TokenHash = newRefreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
                 },
                 cancellationToken
             );
@@ -282,7 +284,7 @@ namespace Infrastructure.Services.Auth
         )
         {
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(
-                x => x.Email == request.Target || x.PhoneNumber == request.Target,
+                x => x.Email == request.Target || x.Phone == request.Target,
                 cancellationToken
             );
 
@@ -309,7 +311,7 @@ namespace Infrastructure.Services.Auth
             CancellationToken cancellationToken
         )
         {
-            var otp = await _unitOfWork.OtpVerifications.FirstOrDefaultAsync(
+            var otp = await _unitOfWork.Otps.FirstOrDefaultAsync(
                 x => x.Target == request.Target && x.OtpCode == request.Otp && !x.IsVerified,
                 cancellationToken
             );
@@ -325,7 +327,7 @@ namespace Infrastructure.Services.Auth
             }
 
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(
-                x => x.Email == request.Target || x.PhoneNumber == request.Target,
+                x => x.Email == request.Target || x.Phone == request.Target,
                 cancellationToken
             );
 
@@ -338,7 +340,7 @@ namespace Infrastructure.Services.Auth
             otp.IsVerified = true;
 
             // revoke OTP sau khi dùng
-            _unitOfWork.OtpVerifications.Remove(otp);
+            _unitOfWork.Otps.Remove(otp);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

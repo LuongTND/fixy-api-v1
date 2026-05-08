@@ -1,4 +1,4 @@
-using Domain.Entity.Identity;
+using Domain.Entity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Application.Interfaces
@@ -12,8 +12,8 @@ namespace Application.Interfaces
         DbSet<UserRole> UserRoles { get; }
 
         DbSet<RefreshToken> RefreshTokens { get; }
+        DbSet<UserOtp> Otps { get; }
 
-        DbSet<OtpVerification> OtpVerifications { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         int SaveChanges();
     }
