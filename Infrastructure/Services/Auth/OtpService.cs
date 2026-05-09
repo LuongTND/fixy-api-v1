@@ -24,10 +24,10 @@ namespace Infrastructure.Services.Auth
             IDateTimeProvider dateTimeProvider,
             IOptions<OtpSettings> settings)
         {
-            _userOtpRepository = userOtpRepository;
-            _unitOfWork = unitOfWork;
-            _dateTimeProvider = dateTimeProvider;
-            _settings = settings.Value;
+            _userOtpRepository = userOtpRepository ?? throw new ArgumentNullException(nameof(userOtpRepository));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
+            _settings = (settings ?? throw new ArgumentNullException(nameof(settings))).Value;
         }
 
         public async Task<string> CreateOtpAsync(Guid userId, UserOtpType type, string? ipAddress, CancellationToken cancellationToken = default)

@@ -17,8 +17,8 @@ namespace Infrastructure.Services.Auth
 
         public JwtTokenService(IOptions<JwtSettings> settings, IDateTimeProvider dateTimeProvider)
         {
-            _settings = settings.Value;
-            _dateTimeProvider = dateTimeProvider;
+            _settings = (settings ?? throw new ArgumentNullException(nameof(settings))).Value;
+            _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
         }
 
         public string GenerateAccessToken(User user)

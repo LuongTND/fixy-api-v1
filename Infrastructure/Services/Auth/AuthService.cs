@@ -45,19 +45,19 @@ namespace Infrastructure.Services.Auth
             IDateTimeProvider dateTimeProvider,
             IOptions<JwtSettings> jwtSettings)
         {
-            _userRepository = userRepository;
-            _userSessionRepository = userSessionRepository;
-            _refreshTokenRepository = refreshTokenRepository;
-            _roleRepository = roleRepository;
-            _userRoleRepository = userRoleRepository;
-            _customerProfileRepository = customerProfileRepository;
-            _unitOfWork = unitOfWork;
-            _tokenService = tokenService;
-            _otpService = otpService;
-            _emailService = emailService;
-            _passwordHasher = passwordHasher;
-            _dateTimeProvider = dateTimeProvider;
-            _jwtSettings = jwtSettings.Value;
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _userSessionRepository = userSessionRepository ?? throw new ArgumentNullException(nameof(userSessionRepository));
+            _refreshTokenRepository = refreshTokenRepository ?? throw new ArgumentNullException(nameof(refreshTokenRepository));
+            _roleRepository = roleRepository ?? throw new ArgumentNullException(nameof(roleRepository));
+            _userRoleRepository = userRoleRepository ?? throw new ArgumentNullException(nameof(userRoleRepository));
+            _customerProfileRepository = customerProfileRepository ?? throw new ArgumentNullException(nameof(customerProfileRepository));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+            _otpService = otpService ?? throw new ArgumentNullException(nameof(otpService));
+            _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+            _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
+            _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
+            _jwtSettings = (jwtSettings ?? throw new ArgumentNullException(nameof(jwtSettings))).Value;
         }
 
         public async Task<OperationResult> SignupAsync(SignupDto request, string ipAddress, CancellationToken cancellationToken = default)
