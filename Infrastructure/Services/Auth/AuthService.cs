@@ -10,6 +10,7 @@ using Application.Interfaces.Services.Email;
 using Application.Settings;
 using Domain.Entity;
 using Domain.Enum;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Auth
@@ -29,6 +30,7 @@ namespace Infrastructure.Services.Auth
         private readonly IPasswordHasher _passwordHasher;
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly JwtSettings _jwtSettings;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IUserRepository userRepository,
@@ -43,7 +45,8 @@ namespace Infrastructure.Services.Auth
             IEmailService emailService,
             IPasswordHasher passwordHasher,
             IDateTimeProvider dateTimeProvider,
-            IOptions<JwtSettings> jwtSettings)
+            IOptions<JwtSettings> jwtSettings,
+            ILogger<AuthService> logger)
         {
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _userSessionRepository = userSessionRepository ?? throw new ArgumentNullException(nameof(userSessionRepository));
@@ -58,6 +61,7 @@ namespace Infrastructure.Services.Auth
             _passwordHasher = passwordHasher ?? throw new ArgumentNullException(nameof(passwordHasher));
             _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
             _jwtSettings = (jwtSettings ?? throw new ArgumentNullException(nameof(jwtSettings))).Value;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<OperationResult> SignupAsync(SignupDto request, string ipAddress, CancellationToken cancellationToken = default)
@@ -67,6 +71,7 @@ namespace Infrastructure.Services.Auth
             if (string.IsNullOrWhiteSpace(email) ||
                 string.IsNullOrWhiteSpace(request.Password))
             {
+                _logger.LogWarning("Signup failed due to missing email or password. Ip={IpAddress}", ipAddress);
                 return OperationResult.Failure("Email and password are required");
             }
 
@@ -76,6 +81,7 @@ namespace Infrastructure.Services.Auth
             {
                 if (user.IsActive)
                 {
+                    _logger.LogWarning("Signup failed because email already exists. Email={Email} Ip={IpAddress}", email, ipAddress);
                     return OperationResult.Failure("Email already exists");
                 }
             }
@@ -105,6 +111,8 @@ namespace Infrastructure.Services.Auth
                 otp,
                 cancellationToken);
 
+            _logger.LogInformation("Signup OTP sent. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
+
             return OperationResult.Success("OTP sent");
         }
 
@@ -114,17 +122,20 @@ namespace Infrastructure.Services.Auth
             var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
             if (user == null)
             {
+                _logger.LogWarning("Verify signup OTP failed: user not found. Email={Email} Ip={IpAddress}", email, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("OTP is invalid");
             }
 
             if (user.IsActive)
             {
+                _logger.LogWarning("Verify signup OTP failed: user already active. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("User already active");
             }
 
             var verified = await _otpService.VerifyOtpAsync(user.Id, UserOtpType.EmailVerify, request.Otp, cancellationToken);
             if (!verified)
             {
+                _logger.LogWarning("Verify signup OTP failed: invalid OTP. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("OTP is invalid");
             }
 
@@ -133,6 +144,7 @@ namespace Infrastructure.Services.Auth
             var role = await _roleRepository.GetByNameAsync("Customer", cancellationToken);
             if (role == null)
             {
+                _logger.LogError("Default role not found during verify signup. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("Default role not found");
             }
 
@@ -170,6 +182,8 @@ namespace Infrastructure.Services.Auth
             await _refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            _logger.LogInformation("Signup verified and session created. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
+
             return OperationResult<AuthResponseDto>.Success(BuildAuthResponse(user, refreshTokenValue));
         }
 
@@ -179,11 +193,13 @@ namespace Infrastructure.Services.Auth
             var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
             if (user == null || !_passwordHasher.VerifyPassword(user.PasswordHash, request.Password))
             {
+                _logger.LogWarning("Login failed: invalid credentials. Email={Email} Ip={IpAddress}", email, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("Email or password is invalid");
             }
 
             if (!user.IsActive)
             {
+                _logger.LogWarning("Login failed: user inactive. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("User is inactive");
             }
 
@@ -195,6 +211,8 @@ namespace Infrastructure.Services.Auth
             await _refreshTokenRepository.AddAsync(refreshToken, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            _logger.LogInformation("Login successful. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
+
             return OperationResult<AuthResponseDto>.Success(BuildAuthResponse(user, refreshTokenValue));
         }
 
@@ -205,12 +223,14 @@ namespace Infrastructure.Services.Auth
 
             if (refreshToken == null || refreshToken.User == null)
             {
+                _logger.LogWarning("Refresh failed: token invalid. Ip={IpAddress}", ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("Refresh token is invalid");
             }
 
             var now = _dateTimeProvider.UtcNow;
             if (refreshToken.IsRevoked)
             {
+                _logger.LogWarning("Refresh failed: token revoked. UserId={UserId} Ip={IpAddress}", refreshToken.UserId, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("Refresh token is revoked");
             }
 
@@ -220,6 +240,7 @@ namespace Infrastructure.Services.Auth
                 refreshToken.RevokedAt = now;
                 refreshToken.RevokedReason = "Expired";
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _logger.LogWarning("Refresh failed: token expired. UserId={UserId} Ip={IpAddress}", refreshToken.UserId, ipAddress);
                 return OperationResult<AuthResponseDto>.Failure("Refresh token is expired");
             }
 
@@ -240,6 +261,8 @@ namespace Infrastructure.Services.Auth
             await _refreshTokenRepository.AddAsync(newRefreshToken, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            _logger.LogInformation("Refresh successful. UserId={UserId} Ip={IpAddress}", refreshToken.UserId, ipAddress);
+
             return OperationResult<AuthResponseDto>.Success(BuildAuthResponse(refreshToken.User, newRefreshValue));
         }
 
@@ -249,6 +272,7 @@ namespace Infrastructure.Services.Auth
             var refreshToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
             if (refreshToken == null)
             {
+                _logger.LogInformation("Logout completed: token not found. Ip={IpAddress}", ipAddress);
                 return OperationResult.Success("Logout completed");
             }
 
@@ -260,6 +284,8 @@ namespace Infrastructure.Services.Auth
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 
+            _logger.LogInformation("Logout completed. UserId={UserId} Ip={IpAddress}", refreshToken.UserId, ipAddress);
+
             return OperationResult.Success("Logout completed");
         }
 
@@ -269,11 +295,14 @@ namespace Infrastructure.Services.Auth
             var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
             if (user == null)
             {
+                _logger.LogInformation("Password OTP requested for non-existing email. Email={Email} Ip={IpAddress}", email, ipAddress);
                 return OperationResult.Success("OTP sent if email exists");
             }
 
             var otp = await _otpService.CreateOtpAsync(user.Id, UserOtpType.ResetPassword, ipAddress, cancellationToken);
             await _emailService.SendOtpEmailAsync(user.Email ?? email, otp, cancellationToken);
+
+            _logger.LogInformation("Password OTP sent. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
 
             return OperationResult.Success("OTP sent if email exists");
         }
@@ -284,12 +313,14 @@ namespace Infrastructure.Services.Auth
             var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
             if (user == null)
             {
+                _logger.LogWarning("Change password OTP failed: user not found. Email={Email} Ip={IpAddress}", email, ipAddress);
                 return OperationResult.Failure("OTP is invalid");
             }
 
             var verified = await _otpService.VerifyOtpAsync(user.Id, UserOtpType.ResetPassword, request.Otp, cancellationToken);
             if (!verified)
             {
+                _logger.LogWarning("Change password OTP failed: invalid OTP. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
                 return OperationResult.Failure("OTP is invalid");
             }
 
@@ -306,6 +337,7 @@ namespace Infrastructure.Services.Auth
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Password changed by OTP. UserId={UserId} Ip={IpAddress}", user.Id, ipAddress);
             return OperationResult.Success("Password updated");
         }
 

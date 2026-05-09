@@ -7,6 +7,7 @@ using Application.Interfaces.Services.Auth;
 using Application.Settings;
 using Domain.Entity;
 using Domain.Enum;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Auth
@@ -17,17 +18,20 @@ namespace Infrastructure.Services.Auth
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly OtpSettings _settings;
+        private readonly ILogger<OtpService> _logger;
 
         public OtpService(
             IUserOtpRepository userOtpRepository,
             IUnitOfWork unitOfWork,
             IDateTimeProvider dateTimeProvider,
-            IOptions<OtpSettings> settings)
+            IOptions<OtpSettings> settings,
+            ILogger<OtpService> logger)
         {
             _userOtpRepository = userOtpRepository ?? throw new ArgumentNullException(nameof(userOtpRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
             _settings = (settings ?? throw new ArgumentNullException(nameof(settings))).Value;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task<string> CreateOtpAsync(Guid userId, UserOtpType type, string? ipAddress, CancellationToken cancellationToken = default)
@@ -75,6 +79,7 @@ namespace Infrastructure.Services.Auth
 
             if (activeOtp.LockedUntil.HasValue && activeOtp.LockedUntil.Value > now)
             {
+                _logger.LogWarning("OTP verification blocked due to lockout. UserId={UserId} Type={OtpType}", userId, type);
                 return false;
             }
 
@@ -84,6 +89,7 @@ namespace Infrastructure.Services.Auth
                 if (activeOtp.AttemptCount >= _settings.MaxAttempts)
                 {
                     activeOtp.LockedUntil = activeOtp.ExpiresAt;
+                    _logger.LogWarning("OTP locked due to max attempts. UserId={UserId} Type={OtpType}", userId, type);
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

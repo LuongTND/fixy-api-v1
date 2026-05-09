@@ -5,6 +5,7 @@ using Application.Common.Interfaces;
 using Application.Interfaces.Services.Auth;
 using Application.Settings;
 using Domain.Entity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -14,11 +15,13 @@ namespace Infrastructure.Services.Auth
     {
         private readonly JwtSettings _settings;
         private readonly IDateTimeProvider _dateTimeProvider;
+        private readonly ILogger<JwtTokenService> _logger;
 
-        public JwtTokenService(IOptions<JwtSettings> settings, IDateTimeProvider dateTimeProvider)
+        public JwtTokenService(IOptions<JwtSettings> settings, IDateTimeProvider dateTimeProvider, ILogger<JwtTokenService> logger)
         {
             _settings = (settings ?? throw new ArgumentNullException(nameof(settings))).Value;
             _dateTimeProvider = dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public string GenerateAccessToken(User user)
