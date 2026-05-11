@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces;
-using Domain.Entity;
-using Microsoft.EntityFrameworkCore;
+using Application.Interfaces.Repositories;
+using Infrastructure.Persistence.Repositories;
+using Infrastructure.Repositories;
 
 namespace Infrastructure.Persistence
 {
@@ -11,18 +12,21 @@ namespace Infrastructure.Persistence
         public UnitOfWork(AppDbContext context)
         {
             _context = context;
+
+            Users = new UserRepository(context);
+            Roles = new RoleRepository(context);
+            UserRoles = new UserRoleRepository(context);
+            RefreshTokens = new RefreshTokenRepository(context);
+            Otps = new UserOtpRepository(context);
+            Addresses = new AddressRepository(context);
         }
 
-        public DbSet<User> Users => _context.Users;
-
-        public DbSet<Role> Roles => _context.Roles;
-
-        public DbSet<UserRole> UserRoles => _context.UserRoles;
-
-        public DbSet<RefreshToken> RefreshTokens => _context.RefreshTokens;
-
-        public DbSet<UserOtp> Otps => _context.UserOtps;
-        public DbSet<Address> Addresses => _context.Addresses;
+        public IUserRepository Users { get; }
+        public IRoleRepository Roles { get; }
+        public IUserRoleRepository UserRoles { get; }
+        public IRefreshTokenRepository RefreshTokens { get; }
+        public IUserOtpRepository Otps { get; }
+        public IAddressRepository Addresses { get; }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

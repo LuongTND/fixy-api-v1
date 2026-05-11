@@ -9,7 +9,7 @@ namespace API.Controllers
     [Route("api/addresses")]
     [ApiController]
     [Authorize]
-    public class AddressController : ControllerBase
+    public class AddressController : ApiController
     {
         private readonly IAddressService _addressService;
 

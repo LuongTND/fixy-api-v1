@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Profile;
+﻿using Application.Common;
+using Application.DTOs.Profile;
 using Application.Interfaces;
 using Application.Interfaces.Services;
 using Domain.Entity;
@@ -15,32 +16,37 @@ namespace Infrastructure.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<ProfileDto> GetProfileAsync(Guid userId)
+        public async Task<OperationResult<ProfileDto>> GetProfileAsync(Guid userId)
         {
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(x => x.Id == userId);
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
 
             if (user == null)
             {
-                throw new Exception("User not found");
+                return OperationResult<ProfileDto>.Failure("User not found");
             }
 
-            return new ProfileDto
-            {
-                FullName = user.FullName,
-                Phone = user.Phone,
-                Email = user.Email,
-                DateOfBirth = user.DateOfBirth,
-                Gender = user.Gender,
-            };
+            return OperationResult<ProfileDto>.Success(
+                new ProfileDto
+                {
+                    FullName = user.FullName,
+                    Phone = user.Phone,
+                    Email = user.Email,
+                    DateOfBirth = user.DateOfBirth,
+                    Gender = user.Gender,
+                }
+            );
         }
 
-        public async Task<ProfileDto> UpdateProfileAsync(Guid userId, UpdateProfileRequestDto dto)
+        public async Task<OperationResult<ProfileDto>> UpdateProfileAsync(
+            Guid userId,
+            UpdateProfileRequestDto dto
+        )
         {
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(x => x.Id == userId);
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
 
             if (user == null)
             {
-                throw new Exception("User not found");
+                return OperationResult<ProfileDto>.Failure("User not found");
             }
 
             if (user.Phone != dto.Phone)
@@ -57,14 +63,16 @@ namespace Infrastructure.Services
 
             await _unitOfWork.SaveChangesAsync();
 
-            return new ProfileDto
-            {
-                FullName = user.FullName,
-                Phone = user.Phone,
-                Email = user.Email,
-                DateOfBirth = user.DateOfBirth,
-                Gender = user.Gender,
-            };
+            return OperationResult<ProfileDto>.Success(
+                new ProfileDto
+                {
+                    FullName = user.FullName,
+                    Phone = user.Phone,
+                    Email = user.Email,
+                    DateOfBirth = user.DateOfBirth,
+                    Gender = user.Gender,
+                }
+            );
         }
     }
 }

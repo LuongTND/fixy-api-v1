@@ -9,7 +9,7 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController : ApiController
 {
     private readonly IOtpService _otpService;
 
@@ -96,9 +96,9 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        await _authService.ChangePasswordAsync(request, cancellationToken);
+        var result = await _authService.ChangePasswordAsync(request, cancellationToken);
 
-        return Ok(new { message = "Password changed successfully" });
+        return Ok(result);
     }
 
     // =========================
@@ -110,8 +110,8 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        await _authService.ResetPasswordAsync(request, cancellationToken);
-        return NoContent();
+        var result = await _authService.ResetPasswordAsync(request, cancellationToken);
+        return Ok(result);
     }
 
     [Authorize]
