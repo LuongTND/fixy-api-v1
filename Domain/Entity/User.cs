@@ -5,8 +5,13 @@ namespace Domain.Entity
 {
     public class User : BaseEntity, ISoftDelete
     {
+        public string FullName { get; set; } = string.Empty;
+        public DateOnly? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
         public string? Phone { get; set; }
+        public bool IsPhoneVerified { get; set; }
         public string? Email { get; set; }
+        public bool IsEmailVerified { get; set; }
         public string PasswordHash { get; set; } = string.Empty;
         public OAuthProvider? OAuthProvider { get; set; }
         public string? OAuthId { get; set; }
@@ -18,7 +23,6 @@ namespace Domain.Entity
         public string? DeletedBy { get; set; }
 
         public ICollection<UserOtp> UserOtps { get; set; } = new List<UserOtp>();
-        public ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public WorkerProfile? WorkerProfile { get; set; }

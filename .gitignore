@@ -1,4 +1,4 @@
-﻿# Build folders
+# Build folders
 bin/
 obj/
 
@@ -18,3 +18,4 @@ obj/
 appsettings.json
 /API/appsettings.json
 /API/appsettings.json
+API/.env

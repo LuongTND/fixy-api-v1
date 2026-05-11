@@ -22,6 +22,70 @@ namespace Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entity.Address", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Label")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double?>("Lat")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Lng")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Ward")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId", "IsDefault")
+                        .HasDatabaseName("idx_addr_default");
+
+                    b.ToTable("Addresses");
+                });
+
             modelBuilder.Entity("Domain.Entity.Booking", b =>
                 {
                     b.Property<Guid>("Id")
@@ -211,45 +275,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("ChatMessages");
                 });
 
-            modelBuilder.Entity("Domain.Entity.CustomerAddress", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("FullAddress")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Label")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<double?>("Lat")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Lng")
-                        .HasColumnType("float");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerId", "IsDefault")
-                        .HasDatabaseName("idx_addr_default");
-
-                    b.ToTable("CustomerAddresses");
-                });
-
             modelBuilder.Entity("Domain.Entity.CustomerProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -258,19 +283,6 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
@@ -813,9 +825,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<string>("RevokedReason")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -832,9 +841,6 @@ namespace Infrastructure.Persistence.Migrations
                         .HasDatabaseName("idx_rt_expires");
 
                     b.HasIndex("ReplacedById");
-
-                    b.HasIndex("SessionId")
-                        .HasDatabaseName("idx_rt_session");
 
                     b.HasIndex("TokenHash")
                         .IsUnique()
@@ -929,6 +935,29 @@ namespace Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
+                            CreatedDate = new DateTime(2026, 5, 11, 7, 6, 40, 597, DateTimeKind.Utc).AddTicks(198),
+                            IsActive = true,
+                            Name = "ADMIN"
+                        },
+                        new
+                        {
+                            Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
+                            CreatedDate = new DateTime(2026, 5, 11, 7, 6, 40, 597, DateTimeKind.Utc).AddTicks(202),
+                            IsActive = true,
+                            Name = "CUSTOMER"
+                        },
+                        new
+                        {
+                            Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
+                            CreatedDate = new DateTime(2026, 5, 11, 7, 6, 40, 597, DateTimeKind.Utc).AddTicks(204),
+                            IsActive = true,
+                            Name = "STAFF"
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entity.RolePermission", b =>
@@ -1083,6 +1112,9 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
+
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -1090,7 +1122,17 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1098,24 +1140,34 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("OAuthId")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("bit");
 
-                    b.Property<string>("OAuthProvider")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("IsPhoneVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OAuthId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int?>("OAuthProvider")
+                        .HasColumnType("int");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Phone")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("TotpEnabled")
                         .HasColumnType("bit");
 
                     b.Property<string>("TotpSecret")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
@@ -1124,12 +1176,10 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique()
-                        .HasDatabaseName("idx_users_email")
                         .HasFilter("[Email] IS NOT NULL");
 
                     b.HasIndex("Phone")
                         .IsUnique()
-                        .HasDatabaseName("idx_users_phone")
                         .HasFilter("[Phone] IS NOT NULL");
 
                     b.ToTable("Users");
@@ -1141,48 +1191,43 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("ExpiresAt")
+                    b.Property<DateTime>("ExpiryDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("IpAddress")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsUsed")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
-                    b.Property<DateTime?>("LockedUntil")
-                        .HasColumnType("datetime2");
+                    b.Property<bool>("IsVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
-                    b.Property<string>("OtpHash")
+                    b.Property<string>("OtpCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
-                    b.Property<string>("Type")
+                    b.Property<string>("Target")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("idx_otp_expires");
+                    b.HasIndex("Target");
 
-                    b.HasIndex("UserId", "Type", "IsUsed")
-                        .HasDatabaseName("idx_otp_lookup");
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserOtps");
                 });
@@ -1214,72 +1259,6 @@ namespace Infrastructure.Persistence.Migrations
                         .HasDatabaseName("idx_user_roles_user");
 
                     b.ToTable("UserRoles");
-                });
-
-            modelBuilder.Entity("Domain.Entity.UserSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("AppVersion")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeviceId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("DeviceName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DeviceType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("IpAddress")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LastActiveAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Location")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Os")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("TerminatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TerminatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DeviceId")
-                        .HasDatabaseName("idx_session_device");
-
-                    b.HasIndex("LastActiveAt")
-                        .HasDatabaseName("idx_session_last_active");
-
-                    b.HasIndex("UserId", "IsActive")
-                        .HasDatabaseName("idx_session_user_active");
-
-                    b.ToTable("UserSessions");
                 });
 
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
@@ -1703,8 +1682,8 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid?>("AddressId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
@@ -1719,9 +1698,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<string>("Bio")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateOnly?>("BirthDate")
-                        .HasColumnType("date");
-
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -1731,12 +1707,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<double?>("CurrentLng")
                         .HasColumnType("float");
 
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("ExperienceYears")
                         .HasColumnType("int");
 
@@ -1745,16 +1715,6 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime?>("FeaturedUntil")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Gender")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("IsOnline")
                         .HasColumnType("bit");
@@ -1791,6 +1751,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AddressId");
 
                     b.HasIndex("ApprovedById");
 
@@ -1916,6 +1878,17 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("WorkerServiceAreas");
                 });
 
+            modelBuilder.Entity("Domain.Entity.Address", b =>
+                {
+                    b.HasOne("Domain.Entity.CustomerProfile", "Customer")
+                        .WithMany("Addresses")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("Domain.Entity.Booking", b =>
                 {
                     b.HasOne("Domain.Entity.User", "CancelledBy")
@@ -1994,23 +1967,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Sender");
                 });
 
-            modelBuilder.Entity("Domain.Entity.CustomerAddress", b =>
-                {
-                    b.HasOne("Domain.Entity.CustomerProfile", "Customer")
-                        .WithMany("Addresses")
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Customer");
-                });
-
             modelBuilder.Entity("Domain.Entity.CustomerProfile", b =>
                 {
                     b.HasOne("Domain.Entity.User", "User")
                         .WithOne("CustomerProfile")
                         .HasForeignKey("Domain.Entity.CustomerProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2060,7 +2022,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.User", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2071,7 +2033,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.User", "User")
                         .WithOne("NotificationSetting")
                         .HasForeignKey("Domain.Entity.NotificationSetting", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2140,21 +2102,13 @@ namespace Infrastructure.Persistence.Migrations
                         .HasForeignKey("ReplacedById")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Domain.Entity.UserSession", "Session")
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Domain.Entity.User", "User")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("ReplacedBy");
-
-                    b.Navigation("Session");
 
                     b.Navigation("User");
                 });
@@ -2260,13 +2214,9 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.UserOtp", b =>
                 {
-                    b.HasOne("Domain.Entity.User", "User")
+                    b.HasOne("Domain.Entity.User", null)
                         .WithMany("UserOtps")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                        .HasForeignKey("UserId");
                 });
 
             modelBuilder.Entity("Domain.Entity.UserRole", b =>
@@ -2291,17 +2241,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("AssignedBy");
 
                     b.Navigation("Role");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Domain.Entity.UserSession", b =>
-                {
-                    b.HasOne("Domain.Entity.User", "User")
-                        .WithMany("UserSessions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -2441,6 +2380,10 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.WorkerProfile", b =>
                 {
+                    b.HasOne("Domain.Entity.Address", "Address")
+                        .WithMany()
+                        .HasForeignKey("AddressId");
+
                     b.HasOne("Domain.Entity.User", "ApprovedBy")
                         .WithMany()
                         .HasForeignKey("ApprovedById")
@@ -2451,6 +2394,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasForeignKey("Domain.Entity.WorkerProfile", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Address");
 
                     b.Navigation("ApprovedBy");
 
@@ -2582,16 +2527,9 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Navigation("UserRoles");
 
-                    b.Navigation("UserSessions");
-
                     b.Navigation("Wallet");
 
                     b.Navigation("WorkerProfile");
-                });
-
-            modelBuilder.Entity("Domain.Entity.UserSession", b =>
-                {
-                    b.Navigation("RefreshTokens");
                 });
 
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
