@@ -1,6 +1,7 @@
 ﻿using Application.Common;
 using Application.DTOs.Profile;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entity;
 using Microsoft.EntityFrameworkCore;
@@ -9,16 +10,18 @@ namespace Infrastructure.Services
 {
     public class UserService : IUserService
     {
+        private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        public UserService(IUnitOfWork unitOfWork)
+        public UserService(IUserRepository userRepository, IUnitOfWork unitOfWork)
         {
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
         }
 
         public async Task<OperationResult<ProfileDto>> GetProfileAsync(Guid userId)
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
 
             if (user == null)
             {
@@ -42,7 +45,7 @@ namespace Infrastructure.Services
             UpdateProfileRequestDto dto
         )
         {
-            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId);
 
             if (user == null)
             {
@@ -59,7 +62,7 @@ namespace Infrastructure.Services
             user.DateOfBirth = dto.DateOfBirth;
             user.Gender = dto.Gender;
 
-            _unitOfWork.Users.Update(user);
+            _userRepository.Update(user);
 
             await _unitOfWork.SaveChangesAsync();
 

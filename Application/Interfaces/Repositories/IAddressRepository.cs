@@ -6,12 +6,8 @@ namespace Application.Interfaces.Repositories
     {
         Task<List<Address>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
 
-        Task<Address?> GetByIdAndUserAsync(
-            Guid addressId,
-            Guid userId,
-            CancellationToken ct = default
-        );
+        Task<Address?> GetByIdAsync(Guid addressId, Guid userId, CancellationToken ct = default);
 
-        Task<List<Address>> GetDefaultByUserIdAsync(Guid userId, CancellationToken ct = default);
+        Task<Address> GetDefaultByUserIdAsync(Guid userId, CancellationToken ct = default);
     }
 }

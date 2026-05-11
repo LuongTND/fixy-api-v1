@@ -1,6 +1,7 @@
 ﻿using Application.Common;
 using Application.DTOs.Address;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entity;
 
@@ -8,10 +9,12 @@ namespace Infrastructure.Services
 {
     public class AddressService : IAddressService
     {
+        private readonly IAddressRepository _addressRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddressService(IUnitOfWork unitOfWork)
+        public AddressService(IAddressRepository addressRepository, IUnitOfWork unitOfWork)
         {
+            _addressRepository = addressRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -19,7 +22,7 @@ namespace Infrastructure.Services
             Guid userId
         )
         {
-            var addresses = await _unitOfWork.Addresses.GetByUserIdAsync(userId);
+            var addresses = await _addressRepository.GetByUserIdAsync(userId);
 
             var result = addresses
                 .OrderByDescending(x => x.IsDefault)
@@ -45,19 +48,13 @@ namespace Infrastructure.Services
             CreateAddressRequestDto dto
         )
         {
-            var hasAnyAddress = await _unitOfWork.Addresses.ExistsAsync(x =>
-                x.CustomerId == userId
-            );
+            var hasAnyAddress = await _addressRepository.ExistsAsync(x => x.CustomerId == userId);
 
             if (dto.IsDefault)
             {
-                var currentDefaults = await _unitOfWork.Addresses.GetDefaultByUserIdAsync(userId);
-
-                foreach (var item in currentDefaults)
-                {
-                    item.IsDefault = false;
-                    _unitOfWork.Addresses.Update(item);
-                }
+                var currentDefault = await _addressRepository.GetDefaultByUserIdAsync(userId);
+                currentDefault.IsDefault = false;
+                _addressRepository.Update(currentDefault);
             }
 
             var address = new Address
@@ -73,7 +70,7 @@ namespace Infrastructure.Services
                 IsDefault = !hasAnyAddress || dto.IsDefault,
             };
 
-            await _unitOfWork.Addresses.AddAsync(address);
+            await _addressRepository.AddAsync(address);
             await _unitOfWork.SaveChangesAsync();
 
             return OperationResult<AddressDto>.Success(
@@ -99,20 +96,17 @@ namespace Infrastructure.Services
             UpdateAddressRequestDto dto
         )
         {
-            var address = await _unitOfWork.Addresses.GetByIdAndUserAsync(addressId, userId);
+            var address = await _addressRepository.GetByIdAsync(addressId, userId);
 
             if (address == null)
                 return OperationResult<AddressDto>.Failure("Address not found or access denied");
 
             if (dto.IsDefault && !address.IsDefault)
             {
-                var currentDefaults = await _unitOfWork.Addresses.GetDefaultByUserIdAsync(userId);
+                var currentDefault = await _addressRepository.GetDefaultByUserIdAsync(userId);
 
-                foreach (var item in currentDefaults)
-                {
-                    item.IsDefault = false;
-                    _unitOfWork.Addresses.Update(item);
-                }
+                currentDefault.IsDefault = false;
+                _addressRepository.Update(currentDefault);
             }
 
             address.Label = dto.Label;
@@ -124,7 +118,7 @@ namespace Infrastructure.Services
             address.Lng = dto.Lng;
             address.IsDefault = dto.IsDefault;
 
-            _unitOfWork.Addresses.Update(address);
+            _addressRepository.Update(address);
             await _unitOfWork.SaveChangesAsync();
 
             return OperationResult<AddressDto>.Success(
@@ -146,7 +140,7 @@ namespace Infrastructure.Services
 
         public async Task<OperationResult> DeleteAsync(Guid addressId, Guid userId)
         {
-            var address = await _unitOfWork.Addresses.GetByIdAndUserAsync(addressId, userId);
+            var address = await _addressRepository.GetByIdAsync(addressId, userId);
 
             if (address == null)
                 return OperationResult.Failure("Address not found or access denied");
@@ -154,7 +148,7 @@ namespace Infrastructure.Services
             address.IsDeleted = true;
             address.DeletedDate = DateTime.UtcNow;
 
-            _unitOfWork.Addresses.Update(address);
+            _addressRepository.Update(address);
             await _unitOfWork.SaveChangesAsync();
 
             return OperationResult.Success("Delete success");

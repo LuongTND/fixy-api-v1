@@ -3,28 +3,36 @@ using System.Text.RegularExpressions;
 using Application.Common;
 using Application.DTOs.Auth;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Auth;
 using Application.Settings;
 using Domain.Entity;
-using Domain.Exceptions;
 using Google.Apis.Auth;
 using Infrastructure.Helpers;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Auth
 {
     public class AuthService : IAuthService
     {
+        private readonly IUserRepository _userRepository;
+        private readonly IUserOtpRepository _userOtpRepository;
+        private readonly IRoleRepository _roleRepository;
+        private readonly IUserRoleRepository _userRoleRepository;
+        private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         private readonly IPasswordHasher _passwordHasher;
-
         private readonly IJwtService _jwtService;
         private readonly GoogleSettings _googleSettings;
         private readonly JwtSettings _jwtSettings;
 
         public AuthService(
+            IUserRepository userRepository,
+            IUserOtpRepository userOtpRepository,
+            IRoleRepository roleRepository,
+            IUserRoleRepository userRoleRepository,
+            IRefreshTokenRepository refreshTokenRepository,
             IUnitOfWork unitOfWork,
             IPasswordHasher passwordHasher,
             IJwtService jwtService,
@@ -32,6 +40,11 @@ namespace Infrastructure.Services.Auth
             IOptions<JwtSettings> jwtSettings
         )
         {
+            _userRepository = userRepository;
+            _userOtpRepository = userOtpRepository;
+            _roleRepository = roleRepository;
+            _userRoleRepository = userRoleRepository;
+            _refreshTokenRepository = refreshTokenRepository;
             _unitOfWork = unitOfWork;
             _passwordHasher = passwordHasher;
             _jwtService = jwtService;
@@ -44,12 +57,12 @@ namespace Infrastructure.Services.Auth
             CancellationToken ct
         )
         {
-            var otp = await _unitOfWork.Otps.GetVerifiedOtpAsync(request.Target, ct);
+            var otp = await _userOtpRepository.GetVerifiedOtpAsync(request.Target, ct);
 
             if (otp == null)
                 return OperationResult<AuthResponseDto>.Failure("OTP is not verified");
 
-            var existedUser = await _unitOfWork.Users.GetByTargetAsync(request.Target, ct);
+            var existedUser = await _userRepository.GetByTargetAsync(request.Target, ct);
 
             if (existedUser != null)
                 return OperationResult<AuthResponseDto>.Failure("Account already exists");
@@ -71,19 +84,16 @@ namespace Infrastructure.Services.Auth
                 user.IsEmailVerified = true;
             }
 
-            await _unitOfWork.Users.AddAsync(user, ct);
+            await _userRepository.AddAsync(user, ct);
 
-            var role = await _unitOfWork.Roles.GetCustomerRoleAsync(ct);
+            var role = await _roleRepository.GetCustomerRoleAsync(ct);
 
-            await _unitOfWork.UserRoles.AddAsync(
-                new UserRole { User = user, RoleId = role.Id },
-                ct
-            );
+            await _userRoleRepository.AddAsync(new UserRole { User = user, RoleId = role.Id }, ct);
 
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            await _unitOfWork.RefreshTokens.AddAsync(
+            await _refreshTokenRepository.AddAsync(
                 new RefreshToken
                 {
                     User = user,
@@ -112,7 +122,7 @@ namespace Infrastructure.Services.Auth
             CancellationToken ct
         )
         {
-            var user = await _unitOfWork.Users.GetByTargetWithRoleAsync(request.Target, ct);
+            var user = await _userRepository.GetByTargetWithRoleAsync(request.Target, ct);
 
             if (user == null)
                 return OperationResult<AuthResponseDto>.Failure("Invalid credentials");
@@ -125,7 +135,7 @@ namespace Infrastructure.Services.Auth
             var accessToken = _jwtService.GenerateAccessToken(user, roles);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            await _unitOfWork.RefreshTokens.AddAsync(
+            await _refreshTokenRepository.AddAsync(
                 new RefreshToken
                 {
                     UserId = user.Id,
@@ -162,7 +172,7 @@ namespace Infrastructure.Services.Auth
                 }
             );
 
-            var user = await _unitOfWork.Users.GetByTargetAsync(payload.Email, ct);
+            var user = await _userRepository.GetByTargetAsync(payload.Email, ct);
 
             if (user == null)
             {
@@ -173,19 +183,19 @@ namespace Infrastructure.Services.Auth
                     IsEmailVerified = true,
                 };
 
-                await _unitOfWork.Users.AddAsync(user, ct);
+                await _userRepository.AddAsync(user, ct);
             }
 
-            var role = await _unitOfWork.Roles.GetCustomerRoleAsync(ct);
+            var role = await _roleRepository.GetCustomerRoleAsync(ct);
 
-            var exists = await _unitOfWork.UserRoles.ExistsAsync(
+            var exists = await _userRoleRepository.ExistsAsync(
                 ur => ur.UserId == user.Id && ur.RoleId == role.Id,
                 ct
             );
 
             if (!exists)
             {
-                await _unitOfWork.UserRoles.AddAsync(
+                await _userRoleRepository.AddAsync(
                     new UserRole { UserId = user.Id, RoleId = role.Id },
                     ct
                 );
@@ -194,7 +204,7 @@ namespace Infrastructure.Services.Auth
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            await _unitOfWork.RefreshTokens.AddAsync(
+            await _refreshTokenRepository.AddAsync(
                 new RefreshToken
                 {
                     UserId = user.Id,
@@ -225,7 +235,7 @@ namespace Infrastructure.Services.Auth
         {
             var tokenHash = TokenHasher.Hash(refreshToken);
 
-            var token = await _unitOfWork.RefreshTokens.GetValidTokenWithUserAsync(tokenHash, ct);
+            var token = await _refreshTokenRepository.GetValidTokenWithUserAsync(tokenHash, ct);
 
             if (token == null)
                 return OperationResult<AuthResponseDto>.Failure("Invalid refresh token");
@@ -243,7 +253,7 @@ namespace Infrastructure.Services.Auth
             token.IsRevoked = true;
             token.RevokedAt = DateTime.UtcNow;
 
-            await _unitOfWork.RefreshTokens.AddAsync(
+            await _refreshTokenRepository.AddAsync(
                 new RefreshToken
                 {
                     UserId = user.Id,
@@ -272,7 +282,7 @@ namespace Infrastructure.Services.Auth
             CancellationToken ct
         )
         {
-            var user = await _unitOfWork.Users.GetByTargetAsync(request.Target, ct);
+            var user = await _userRepository.GetByTargetAsync(request.Target, ct);
 
             if (user == null)
                 return OperationResult.Failure("User not found");
@@ -295,12 +305,12 @@ namespace Infrastructure.Services.Auth
             CancellationToken ct
         )
         {
-            var otp = await _unitOfWork.Otps.GetVerifiedOtpAsync(request.Target, ct);
+            var otp = await _userOtpRepository.GetVerifiedOtpAsync(request.Target, ct);
 
             if (otp == null)
                 return OperationResult.Failure("OTP is not verified");
 
-            var user = await _unitOfWork.Users.GetByTargetAsync(request.Target, ct);
+            var user = await _userRepository.GetByTargetAsync(request.Target, ct);
 
             if (user == null)
                 return OperationResult.Failure("User not found");
