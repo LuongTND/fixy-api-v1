@@ -1,9 +1,12 @@
 using API.Middlewares;
 using Application;
+using DotNetEnv;
 using Infrastructure;
-using Infrastructure.Persistence;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+Env.Load();
+builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -13,6 +16,35 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc(
         "v1",
         new Microsoft.OpenApi.Models.OpenApiInfo { Title = "FIXY API", Version = "v1" }
+    );
+    c.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Input JWT token",
+        }
+    );
+
+    c.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer",
+                    },
+                },
+                []
+            },
+        }
     );
 });
 

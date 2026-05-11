@@ -22,6 +22,7 @@ namespace Infrastructure.Persistence
         public DbSet<RefreshToken> RefreshTokens => _context.RefreshTokens;
 
         public DbSet<UserOtp> Otps => _context.UserOtps;
+        public DbSet<Address> Addresses => _context.Addresses;
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

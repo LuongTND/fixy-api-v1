@@ -6,6 +6,8 @@ namespace Domain.Entity
     public class User : BaseEntity, ISoftDelete
     {
         public string FullName { get; set; } = string.Empty;
+        public DateOnly? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
         public string? Phone { get; set; }
         public bool IsPhoneVerified { get; set; }
         public string? Email { get; set; }

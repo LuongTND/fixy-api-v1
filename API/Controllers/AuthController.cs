@@ -1,6 +1,8 @@
-﻿using Application.DTOs.Auth;
+﻿using System.Security.Claims;
+using Application.DTOs.Auth;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
@@ -110,5 +112,19 @@ public class AuthController : ControllerBase
     {
         await _authService.ResetPasswordAsync(request, cancellationToken);
         return NoContent();
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public IActionResult Me()
+    {
+        return Ok(
+            new
+            {
+                Id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                Email = User.FindFirst(ClaimTypes.Email)?.Value,
+                Roles = User.FindAll(ClaimTypes.Role).Select(x => x.Value),
+            }
+        );
     }
 }
