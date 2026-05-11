@@ -45,6 +45,9 @@ namespace Infrastructure
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
+            services.AddSingleton<IEmailQueue, EmailQueue>();
+
+            services.AddHostedService<EmailBackgroundService>();
             // Authentication
             services
                 .AddAuthentication(options =>

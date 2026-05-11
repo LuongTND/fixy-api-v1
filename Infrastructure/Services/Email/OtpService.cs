@@ -13,17 +13,17 @@ namespace Infrastructure.Services.Email
     public class OtpService : IOtpService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IEmailService _emailService;
+        private readonly IEmailQueue _emailQueue;
         private readonly ITemplateEngine _templateEngine;
 
         public OtpService(
             IUnitOfWork unitOfWork,
-            IEmailService emailService,
+            IEmailQueue emailQueue,
             ITemplateEngine templateEngine
         )
         {
             _unitOfWork = unitOfWork;
-            _emailService = emailService;
+            _emailQueue = emailQueue;
             _templateEngine = templateEngine;
         }
 
@@ -72,7 +72,14 @@ namespace Infrastructure.Services.Email
                         );
                         break;
                 }
-                await _emailService.SendEmailAsync(target, "Mã OTP của bạn", html);
+                await _emailQueue.QueueEmailAsync(
+                    new EmailMessage
+                    {
+                        To = target,
+                        Subject = "Mã OTP của bạn",
+                        Body = html,
+                    }
+                );
             }
             else if (IsPhone(target))
             {

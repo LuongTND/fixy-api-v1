@@ -25,10 +25,7 @@ namespace Infrastructure.Services.Auth
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new(JwtRegisteredClaimNames.UniqueName, user.Phone ?? user.Email!),
-                new(
-                    ClaimTypes.Name,
-                    user.CustomerProfile != null ? user.CustomerProfile.FullName : "No Name"
-                ),
+                new(ClaimTypes.Name, user.CustomerProfile != null ? user.FullName : "No Name"),
             };
 
             foreach (var role in roles)

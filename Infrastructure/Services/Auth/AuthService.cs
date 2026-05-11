@@ -4,9 +4,9 @@ using Application.Interfaces;
 using Application.Interfaces.Services.Auth;
 using Application.Settings;
 using Domain.Entity;
-using Domain.Enum;
 using Domain.Exceptions;
 using Google.Apis.Auth;
+using Infrastructure.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -20,18 +20,21 @@ namespace Infrastructure.Services.Auth
 
         private readonly IJwtService _jwtService;
         private readonly GoogleSettings _googleSettings;
+        private readonly JwtSettings _jwtSettings;
 
         public AuthService(
             IUnitOfWork unitOfWork,
             IPasswordHasher passwordHasher,
             IJwtService jwtService,
-            IOptions<GoogleSettings> googleSettings
+            IOptions<GoogleSettings> googleSettings,
+            IOptions<JwtSettings> jwtSettings
         )
         {
             _unitOfWork = unitOfWork;
             _passwordHasher = passwordHasher;
             _jwtService = jwtService;
             _googleSettings = googleSettings.Value;
+            _jwtSettings = jwtSettings.Value;
         }
 
         public async Task<AuthResponseDto> RegisterAsync(
@@ -44,7 +47,7 @@ namespace Infrastructure.Services.Auth
                 .FirstOrDefaultAsync(
                     x =>
                         x.Target == request.Target
-                        && x.ExpiryDate < DateTime.UtcNow
+                        && x.ExpiryDate > DateTime.UtcNow
                         && x.IsVerified,
                     cancellationToken
                 );
@@ -67,7 +70,7 @@ namespace Infrastructure.Services.Auth
             var user = new User
             {
                 PasswordHash = _passwordHasher.HashPassword(request.Password),
-                CustomerProfile = new CustomerProfile { FullName = request.FullName },
+                FullName = request.FullName,
             };
 
             if (IsPhone(request.Target))
@@ -100,13 +103,12 @@ namespace Infrastructure.Services.Auth
             );
 
             var refreshToken = _jwtService.GenerateRefreshToken();
-
             await _unitOfWork.RefreshTokens.AddAsync(
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    TokenHash = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    TokenHash = TokenHasher.Hash(refreshToken),
+                    ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
                 },
                 cancellationToken
             );
@@ -154,8 +156,8 @@ namespace Infrastructure.Services.Auth
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    TokenHash = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    TokenHash = TokenHasher.Hash(refreshToken),
+                    ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
                 },
                 cancellationToken
             );
@@ -190,7 +192,7 @@ namespace Infrastructure.Services.Auth
                 {
                     Email = payload.Email,
                     IsEmailVerified = true,
-                    CustomerProfile = new CustomerProfile { FullName = payload.Name },
+                    FullName = payload.Name,
                 };
                 await _unitOfWork.Users.AddAsync(user, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -199,8 +201,18 @@ namespace Infrastructure.Services.Auth
 
             var userRole = new UserRole { UserId = user.Id, RoleId = customerRole.Id };
 
-            await _unitOfWork.UserRoles.AddAsync(userRole, cancellationToken);
+            var hasRole = await _unitOfWork.UserRoles.AnyAsync(
+                x => x.UserId == user.Id && x.RoleId == customerRole.Id,
+                cancellationToken
+            );
 
+            if (!hasRole)
+            {
+                await _unitOfWork.UserRoles.AddAsync(
+                    new UserRole { UserId = user.Id, RoleId = customerRole.Id },
+                    cancellationToken
+                );
+            }
             var accessToken = _jwtService.GenerateAccessToken(
                 user,
                 new List<string> { customerRole.Name }
@@ -212,8 +224,8 @@ namespace Infrastructure.Services.Auth
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    TokenHash = refreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    TokenHash = TokenHasher.Hash(refreshToken),
+                    ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
                 }
             );
 
@@ -231,7 +243,10 @@ namespace Infrastructure.Services.Auth
                 .RefreshTokens.Include(x => x.User!)
                     .ThenInclude(x => x.UserRoles)
                         .ThenInclude(x => x.Role)
-                .FirstOrDefaultAsync(x => x.TokenHash == refreshToken, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.TokenHash == TokenHasher.Hash(refreshToken) && !x.IsRevoked,
+                    cancellationToken
+                );
 
             if (existedRefreshToken is null)
             {
@@ -256,15 +271,16 @@ namespace Infrastructure.Services.Auth
             var newRefreshToken = _jwtService.GenerateRefreshToken();
 
             // revoke old token
-            _unitOfWork.RefreshTokens.Remove(existedRefreshToken);
+            existedRefreshToken.IsRevoked = true;
+            existedRefreshToken.RevokedAt = DateTime.UtcNow;
 
             // add new token
             await _unitOfWork.RefreshTokens.AddAsync(
                 new RefreshToken
                 {
                     UserId = user.Id,
-                    TokenHash = newRefreshToken,
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    TokenHash = TokenHasher.Hash(newRefreshToken),
+                    ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
                 },
                 cancellationToken
             );
@@ -311,19 +327,19 @@ namespace Infrastructure.Services.Auth
             CancellationToken cancellationToken
         )
         {
-            var otp = await _unitOfWork.Otps.FirstOrDefaultAsync(
-                x => x.Target == request.Target && x.OtpCode == request.Otp && !x.IsVerified,
-                cancellationToken
-            );
+            var verifiedOtp = await _unitOfWork
+                .Otps.OrderByDescending(x => x.CreatedDate)
+                .FirstOrDefaultAsync(
+                    x =>
+                        x.Target == request.Target
+                        && x.ExpiryDate > DateTime.UtcNow
+                        && x.IsVerified,
+                    cancellationToken
+                );
 
-            if (otp is null)
+            if (verifiedOtp is null)
             {
-                throw new BusinessException("Invalid OTP");
-            }
-
-            if (otp.ExpiryDate < DateTime.UtcNow)
-            {
-                throw new BusinessException("OTP expired");
+                throw new BusinessException("OTP is not verified");
             }
 
             var user = await _unitOfWork.Users.FirstOrDefaultAsync(
@@ -337,10 +353,6 @@ namespace Infrastructure.Services.Auth
             }
 
             user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
-            otp.IsVerified = true;
-
-            // revoke OTP sau khi dùng
-            _unitOfWork.Otps.Remove(otp);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

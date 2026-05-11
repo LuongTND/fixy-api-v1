@@ -21,7 +21,20 @@ builder.Services.AddApplication();
 
 // Add Infrastructure Layer
 builder.Services.AddInfrastructure(builder.Configuration);
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "AllowReactApp",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+    );
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -35,6 +48,7 @@ app.UseHttpsRedirection();
 
 // Exception handling middleware
 app.UseExceptionMiddleware();
+app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -5,6 +5,7 @@ namespace Domain.Entity
 {
     public class User : BaseEntity, ISoftDelete
     {
+        public string FullName { get; set; } = string.Empty;
         public string? Phone { get; set; }
         public bool IsPhoneVerified { get; set; }
         public string? Email { get; set; }
@@ -20,7 +21,6 @@ namespace Domain.Entity
         public string? DeletedBy { get; set; }
 
         public ICollection<UserOtp> UserOtps { get; set; } = new List<UserOtp>();
-        public ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public WorkerProfile? WorkerProfile { get; set; }

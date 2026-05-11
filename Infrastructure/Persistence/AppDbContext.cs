@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Domain.Common;
 using Domain.Entity;
+using Infrastructure.Persistence.Seeds;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
@@ -12,7 +13,6 @@ namespace Infrastructure.Persistence
 
         public DbSet<User> Users { get; set; }
         public DbSet<UserOtp> UserOtps { get; set; }
-        public DbSet<UserSession> UserSessions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Permission> Permissions { get; set; }
@@ -28,7 +28,7 @@ namespace Infrastructure.Persistence
         public DbSet<WorkerFeaturedOrder> WorkerFeaturedOrders { get; set; }
 
         public DbSet<CustomerProfile> CustomerProfiles { get; set; }
-        public DbSet<CustomerAddress> CustomerAddresses { get; set; }
+        public DbSet<Address> Addresses { get; set; }
 
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
 
@@ -61,7 +61,7 @@ namespace Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            RoleSeeder.Seed(modelBuilder);
             // Apply all configurations from assembly
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
