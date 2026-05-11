@@ -1,19 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Reflection;
 using Domain.Common;
 using Domain.Entity;
-using System.Reflection;
+using Infrastructure.Persistence.Seeds;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        {
-        }
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options) { }
 
         public DbSet<User> Users { get; set; }
         public DbSet<UserOtp> UserOtps { get; set; }
-        public DbSet<UserSession> UserSessions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Permission> Permissions { get; set; }
@@ -29,7 +28,7 @@ namespace Infrastructure.Persistence
         public DbSet<WorkerFeaturedOrder> WorkerFeaturedOrders { get; set; }
 
         public DbSet<CustomerProfile> CustomerProfiles { get; set; }
-        public DbSet<CustomerAddress> CustomerAddresses { get; set; }
+        public DbSet<Address> Addresses { get; set; }
 
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
 
@@ -62,10 +61,10 @@ namespace Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            
+            RoleSeeder.Seed(modelBuilder);
             // Apply all configurations from assembly
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-            
+
             // Global query filters
             ConfigureGlobalFilters(modelBuilder);
         }
@@ -82,17 +81,29 @@ namespace Infrastructure.Persistence
             {
                 if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType))
                 {
-                    var parameter = System.Linq.Expressions.Expression.Parameter(entityType.ClrType, "e");
-                    var property = System.Linq.Expressions.Expression.Property(parameter, nameof(ISoftDelete.IsDeleted));
+                    var parameter = System.Linq.Expressions.Expression.Parameter(
+                        entityType.ClrType,
+                        "e"
+                    );
+                    var property = System.Linq.Expressions.Expression.Property(
+                        parameter,
+                        nameof(ISoftDelete.IsDeleted)
+                    );
                     var filter = System.Linq.Expressions.Expression.Lambda(
-                        System.Linq.Expressions.Expression.Equal(property, System.Linq.Expressions.Expression.Constant(false)),
-                        parameter);
+                        System.Linq.Expressions.Expression.Equal(
+                            property,
+                            System.Linq.Expressions.Expression.Constant(false)
+                        ),
+                        parameter
+                    );
                     modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
                 }
             }
         }
 
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        public override async Task<int> SaveChangesAsync(
+            CancellationToken cancellationToken = default
+        )
         {
             // Set audit fields
             foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
