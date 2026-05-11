@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
 {
-    public class ProfileService : IProfileService
+    public class UserService : IUserService
     {
         private readonly IUnitOfWork _unitOfWork;
 
-        public ProfileService(IUnitOfWork unitOfWork)
+        public UserService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
         }

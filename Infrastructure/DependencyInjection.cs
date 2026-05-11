@@ -1,11 +1,13 @@
 using System.Text;
 using Application.Common.Interfaces;
 using Application.Interfaces;
+using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
+using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -83,6 +85,8 @@ namespace Infrastructure
             services.AddSingleton<ITemplateEngine, RazorTemplateEngine>();
 
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAddressService, AddressService>();
+            services.AddScoped<IUserService, UserService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
