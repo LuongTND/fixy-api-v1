@@ -15,19 +15,13 @@ namespace Infrastructure.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<AddressDto> GetAddressByUserIdAsync(Guid userId)
+        public async Task<IEnumerable<AddressDto>> GetAddressByUserIdAsync(Guid userId)
         {
-            var address = await _unitOfWork
+            var addresses = _unitOfWork
                 .Addresses.Where(x => x.CustomerId == userId)
-                .OrderByDescending(x => x.IsDefault)
-                .FirstOrDefaultAsync();
+                .OrderByDescending(x => x.IsDefault);
 
-            if (address == null)
-            {
-                throw new Exception("Address not found");
-            }
-
-            return new AddressDto
+            return addresses.Select(address => new AddressDto
             {
                 Id = address.Id,
                 Label = address.Label,
@@ -39,7 +33,7 @@ namespace Infrastructure.Services
                 Lng = address.Lng,
                 IsDefault = address.IsDefault,
                 CreatedDate = address.CreatedDate,
-            };
+            });
         }
 
         public async Task<AddressDto> CreateAsync(Guid userId, CreateAddressRequestDto dto)
