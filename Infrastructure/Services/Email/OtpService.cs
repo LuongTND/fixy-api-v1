@@ -72,7 +72,7 @@ namespace Infrastructure.Services.Email
                     new EmailMessage
                     {
                         To = target,
-                        Subject = "OTP Code",
+                        Subject = "Mã OTP của bạn",
                         Body = html,
                     }
                 );
