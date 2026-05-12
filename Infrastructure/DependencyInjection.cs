@@ -10,6 +10,7 @@ using Application.Service;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Repositories;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
@@ -92,7 +93,16 @@ namespace Infrastructure
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+
+            //Repository
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IUserOtpRepository, UserOtpRepository>();
+            services.AddScoped<IRoleRepository, RoleRepository>();
+            services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

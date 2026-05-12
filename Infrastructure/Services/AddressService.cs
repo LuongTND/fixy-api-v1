@@ -1,60 +1,98 @@
-﻿using Application.DTOs.Address;
+﻿using Application.Common;
+using Application.DTOs.Address;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entity;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
 {
     public class AddressService : IAddressService
     {
+        private readonly IAddressRepository _addressRepository;
+        private readonly IUserRepository _userRepository;
+
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddressService(IUnitOfWork unitOfWork)
+        public AddressService(
+            IAddressRepository addressRepository,
+            IUserRepository userRepository,
+            IUnitOfWork unitOfWork
+        )
         {
+            _addressRepository = addressRepository;
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<IEnumerable<AddressDto>> GetAddressByUserIdAsync(Guid userId)
+        public async Task<OperationResult<IEnumerable<AddressDto>>> GetAddressByUserIdAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        )
         {
-            var addresses = _unitOfWork
-                .Addresses.Where(x => x.CustomerId == userId)
-                .OrderByDescending(x => x.IsDefault);
+            var addresses = await _addressRepository.GetByUserIdAsync(userId, cancellationToken);
 
-            return addresses.Select(address => new AddressDto
-            {
-                Id = address.Id,
-                Label = address.Label,
-                City = address.City,
-                District = address.District,
-                Ward = address.Ward,
-                Detail = address.Detail,
-                Lat = address.Lat,
-                Lng = address.Lng,
-                IsDefault = address.IsDefault,
-                CreatedDate = address.CreatedDate,
-            });
+            var result = addresses
+                .OrderByDescending(x => x.IsDefault)
+                .Select(address => new AddressDto
+                {
+                    Id = address.Id,
+                    Label = address.Label,
+                    City = address.City,
+                    District = address.District,
+                    Ward = address.Ward,
+                    Detail = address.Detail,
+                    Lat = address.Lat,
+                    Lng = address.Lng,
+                    IsDefault = address.IsDefault,
+                    CreatedDate = address.CreatedDate,
+                });
+
+            return OperationResult<IEnumerable<AddressDto>>.Success(
+                result,
+                "Get address by userId successfully"
+            );
         }
 
-        public async Task<AddressDto> CreateAsync(Guid userId, CreateAddressRequestDto dto)
+        public async Task<OperationResult<AddressDto>> CreateAsync(
+            Guid userId,
+            CreateAddressRequestDto dto,
+            CancellationToken cancellationToken
+        )
         {
+            var user = await _userRepository.GetByIdWithRoleAndAddressAsync(
+                userId,
+                cancellationToken
+            );
+            if (user == null)
+            {
+                return OperationResult<AddressDto>.Failure("User not found");
+            }
+            var roles = user.UserRoles.Select(x => x.Role!.Name).ToList();
+            if (roles.Contains("WORKER") && user.Addresses.Count == 1)
+            {
+                return OperationResult<AddressDto>.Failure(
+                    "Workers are only allowed to have one address."
+                );
+            }
+            var hasAnyAddress = await _addressRepository.ExistsAsync(
+                x => x.UserId == userId,
+                cancellationToken
+            );
+
             if (dto.IsDefault)
             {
-                var currentDefaults = await _unitOfWork
-                    .Addresses.Where(x => x.CustomerId == userId && x.IsDefault)
-                    .ToListAsync();
-
-                foreach (var item in currentDefaults)
+                var currentDefault = await _addressRepository.GetDefaultByUserIdAsync(userId);
+                if (currentDefault != null)
                 {
-                    item.IsDefault = false;
+                    currentDefault.IsDefault = false;
+                    _addressRepository.Update(currentDefault);
                 }
             }
 
-            var hasAddress = await _unitOfWork.Addresses.AnyAsync(x => x.CustomerId == userId);
-
             var address = new Address
             {
-                CustomerId = userId,
+                UserId = userId,
                 Label = dto.Label,
                 City = dto.City,
                 District = dto.District,
@@ -62,53 +100,50 @@ namespace Infrastructure.Services
                 Detail = dto.Detail,
                 Lat = dto.Lat,
                 Lng = dto.Lng,
-                IsDefault = !hasAddress || dto.IsDefault,
+                IsDefault = !hasAnyAddress || dto.IsDefault,
             };
 
-            await _unitOfWork.Addresses.AddAsync(address);
-            await _unitOfWork.SaveChangesAsync();
+            await _addressRepository.AddAsync(address, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return new AddressDto
-            {
-                Id = address.Id,
-                Label = address.Label,
-                City = address.City,
-                District = address.District,
-                Ward = address.Ward,
-                Detail = address.Detail,
-                Lat = address.Lat,
-                Lng = address.Lng,
-                IsDefault = address.IsDefault,
-                CreatedDate = address.CreatedDate,
-            };
+            return OperationResult<AddressDto>.Success(
+                new AddressDto
+                {
+                    Id = address.Id,
+                    Label = address.Label,
+                    City = address.City,
+                    District = address.District,
+                    Ward = address.Ward,
+                    Detail = address.Detail,
+                    Lat = address.Lat,
+                    Lng = address.Lng,
+                    IsDefault = address.IsDefault,
+                    CreatedDate = address.CreatedDate,
+                },
+                "Create address successfully"
+            );
         }
 
-        public async Task<AddressDto> UpdateAsync(
+        public async Task<OperationResult<AddressDto>> UpdateAsync(
             Guid addressId,
             Guid userId,
-            UpdateAddressRequestDto dto
+            UpdateAddressRequestDto dto,
+            CancellationToken cancellationToken
         )
         {
-            var address = await _unitOfWork.Addresses.FirstOrDefaultAsync(x => x.Id == addressId);
+            var address = await _addressRepository.GetByIdAsync(addressId, cancellationToken);
 
-            if (address == null)
-            {
-                throw new Exception("Address not found");
-            }
-            if (address.CustomerId != userId)
-            {
-                throw new UnauthorizedAccessException("You cannot access this address");
-            }
-            // đổi default
+            if (address == null || address.UserId != userId)
+                return OperationResult<AddressDto>.Failure("Address not found or access denied");
+
             if (dto.IsDefault && !address.IsDefault)
             {
-                var currentDefaults = await _unitOfWork
-                    .Addresses.Where(x => x.CustomerId == address.CustomerId && x.IsDefault)
-                    .ToListAsync();
+                var currentDefault = await _addressRepository.GetDefaultByUserIdAsync(userId);
 
-                foreach (var item in currentDefaults)
+                if (currentDefault != null)
                 {
-                    item.IsDefault = false;
+                    currentDefault.IsDefault = false;
+                    _addressRepository.Update(currentDefault);
                 }
             }
 
@@ -121,43 +156,45 @@ namespace Infrastructure.Services
             address.Lng = dto.Lng;
             address.IsDefault = dto.IsDefault;
 
-            _unitOfWork.Addresses.Update(address);
-
+            _addressRepository.Update(address);
             await _unitOfWork.SaveChangesAsync();
 
-            return new AddressDto
-            {
-                Id = address.Id,
-                Label = address.Label,
-                City = address.City,
-                District = address.District,
-                Ward = address.Ward,
-                Detail = address.Detail,
-                Lat = address.Lat,
-                Lng = address.Lng,
-                IsDefault = address.IsDefault,
-                CreatedDate = address.CreatedDate,
-            };
+            return OperationResult<AddressDto>.Success(
+                new AddressDto
+                {
+                    Id = address.Id,
+                    Label = address.Label,
+                    City = address.City,
+                    District = address.District,
+                    Ward = address.Ward,
+                    Detail = address.Detail,
+                    Lat = address.Lat,
+                    Lng = address.Lng,
+                    IsDefault = address.IsDefault,
+                    CreatedDate = address.CreatedDate,
+                },
+                "Update address successfully"
+            );
         }
 
-        public async Task DeleteAsync(Guid addressId, Guid userId)
+        public async Task<OperationResult> DeleteAsync(
+            Guid addressId,
+            Guid userId,
+            CancellationToken cancellationToken
+        )
         {
-            var address = await _unitOfWork.Addresses.FirstOrDefaultAsync(x => x.Id == addressId);
+            var address = await _addressRepository.GetByIdAsync(addressId, cancellationToken);
 
-            if (address == null)
-            {
-                throw new Exception("Address not found");
-            }
-            if (address.CustomerId != userId)
-            {
-                throw new UnauthorizedAccessException("You cannot access this address");
-            }
+            if (address == null || address.UserId != userId)
+                return OperationResult.Failure("Address not found or access denied");
+
             address.IsDeleted = true;
             address.DeletedDate = DateTime.UtcNow;
 
-            _unitOfWork.Addresses.Update(address);
-
+            _addressRepository.Update(address);
             await _unitOfWork.SaveChangesAsync();
+
+            return OperationResult.Success("Delete address successfully");
         }
     }
 }

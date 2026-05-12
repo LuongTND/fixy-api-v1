@@ -4,7 +4,7 @@ namespace Domain.Entity
 {
     public class Address : BaseEntity, ISoftDelete
     {
-        public Guid CustomerId { get; set; }
+        public Guid UserId { get; set; }
         public string? Label { get; set; }
         public string City { get; set; } = default!;
 
@@ -20,6 +20,6 @@ namespace Domain.Entity
         public DateTime? DeletedDate { get; set; }
         public string? DeletedBy { get; set; }
 
-        public CustomerProfile? Customer { get; set; }
+        public User? User { get; set; }
     }
 }
