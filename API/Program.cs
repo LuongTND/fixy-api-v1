@@ -1,5 +1,7 @@
 using API.Middlewares;
 using Application;
+using Application.Common.Interfaces;
+using API.Services;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -12,6 +14,8 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Add FluentValidation
 builder.Services.AddFluentValidationAutoValidation();

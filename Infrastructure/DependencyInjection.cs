@@ -15,11 +15,13 @@ using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
+using Application.Interfaces.Services.Media;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Infrastructure.Services.Medias;
 
 namespace Infrastructure
 {
@@ -52,6 +54,10 @@ namespace Infrastructure
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
+            
+            // Cloudinary Settings
+            services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
+
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
             services.AddHostedService<EmailBackgroundService>();
@@ -93,6 +99,7 @@ namespace Infrastructure
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+            services.AddScoped<IMediaService, MediaService>();
 
             //Repository
             services.AddScoped<IUserRepository, UserRepository>();
@@ -102,6 +109,7 @@ namespace Infrastructure
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IAddressRepository, AddressRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+            services.AddScoped<IMediaRepository, MediaRepository>();
 
 
             // Unit Of Work
