@@ -35,7 +35,6 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "ADMIN")]
-        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateServiceCategoryDto dto,CancellationToken cancellationToken)
         {
@@ -45,7 +44,6 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "ADMIN")]
-        [AllowAnonymous]
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateServiceCategoryDto dto, CancellationToken cancellationToken)
         {
