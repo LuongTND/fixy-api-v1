@@ -1,31 +1,32 @@
-﻿using Application.DTOs.Auth;
+﻿using Application.Common;
+using Application.DTOs.Auth;
 
 namespace Application.Interfaces.Services.Auth
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(
+        Task<OperationResult<AuthResponseDto>> RegisterAsync(
             RegisterRequestDto request,
             CancellationToken cancellationToken
         );
 
-        Task<AuthResponseDto> LoginAsync(
+        Task<OperationResult<AuthResponseDto>> LoginAsync(
             LoginRequestDto request,
             CancellationToken cancellationToken
         );
-        Task<AuthResponseDto> GoogleLoginAsync(
+        Task<OperationResult<AuthResponseDto>> GoogleLoginAsync(
             GoogleLoginRequestDto requestDto,
             CancellationToken cancellationToken
         );
-        Task<AuthResponseDto> RefreshTokenAsync(
+        Task<OperationResult<AuthResponseDto>> RefreshTokenAsync(
             string refreshToken,
             CancellationToken cancellationToken
         );
-        Task ChangePasswordAsync(
+        Task<OperationResult> ChangePasswordAsync(
             ChangePasswordRequestDto request,
             CancellationToken cancellationToken
         );
-        Task ResetPasswordAsync(
+        Task<OperationResult> ResetPasswordAsync(
             ResetPasswordRequestDto request,
             CancellationToken cancellationToken
         );
