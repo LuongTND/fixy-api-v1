@@ -9,7 +9,7 @@ namespace API.Controllers
     [ApiController]
     [Route("api/user")]
     [Authorize]
-    public class UserController : ControllerBase
+    public class UserController : ApiController
     {
         private readonly IUserService _userService;
 
@@ -19,21 +19,24 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetProfile()
+        public async Task<IActionResult> GetProfile(CancellationToken cancellationToken)
         {
             var userId = GetUserId();
 
-            var result = await _userService.GetProfileAsync(userId);
+            var result = await _userService.GetProfileAsync(userId, cancellationToken);
 
             return Ok(result);
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequestDto dto)
+        public async Task<IActionResult> UpdateProfile(
+            [FromBody] UpdateProfileRequestDto dto,
+            CancellationToken cancellationToken
+        )
         {
             var userId = GetUserId();
 
-            var result = await _userService.UpdateProfileAsync(userId, dto);
+            var result = await _userService.UpdateProfileAsync(userId, dto, cancellationToken);
 
             return Ok(result);
         }
