@@ -81,6 +81,12 @@ namespace Infrastructure.Persistence.Configurations
                 .WithOne(x => x.User)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // User - Address
+            builder
+                .HasMany(x => x.Addresses)
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

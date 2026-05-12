@@ -1,77 +1,73 @@
 ﻿using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Application.Common;
 using Application.Common.Models.Email;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Email;
 using Domain.Entity;
 using Domain.Enum;
-using Domain.Exceptions;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.Email
 {
     public class OtpService : IOtpService
     {
+        private readonly IUserOtpRepository _userOtpRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailQueue _emailQueue;
         private readonly ITemplateEngine _templateEngine;
 
         public OtpService(
+            IUserOtpRepository userOtpRepository,
             IUnitOfWork unitOfWork,
             IEmailQueue emailQueue,
             ITemplateEngine templateEngine
         )
         {
+            _userOtpRepository = userOtpRepository;
             _unitOfWork = unitOfWork;
             _emailQueue = emailQueue;
             _templateEngine = templateEngine;
         }
 
-        public async Task SendOtpAsync(string target, EmailPurpose purpose)
+        public async Task<OperationResult> SendOtpAsync(string target, EmailPurpose purpose)
         {
-            var oldOtps = await _unitOfWork
-                .Otps.Where(x => x.Target == target && !x.IsUsed)
-                .ToListAsync();
+            var oldOtps = await _userOtpRepository.GetUnusedOtpsAsync(target);
 
             foreach (var otp in oldOtps)
-            {
                 otp.IsUsed = true;
-            }
 
-            // 2. generate secure OTP
             var otpCode = RandomNumberGenerator.GetInt32(100000, 999999).ToString();
 
-            var otpEntity = new UserOtp
+            var entity = new UserOtp
             {
                 Target = target,
                 OtpCode = otpCode,
                 ExpiryDate = DateTime.UtcNow.AddMinutes(5),
                 IsUsed = false,
                 IsVerified = false,
-                CreatedDate = DateTime.UtcNow,
             };
 
-            await _unitOfWork.Otps.AddAsync(otpEntity);
+            await _userOtpRepository.AddAsync(entity);
+
             await _unitOfWork.SaveChangesAsync();
+
             if (IsEmail(target))
             {
-                string html = "";
-                switch (purpose)
+                var template = purpose switch
                 {
-                    case EmailPurpose.Register:
-                        html = await _templateEngine.RenderEmailTemplateAsync(
-                            "RegisterOtpTemplate",
-                            new OtpEmailModel { Otp = otpCode }
-                        );
-                        break;
-                    case EmailPurpose.ForgotPassword:
-                        //
-                        html = await _templateEngine.RenderEmailTemplateAsync(
-                            "ForgotPasswordOtpTemplate",
-                            new OtpEmailModel { Otp = otpCode }
-                        );
-                        break;
-                }
+                    EmailPurpose.Register => "RegisterOtpTemplate",
+
+                    EmailPurpose.ForgotPassword => "ForgotPasswordOtpTemplate",
+
+                    _ => "RegisterOtpTemplate",
+                };
+
+                var html = await _templateEngine.RenderEmailTemplateAsync(
+                    template,
+                    new OtpEmailModel { Otp = otpCode }
+                );
+
                 await _emailQueue.QueueEmailAsync(
                     new EmailMessage
                     {
@@ -81,32 +77,32 @@ namespace Infrastructure.Services.Email
                     }
                 );
             }
-            else if (IsPhone(target))
+
+            // SMS TODO
+            if (IsPhone(target))
             {
-                //To do send SMS OTP
+                // send sms later
             }
+
+            return OperationResult.Success("OTP sent successfully");
         }
 
-        public async Task VerifyOtpAsync(string target, string otpCode)
+        public async Task<OperationResult> VerifyOtpAsync(string target, string otpCode)
         {
-            var otp = await _unitOfWork
-                .Otps.OrderByDescending(x => x.CreatedDate)
-                .FirstOrDefaultAsync(x => x.Target == target && x.OtpCode == otpCode && !x.IsUsed);
+            var otp = await _userOtpRepository.GetLatestOtpAsync(target, otpCode);
 
-            if (otp is null)
-            {
-                throw new BusinessException("Invalid OTP");
-            }
+            if (otp == null)
+                return OperationResult.Failure("Invalid OTP");
 
             if (otp.ExpiryDate < DateTime.UtcNow)
-            {
-                throw new BusinessException("OTP expired");
-            }
+                return OperationResult.Failure("OTP expired");
 
             otp.IsUsed = true;
             otp.IsVerified = true;
 
             await _unitOfWork.SaveChangesAsync();
+
+            return OperationResult.Success("OTP verified successfully");
         }
 
         private bool IsEmail(string target)

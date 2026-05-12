@@ -1,46 +1,57 @@
-﻿using Application.DTOs.Profile;
+﻿using Application.Common;
+using Application.DTOs.Profile;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Domain.Entity;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
 {
     public class UserService : IUserService
     {
+        private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        public UserService(IUnitOfWork unitOfWork)
+        public UserService(IUserRepository userRepository, IUnitOfWork unitOfWork)
         {
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<ProfileDto> GetProfileAsync(Guid userId)
+        public async Task<OperationResult<ProfileDto>> GetProfileAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        )
         {
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(x => x.Id == userId);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
             if (user == null)
             {
-                throw new Exception("User not found");
+                return OperationResult<ProfileDto>.Failure("User not found");
             }
 
-            return new ProfileDto
-            {
-                FullName = user.FullName,
-                Phone = user.Phone,
-                Email = user.Email,
-                DateOfBirth = user.DateOfBirth,
-                Gender = user.Gender,
-            };
+            return OperationResult<ProfileDto>.Success(
+                new ProfileDto
+                {
+                    FullName = user.FullName,
+                    Phone = user.Phone,
+                    Email = user.Email,
+                    DateOfBirth = user.DateOfBirth,
+                    Gender = user.Gender,
+                }
+            );
         }
 
-        public async Task<ProfileDto> UpdateProfileAsync(Guid userId, UpdateProfileRequestDto dto)
+        public async Task<OperationResult<ProfileDto>> UpdateProfileAsync(
+            Guid userId,
+            UpdateProfileRequestDto dto,
+            CancellationToken cancellationToken
+        )
         {
-            var user = await _unitOfWork.Users.FirstOrDefaultAsync(x => x.Id == userId);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
             if (user == null)
             {
-                throw new Exception("User not found");
+                return OperationResult<ProfileDto>.Failure("User not found");
             }
 
             if (user.Phone != dto.Phone)
@@ -53,18 +64,20 @@ namespace Infrastructure.Services
             user.DateOfBirth = dto.DateOfBirth;
             user.Gender = dto.Gender;
 
-            _unitOfWork.Users.Update(user);
+            _userRepository.Update(user);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return new ProfileDto
-            {
-                FullName = user.FullName,
-                Phone = user.Phone,
-                Email = user.Email,
-                DateOfBirth = user.DateOfBirth,
-                Gender = user.Gender,
-            };
+            return OperationResult<ProfileDto>.Success(
+                new ProfileDto
+                {
+                    FullName = user.FullName,
+                    Phone = user.Phone,
+                    Email = user.Email,
+                    DateOfBirth = user.DateOfBirth,
+                    Gender = user.Gender,
+                }
+            );
         }
     }
 }

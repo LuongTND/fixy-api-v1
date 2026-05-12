@@ -13,7 +13,7 @@ namespace Infrastructure.Persistence.Seeds
             "b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"
         );
 
-        public static readonly Guid StaffRoleId = Guid.Parse(
+        public static readonly Guid WorkerRoleId = Guid.Parse(
             "c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"
         );
 
@@ -36,8 +36,8 @@ namespace Infrastructure.Persistence.Seeds
                     },
                     new Role
                     {
-                        Id = StaffRoleId,
-                        Name = "STAFF",
+                        Id = WorkerRoleId,
+                        Name = "WORKER",
                         CreatedDate = DateTime.UtcNow,
                     }
                 );

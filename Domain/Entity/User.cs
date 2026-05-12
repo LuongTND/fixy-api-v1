@@ -25,6 +25,8 @@ namespace Domain.Entity
         public ICollection<UserOtp> UserOtps { get; set; } = new List<UserOtp>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+        public ICollection<Address> Addresses { get; set; } = new List<Address>();
+
         public WorkerProfile? WorkerProfile { get; set; }
         public CustomerProfile? CustomerProfile { get; set; }
         public Wallet? Wallet { get; set; }
