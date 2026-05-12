@@ -15,28 +15,16 @@ namespace Infrastructure.Repositories
             CancellationToken ct = default
         )
         {
-            return await _dbSet.Where(x => x.CustomerId == userId && !x.IsDeleted).ToListAsync(ct);
+            return await _dbSet.Where(x => x.UserId == userId && !x.IsDeleted).ToListAsync(ct);
         }
 
-        public async Task<Address?> GetByIdAsync(
-            Guid addressId,
+        public async Task<Address?> GetDefaultByUserIdAsync(
             Guid userId,
             CancellationToken ct = default
         )
         {
             return await _dbSet.FirstOrDefaultAsync(
-                x => x.Id == addressId && x.CustomerId == userId && !x.IsDeleted,
-                ct
-            );
-        }
-
-        public async Task<Address> GetDefaultByUserIdAsync(
-            Guid userId,
-            CancellationToken ct = default
-        )
-        {
-            return await _dbSet.FirstAsync(
-                x => x.CustomerId == userId && x.IsDefault && !x.IsDeleted,
+                x => x.UserId == userId && x.IsDefault && !x.IsDeleted,
                 ct
             );
         }

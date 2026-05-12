@@ -3,8 +3,6 @@ using Application.DTOs.Profile;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Domain.Entity;
-using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
 {
@@ -19,9 +17,12 @@ namespace Infrastructure.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<OperationResult<ProfileDto>> GetProfileAsync(Guid userId)
+        public async Task<OperationResult<ProfileDto>> GetProfileAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        )
         {
-            var user = await _userRepository.GetByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
             if (user == null)
             {
@@ -42,10 +43,11 @@ namespace Infrastructure.Services
 
         public async Task<OperationResult<ProfileDto>> UpdateProfileAsync(
             Guid userId,
-            UpdateProfileRequestDto dto
+            UpdateProfileRequestDto dto,
+            CancellationToken cancellationToken
         )
         {
-            var user = await _userRepository.GetByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
             if (user == null)
             {
@@ -64,7 +66,7 @@ namespace Infrastructure.Services
 
             _userRepository.Update(user);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return OperationResult<ProfileDto>.Success(
                 new ProfileDto

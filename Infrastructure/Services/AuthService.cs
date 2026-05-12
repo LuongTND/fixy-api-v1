@@ -113,7 +113,8 @@ namespace Infrastructure.Services.Auth
                     Email = user.Email ?? "",
                     UserId = user.Id.ToString(),
                     Roles = new List<string> { role.Name },
-                }
+                },
+                "Register successfully"
             );
         }
 
@@ -155,7 +156,8 @@ namespace Infrastructure.Services.Auth
                     Email = user.Email ?? "",
                     UserId = user.Id.ToString(),
                     Roles = roles,
-                }
+                },
+                "Login successfully"
             );
         }
 
@@ -224,7 +226,8 @@ namespace Infrastructure.Services.Auth
                     Email = user.Email ?? "",
                     UserId = user.Id.ToString(),
                     Roles = new List<string> { role.Name },
-                }
+                },
+                "Login successfully"
             );
         }
 
@@ -273,7 +276,8 @@ namespace Infrastructure.Services.Auth
                     Email = user.Email ?? "",
                     UserId = user.Id.ToString(),
                     Roles = roles,
-                }
+                },
+                "Refresh successfully"
             );
         }
 

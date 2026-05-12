@@ -1,12 +1,15 @@
 using System.Text;
 using Application.Common.Interfaces;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Repositories;
+using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
@@ -87,6 +90,13 @@ namespace Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
+            //Repository
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IUserOtpRepository, UserOtpRepository>();
+            services.AddScoped<IRoleRepository, RoleRepository>();
+            services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<IAddressRepository, AddressRepository>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

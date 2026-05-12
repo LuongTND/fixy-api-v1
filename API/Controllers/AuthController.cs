@@ -28,17 +28,17 @@ public class AuthController : ApiController
     [HttpPost("otp/send")]
     public async Task<IActionResult> SendOtp([FromBody] SendOtpRequestDto request)
     {
-        await _otpService.SendOtpAsync(request.Target, request.Purpose);
+        var result = await _otpService.SendOtpAsync(request.Target, request.Purpose);
 
-        return Ok(new { message = "OTP sent successfully" });
+        return Ok(result);
     }
 
     [HttpPost("otp/verify")]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
     {
-        await _otpService.VerifyOtpAsync(request.Target, request.OtpCode);
+        var result = await _otpService.VerifyOtpAsync(request.Target, request.OtpCode);
 
-        return Ok(new { message = "OTP verified successfully" });
+        return Ok(result);
     }
 
     // =========================
@@ -52,7 +52,6 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.RegisterAsync(request, cancellationToken);
-
         return Ok(result);
     }
 
@@ -67,7 +66,6 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.LoginAsync(request, cancellationToken);
-
         return Ok(result);
     }
 
@@ -82,7 +80,6 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
-
         return Ok(result);
     }
 
@@ -97,7 +94,6 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.ChangePasswordAsync(request, cancellationToken);
-
         return Ok(result);
     }
 
@@ -112,19 +108,5 @@ public class AuthController : ApiController
     {
         var result = await _authService.ResetPasswordAsync(request, cancellationToken);
         return Ok(result);
-    }
-
-    [Authorize]
-    [HttpGet("me")]
-    public IActionResult Me()
-    {
-        return Ok(
-            new
-            {
-                Id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-                Email = User.FindFirst(ClaimTypes.Email)?.Value,
-                Roles = User.FindAll(ClaimTypes.Role).Select(x => x.Value),
-            }
-        );
     }
 }

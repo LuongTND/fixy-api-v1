@@ -19,10 +19,11 @@ namespace Infrastructure.Services
         }
 
         public async Task<OperationResult<IEnumerable<AddressDto>>> GetAddressByUserIdAsync(
-            Guid userId
+            Guid userId,
+            CancellationToken cancellationToken
         )
         {
-            var addresses = await _addressRepository.GetByUserIdAsync(userId);
+            var addresses = await _addressRepository.GetByUserIdAsync(userId, cancellationToken);
 
             var result = addresses
                 .OrderByDescending(x => x.IsDefault)
@@ -40,26 +41,36 @@ namespace Infrastructure.Services
                     CreatedDate = address.CreatedDate,
                 });
 
-            return OperationResult<IEnumerable<AddressDto>>.Success(result);
+            return OperationResult<IEnumerable<AddressDto>>.Success(
+                result,
+                "Get address by userId successfully"
+            );
         }
 
         public async Task<OperationResult<AddressDto>> CreateAsync(
             Guid userId,
-            CreateAddressRequestDto dto
+            CreateAddressRequestDto dto,
+            CancellationToken cancellationToken
         )
         {
-            var hasAnyAddress = await _addressRepository.ExistsAsync(x => x.CustomerId == userId);
+            var hasAnyAddress = await _addressRepository.ExistsAsync(
+                x => x.UserId == userId,
+                cancellationToken
+            );
 
             if (dto.IsDefault)
             {
                 var currentDefault = await _addressRepository.GetDefaultByUserIdAsync(userId);
-                currentDefault.IsDefault = false;
-                _addressRepository.Update(currentDefault);
+                if (currentDefault != null)
+                {
+                    currentDefault.IsDefault = false;
+                    _addressRepository.Update(currentDefault);
+                }
             }
 
             var address = new Address
             {
-                CustomerId = userId,
+                UserId = userId,
                 Label = dto.Label,
                 City = dto.City,
                 District = dto.District,
@@ -70,8 +81,8 @@ namespace Infrastructure.Services
                 IsDefault = !hasAnyAddress || dto.IsDefault,
             };
 
-            await _addressRepository.AddAsync(address);
-            await _unitOfWork.SaveChangesAsync();
+            await _addressRepository.AddAsync(address, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return OperationResult<AddressDto>.Success(
                 new AddressDto
@@ -86,27 +97,32 @@ namespace Infrastructure.Services
                     Lng = address.Lng,
                     IsDefault = address.IsDefault,
                     CreatedDate = address.CreatedDate,
-                }
+                },
+                "Create address successfully"
             );
         }
 
         public async Task<OperationResult<AddressDto>> UpdateAsync(
             Guid addressId,
             Guid userId,
-            UpdateAddressRequestDto dto
+            UpdateAddressRequestDto dto,
+            CancellationToken cancellationToken
         )
         {
-            var address = await _addressRepository.GetByIdAsync(addressId, userId);
+            var address = await _addressRepository.GetByIdAsync(addressId, cancellationToken);
 
-            if (address == null)
+            if (address == null || address.UserId != userId)
                 return OperationResult<AddressDto>.Failure("Address not found or access denied");
 
             if (dto.IsDefault && !address.IsDefault)
             {
                 var currentDefault = await _addressRepository.GetDefaultByUserIdAsync(userId);
 
-                currentDefault.IsDefault = false;
-                _addressRepository.Update(currentDefault);
+                if (currentDefault != null)
+                {
+                    currentDefault.IsDefault = false;
+                    _addressRepository.Update(currentDefault);
+                }
             }
 
             address.Label = dto.Label;
@@ -134,15 +150,20 @@ namespace Infrastructure.Services
                     Lng = address.Lng,
                     IsDefault = address.IsDefault,
                     CreatedDate = address.CreatedDate,
-                }
+                },
+                "Update address successfully"
             );
         }
 
-        public async Task<OperationResult> DeleteAsync(Guid addressId, Guid userId)
+        public async Task<OperationResult> DeleteAsync(
+            Guid addressId,
+            Guid userId,
+            CancellationToken cancellationToken
+        )
         {
-            var address = await _addressRepository.GetByIdAsync(addressId, userId);
+            var address = await _addressRepository.GetByIdAsync(addressId, cancellationToken);
 
-            if (address == null)
+            if (address == null || address.UserId != userId)
                 return OperationResult.Failure("Address not found or access denied");
 
             address.IsDeleted = true;
@@ -151,7 +172,7 @@ namespace Infrastructure.Services
             _addressRepository.Update(address);
             await _unitOfWork.SaveChangesAsync();
 
-            return OperationResult.Success("Delete success");
+            return OperationResult.Success("Delete address successfully");
         }
     }
 }

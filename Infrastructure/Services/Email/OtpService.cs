@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Application.Common;
 using Application.Common.Models.Email;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Email;
 using Domain.Entity;
 using Domain.Enum;
@@ -11,16 +12,19 @@ namespace Infrastructure.Services.Email
 {
     public class OtpService : IOtpService
     {
+        private readonly IUserOtpRepository _userOtpRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailQueue _emailQueue;
         private readonly ITemplateEngine _templateEngine;
 
         public OtpService(
+            IUserOtpRepository userOtpRepository,
             IUnitOfWork unitOfWork,
             IEmailQueue emailQueue,
             ITemplateEngine templateEngine
         )
         {
+            _userOtpRepository = userOtpRepository;
             _unitOfWork = unitOfWork;
             _emailQueue = emailQueue;
             _templateEngine = templateEngine;
@@ -28,7 +32,7 @@ namespace Infrastructure.Services.Email
 
         public async Task<OperationResult> SendOtpAsync(string target, EmailPurpose purpose)
         {
-            var oldOtps = await _unitOfWork.Otps.GetUnusedOtpsAsync(target);
+            var oldOtps = await _userOtpRepository.GetUnusedOtpsAsync(target);
 
             foreach (var otp in oldOtps)
                 otp.IsUsed = true;
@@ -44,7 +48,7 @@ namespace Infrastructure.Services.Email
                 IsVerified = false,
             };
 
-            await _unitOfWork.Otps.AddAsync(entity);
+            await _userOtpRepository.AddAsync(entity);
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -85,7 +89,7 @@ namespace Infrastructure.Services.Email
 
         public async Task<OperationResult> VerifyOtpAsync(string target, string otpCode)
         {
-            var otp = await _unitOfWork.Otps.GetLatestOtpAsync(target, otpCode);
+            var otp = await _userOtpRepository.GetLatestOtpAsync(target, otpCode);
 
             if (otp == null)
                 return OperationResult.Failure("Invalid OTP");

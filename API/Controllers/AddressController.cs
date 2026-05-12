@@ -18,21 +18,23 @@ namespace API.Controllers
             _addressService = addressService;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateAddressRequestDto dto)
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyAddress(CancellationToken cancellationToken)
         {
             var userId = GetUserId();
-
-            var result = await _addressService.CreateAsync(userId, dto);
+            var result = await _addressService.GetAddressByUserIdAsync(userId, cancellationToken);
 
             return Ok(result);
         }
 
-        [HttpGet("me")]
-        public async Task<IActionResult> GetMyAddress()
+        [HttpPost]
+        public async Task<IActionResult> Create(
+            [FromBody] CreateAddressRequestDto dto,
+            CancellationToken cancellationToken
+        )
         {
             var userId = GetUserId();
-            var result = await _addressService.GetAddressByUserIdAsync(userId);
+            var result = await _addressService.CreateAsync(userId, dto, cancellationToken);
 
             return Ok(result);
         }
@@ -40,21 +42,29 @@ namespace API.Controllers
         [HttpPut("{addressId}")]
         public async Task<IActionResult> Update(
             Guid addressId,
-            [FromBody] UpdateAddressRequestDto dto
+            [FromBody] UpdateAddressRequestDto dto,
+            CancellationToken cancellationToken
         )
         {
-            var result = await _addressService.UpdateAsync(addressId, GetUserId(), dto);
+            var userId = GetUserId();
+
+            var result = await _addressService.UpdateAsync(
+                addressId,
+                userId,
+                dto,
+                cancellationToken
+            );
 
             return Ok(result);
         }
 
         [HttpDelete("{addressId}")]
-        public async Task<IActionResult> Delete(Guid addressId)
+        public async Task<IActionResult> Delete(Guid addressId, CancellationToken cancellationToken)
         {
             var userId = GetUserId();
-            await _addressService.DeleteAsync(addressId, GetUserId());
+            var result = await _addressService.DeleteAsync(addressId, userId, cancellationToken);
 
-            return NoContent();
+            return Ok(result);
         }
 
         private Guid GetUserId()

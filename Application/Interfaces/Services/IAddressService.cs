@@ -5,13 +5,25 @@ namespace Application.Interfaces.Services
 {
     public interface IAddressService
     {
-        Task<OperationResult<IEnumerable<AddressDto>>> GetAddressByUserIdAsync(Guid userId);
-        Task<OperationResult<AddressDto>> CreateAsync(Guid userId, CreateAddressRequestDto dto);
+        Task<OperationResult<IEnumerable<AddressDto>>> GetAddressByUserIdAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult<AddressDto>> CreateAsync(
+            Guid userId,
+            CreateAddressRequestDto dto,
+            CancellationToken cancellationToken
+        );
         Task<OperationResult<AddressDto>> UpdateAsync(
             Guid addressId,
             Guid userId,
-            UpdateAddressRequestDto dto
+            UpdateAddressRequestDto dto,
+            CancellationToken cancellationToken
         );
-        Task<OperationResult> DeleteAsync(Guid addressId, Guid userId);
+        Task<OperationResult> DeleteAsync(
+            Guid addressId,
+            Guid userId,
+            CancellationToken cancellationToken
+        );
     }
 }

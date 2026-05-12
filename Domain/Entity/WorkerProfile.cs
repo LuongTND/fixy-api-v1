@@ -27,7 +27,6 @@ namespace Domain.Entity
 
         public User? User { get; set; }
         public User? ApprovedBy { get; set; }
-        public Address? Address { get; set; }
         public ICollection<WorkerCertificate> Certificates { get; set; } =
             new List<WorkerCertificate>();
         public ICollection<WorkerServiceArea> ServiceAreas { get; set; } =

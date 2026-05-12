@@ -5,10 +5,14 @@ namespace Application.Interfaces.Services
 {
     public interface IUserService
     {
-        Task<OperationResult<ProfileDto>> GetProfileAsync(Guid userId);
+        Task<OperationResult<ProfileDto>> GetProfileAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        );
         Task<OperationResult<ProfileDto>> UpdateProfileAsync(
             Guid userId,
-            UpdateProfileRequestDto dto
+            UpdateProfileRequestDto dto,
+            CancellationToken cancellationToken
         );
     }
 }
