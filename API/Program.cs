@@ -1,6 +1,8 @@
 using API.Middlewares;
 using Application;
 using DotNetEnv;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Infrastructure;
 using Microsoft.OpenApi.Models;
 
@@ -10,6 +12,13 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container
 builder.Services.AddControllers();
+
+// Add FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+builder.Services.AddValidatorsFromAssembly(typeof(Application.DependencyInjection).Assembly);
+
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

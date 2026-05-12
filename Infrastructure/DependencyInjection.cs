@@ -1,12 +1,16 @@
 using System.Text;
 using Application.Common.Interfaces;
 using Application.Interfaces;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
+using Application.Interfaces.Services.ServiceCategory;
+using Application.Service;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
+using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
@@ -87,6 +91,8 @@ namespace Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+            services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

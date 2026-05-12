@@ -10,21 +10,16 @@ namespace Infrastructure.Persistence
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile("appsettings.Development.json", optional: true)
+                .AddEnvironmentVariables()
                 .Build();
 
-            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var connectionString =
+                configuration.GetConnectionString("DefaultConnection");
 
-            if (!string.IsNullOrEmpty(connectionString))
-            {
-                optionsBuilder.UseSqlServer(connectionString);
-            }
-            else
-            {
-                optionsBuilder.UseInMemoryDatabase("FIXYDb");
-            }
+            var optionsBuilder =
+                new DbContextOptionsBuilder<AppDbContext>();
+
+            optionsBuilder.UseSqlServer(connectionString);
 
             return new AppDbContext(optionsBuilder.Options);
         }

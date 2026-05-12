@@ -12,7 +12,7 @@ namespace API.Controllers
             if (result == null) return NotFound();
             
             if (result.IsSuccess && result.Data != null)
-                return Ok(result.Data);
+                return Ok(result);
             
             if (result.IsSuccess && result.Data == null)
                 return NotFound();
