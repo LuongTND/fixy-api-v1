@@ -6,6 +6,9 @@ namespace Application.Interfaces.Repositories
     {
         Task<RefreshToken?> GetByTokenHashAsync(string tokenHash, CancellationToken ct = default);
 
-        Task<RefreshToken?> GetValidTokenWithUserAsync(string tokenHash, CancellationToken ct);
+        Task<RefreshToken?> GetValidTokenWithUserAsync(
+            string tokenHash,
+            CancellationToken ct = default
+        );
     }
 }

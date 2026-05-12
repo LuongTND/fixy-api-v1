@@ -10,6 +10,18 @@ namespace Infrastructure.Repositories
         public UserRepository(AppDbContext context)
             : base(context) { }
 
+        public async Task<User?> GetByIdWithRoleAndAddressAsync(
+            Guid id,
+            CancellationToken ct = default
+        )
+        {
+            return await _dbSet
+                .Include(x => x.Addresses)
+                .Include(x => x.UserRoles)
+                    .ThenInclude(x => x.Role)
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
+        }
+
         public async Task<User?> GetByTargetAsync(string target, CancellationToken ct = default)
         {
             return await _dbSet.FirstOrDefaultAsync(

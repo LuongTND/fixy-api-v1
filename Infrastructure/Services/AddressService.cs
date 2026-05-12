@@ -10,11 +10,18 @@ namespace Infrastructure.Services
     public class AddressService : IAddressService
     {
         private readonly IAddressRepository _addressRepository;
+        private readonly IUserRepository _userRepository;
+
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddressService(IAddressRepository addressRepository, IUnitOfWork unitOfWork)
+        public AddressService(
+            IAddressRepository addressRepository,
+            IUserRepository userRepository,
+            IUnitOfWork unitOfWork
+        )
         {
             _addressRepository = addressRepository;
+            _userRepository = userRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -53,6 +60,21 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
+            var user = await _userRepository.GetByIdWithRoleAndAddressAsync(
+                userId,
+                cancellationToken
+            );
+            if (user == null)
+            {
+                return OperationResult<AddressDto>.Failure("User not found");
+            }
+            var roles = user.UserRoles.Select(x => x.Role!.Name).ToList();
+            if (roles.Contains("WORKER") && user.Addresses.Count == 1)
+            {
+                return OperationResult<AddressDto>.Failure(
+                    "Workers are only allowed to have one address."
+                );
+            }
             var hasAnyAddress = await _addressRepository.ExistsAsync(
                 x => x.UserId == userId,
                 cancellationToken
