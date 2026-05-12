@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511082819_AddIconURLInCateTable")]
+    partial class AddIconURLInCateTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,6 +38,9 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
@@ -70,9 +76,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Ward")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -80,7 +83,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "IsDefault")
+                    b.HasIndex("CustomerId", "IsDefault")
                         .HasDatabaseName("idx_addr_default");
 
                     b.ToTable("Addresses");
@@ -955,7 +958,6 @@ namespace Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
                             CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3341),
-
                             IsActive = true,
                             Name = "STAFF"
                         });
@@ -1689,6 +1691,9 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AddressId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
@@ -1755,6 +1760,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AddressId");
 
                     b.HasIndex("ApprovedById");
 
@@ -1882,13 +1889,13 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.Address", b =>
                 {
-                    b.HasOne("Domain.Entity.User", "User")
+                    b.HasOne("Domain.Entity.CustomerProfile", "Customer")
                         .WithMany("Addresses")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("Domain.Entity.Booking", b =>
@@ -2382,6 +2389,10 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.WorkerProfile", b =>
                 {
+                    b.HasOne("Domain.Entity.Address", "Address")
+                        .WithMany()
+                        .HasForeignKey("AddressId");
+
                     b.HasOne("Domain.Entity.User", "ApprovedBy")
                         .WithMany()
                         .HasForeignKey("ApprovedById")
@@ -2392,6 +2403,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasForeignKey("Domain.Entity.WorkerProfile", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Address");
 
                     b.Navigation("ApprovedBy");
 
@@ -2462,6 +2475,8 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.CustomerProfile", b =>
                 {
+                    b.Navigation("Addresses");
+
                     b.Navigation("Bookings");
 
                     b.Navigation("Reviews");
@@ -2509,8 +2524,6 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.User", b =>
                 {
-                    b.Navigation("Addresses");
-
                     b.Navigation("CustomerProfile");
 
                     b.Navigation("NotificationSetting");

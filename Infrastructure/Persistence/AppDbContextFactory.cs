@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Persistence
 {
@@ -7,14 +8,12 @@ namespace Infrastructure.Persistence
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            var connectionString = Environment.GetEnvironmentVariable(
-                "ConnectionStrings__DefaultConnection"
-            );
+            var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddEnvironmentVariables()
+            .Build();
 
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new Exception("DB_CONNECTION environment variable not found");
-            }
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
 
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
