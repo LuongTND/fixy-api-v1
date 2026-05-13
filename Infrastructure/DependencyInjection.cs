@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
+using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Email;
 using Application.Interfaces.Services.ServiceCategory;
 using Application.Service;
@@ -22,6 +23,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Infrastructure.Services.Medias;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Infrastructure
 {
@@ -57,6 +59,8 @@ namespace Infrastructure
             
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
+            services.Configure<RedisSettings>(configuration.GetSection("RedisSettings"));
+            services.Configure<BookingDraftSettings>(configuration.GetSection("BookingDraftSettings"));
 
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
@@ -100,6 +104,7 @@ namespace Infrastructure
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IMediaService, MediaService>();
+            services.AddScoped<IBookingDraftService, BookingDraftService>();
 
             //Repository
             services.AddScoped<IUserRepository, UserRepository>();
@@ -111,13 +116,27 @@ namespace Infrastructure
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
-
+            services.AddScoped<IBookingRepository, BookingRepository>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Common Services
             services.AddScoped<IDateTimeProvider, SystemDateTimeProvider>();
+
+            var redisSettings = configuration.GetSection("RedisSettings").Get<RedisSettings>();
+            if (!string.IsNullOrWhiteSpace(redisSettings?.ConnectionString))
+            {
+                services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = redisSettings.ConnectionString;
+                    options.InstanceName = redisSettings.InstanceName;
+                });
+            }
+            else
+            {
+                services.AddDistributedMemoryCache();
+            }
 
             return services;
         }
