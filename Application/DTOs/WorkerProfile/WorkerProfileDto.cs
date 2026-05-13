@@ -1,4 +1,5 @@
-﻿using Domain.Enum;
+﻿using Application.DTOs.WorkerProfile.WorkerService;
+using Domain.Enum;
 
 namespace Application.DTOs.WorkerProfile
 {
@@ -11,5 +12,6 @@ namespace Application.DTOs.WorkerProfile
         public string? Phone { get; set; }
         public string? Email { get; set; }
         public string Status { get; set; } = string.Empty;
+        public List<WorkerServiceDto> Service { get; set; } = new List<WorkerServiceDto>();
     }
 }

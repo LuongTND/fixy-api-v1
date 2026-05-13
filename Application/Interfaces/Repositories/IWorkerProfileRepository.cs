@@ -1,13 +1,14 @@
 ﻿using Application.Common;
+using Application.DTOs.WorkerProfile;
 using Domain.Entity;
 
 namespace Application.Interfaces.Repositories
 {
     public interface IWorkerProfileRepository : IRepository<WorkerProfile>
     {
-        Task<(List<WorkerProfile> Items, int TotalCount)> GetPagedWorkerRegisterRequestAsync(
-            PagedQuery query,
-            CancellationToken cancellationToken = default
+        Task<(List<WorkerProfile>, int)> GetWorkerProfilesAsync(
+            WorkerProfileQuery query,
+            CancellationToken cancellationToken
         );
         Task<WorkerProfile?> GetWorkerProfileDetailByIdAsync(
             Guid id,
