@@ -3,7 +3,7 @@ namespace Domain.Enum
     public enum MediaCategory
     {
         Avatar,
-        Identificate,
+        Identification,
         Portfolio,
         Request,
         Completion,

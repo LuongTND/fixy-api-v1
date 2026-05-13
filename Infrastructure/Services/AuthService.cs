@@ -7,6 +7,7 @@ using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Auth;
 using Application.Settings;
 using Domain.Entity;
+using Domain.Enum;
 using Google.Apis.Auth;
 using Infrastructure.Helpers;
 using Microsoft.Extensions.Options;
@@ -89,7 +90,10 @@ namespace Infrastructure.Services.Auth
             }
             await _userRepository.AddAsync(user, ct);
 
-            var role = await _roleRepository.GetCustomerRoleAsync(ct);
+            var role =
+                request.RoleRegister == RoleRegister.Worker
+                    ? await _roleRepository.GetWorkerRoleAsync(ct)
+                    : await _roleRepository.GetCustomerRoleAsync(ct);
 
             await _userRoleRepository.AddAsync(new UserRole { User = user, RoleId = role.Id }, ct);
 

@@ -33,7 +33,7 @@ namespace Infrastructure.Repositories
             return await _dbSet
                 .Where(x =>
                     x.OwnerType == MediaOwnerType.User
-                    && x.Category == MediaCategory.Identificate
+                    && x.Category == MediaCategory.Identification
                     && x.OwnerId == id
                 )
                 .ToListAsync(cancellationToken);

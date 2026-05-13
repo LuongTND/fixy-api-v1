@@ -9,6 +9,5 @@ namespace Application.DTOs.Media
         public string OwnerType { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string FileUrl { get; set; } = string.Empty;
-        public string FilePublicId { get; set; } = string.Empty;
     }
 }

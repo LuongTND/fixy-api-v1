@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Application.Common;
-using Application.DTOs.Auth;
+﻿using Application.Common;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
@@ -9,49 +7,41 @@ using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
+using Application.Interfaces.Services.Media;
 using Domain.Entity;
 using Domain.Enum;
-using Infrastructure.Persistence.Repositories;
 
 namespace Infrastructure.Services
 {
     public class WorkerProfileService : IWorkerProfileService
     {
         private readonly IUserRepository _userRepository;
-        private readonly IRoleRepository _roleRepository;
-        private readonly IUserRoleRepository _userRoleRepository;
-        private readonly IUserOtpRepository _userOtpRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IWorkerCertificateRepository _workerCertificateRepository;
         private readonly IMediaRepository _mediaRepository;
         private readonly IUnitOfWork _unitOfWork;
 
-        private readonly IPasswordHasher _passwordHasher;
+        private readonly IBlobService _blobService;
 
         public WorkerProfileService(
             IUserRepository userRepository,
-            IRoleRepository roleRepository,
-            IUserRoleRepository userRoleRepository,
-            IUserOtpRepository userOtpRepository,
             IWorkerProfileRepository workerProfileRepository,
             IWorkerServiceRepository workerServiceRepository,
             IWorkerCertificateRepository workerCertificateRepository,
             IMediaRepository mediaRepository,
             IUnitOfWork unitOfWork,
-            IPasswordHasher passwordHasher
+            IBlobService blobService
         )
         {
             _userRepository = userRepository;
-            _roleRepository = roleRepository;
-            _userRoleRepository = userRoleRepository;
-            _userOtpRepository = userOtpRepository;
+
             _workerProfileRepository = workerProfileRepository;
             _workerServiceRepository = workerServiceRepository;
             _workerCertificateRepository = workerCertificateRepository;
             _mediaRepository = mediaRepository;
             _unitOfWork = unitOfWork;
-            _passwordHasher = passwordHasher;
+            _blobService = blobService;
         }
 
         public async Task<
@@ -152,7 +142,6 @@ namespace Infrastructure.Services
                                 {
                                     Id = x.Id,
                                     OwnerId = x.OwnerId,
-                                    FilePublicId = x.FilePublicId,
                                     FileUrl = x.FileUrl,
                                 })
                                 .ToList(),
@@ -164,7 +153,6 @@ namespace Infrastructure.Services
                             Id = x.Id,
                             OwnerId = x.OwnerId,
                             FileUrl = x.FileUrl,
-                            FilePublicId = x.FilePublicId,
                         })
                         .ToList(),
                 },
@@ -177,129 +165,137 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var otp = await _userOtpRepository.GetVerifiedOtpAsync(dto.Target, cancellationToken);
-
-            if (otp == null)
-                return OperationResult.Failure("OTP is not verified");
-            var existedUser = await _userRepository.GetByTargetAsync(dto.Target, cancellationToken);
-
-            if (existedUser != null)
-                return OperationResult.Failure("Account already exists");
             if (dto.WorkerService.Count is < 1 or > 5)
             {
                 return OperationResult.Failure(
                     "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
                 );
             }
+
             if (dto.IdentificationUploads.Count != 2)
             {
-                return OperationResult.Failure("Workers need to update front and back of ID card");
+                return OperationResult.Failure("Workers need to upload front and back of ID card");
             }
+
             if (dto.WorkerService.Count(x => x.IsPrimary) != 1)
             {
                 return OperationResult.Failure("Worker must have exactly one primary service");
             }
-            //Create Base User
-            var user = new User
+
+            var user = await _userRepository.GetByTargetAsync(dto.Target);
+
+            if (user == null)
             {
-                FullName = dto.FullName,
-                PasswordHash = _passwordHasher.HashPassword(dto.Password),
-                CitizenIdNumber = dto.CitizenIdNumber,
-                CitizenIdIssueDate = dto.CitizenIdIssueDate,
-                CitizenIdIssuePlace = dto.CitizenIdIssuePlace,
-            };
-            if (IsPhone(dto.Target))
-            {
-                user.Phone = dto.Target;
-                user.IsPhoneVerified = true;
-            }
-            else if (IsEmail(dto.Target))
-            {
-                user.Email = dto.Target;
-                user.IsEmailVerified = true;
-            }
-            else
-            {
-                return OperationResult.Failure("Invalid email or phone number");
+                return OperationResult.Failure("User not found");
             }
 
-            await _userRepository.AddAsync(user, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var uploadedUrls = new List<string>();
 
-            foreach (var identificateImg in dto.IdentificationUploads)
+            try
             {
-                var identificateImage = new Media
+                // Create Worker Profile
+
+                var workerProfile = new WorkerProfile
                 {
-                    OwnerId = user.Id,
-                    UploadedById = user.Id,
-                    OwnerType = MediaOwnerType.User,
-                    Category = MediaCategory.Identificate,
-                    FileUrl = identificateImg.FileUrl,
-                    FilePublicId = identificateImg.FilePublicId,
+                    UserId = user.Id,
+                    Bio = dto.Bio,
+                    ExperienceYears = dto.ExperienceYears,
+                    MaxDistanceKm = dto.MaxDistanceKm,
+                    Status = WorkerStatus.Pending,
+                    Badge = WorkerBadge.New,
+                    RatingAvg = 0,
+                    TotalOrders = 0,
+                    IsOnline = false,
                 };
-                await _mediaRepository.AddAsync(identificateImage, cancellationToken);
-            }
-            var role = await _roleRepository.GetWorkerRoleAsync(cancellationToken);
 
-            await _userRoleRepository.AddAsync(
-                new UserRole { User = user, RoleId = role.Id },
-                cancellationToken
-            );
-            //Create Worker Profile
-            var workerProfile = new WorkerProfile
-            {
-                UserId = user.Id,
-                Bio = dto.Bio,
-                ExperienceYears = dto.ExperienceYears,
-                MaxDistanceKm = dto.MaxDistanceKm,
-                Status = WorkerStatus.Pending,
-                Badge = WorkerBadge.New,
-                RatingAvg = 0,
-                TotalOrders = 0,
-                IsOnline = false,
-            };
-            await _workerProfileRepository.AddAsync(workerProfile, cancellationToken);
-            //Create Worker Service
+                await _workerProfileRepository.AddAsync(workerProfile, cancellationToken);
 
-            foreach (var service in dto.WorkerService)
-            {
-                var workerService = new WorkerService
-                {
-                    WorkerProfileId = workerProfile.Id,
-                    CategoryId = service.CategoryId,
-                    BasePrice = service.BasePrice,
-                    IsPrimary = service.IsPrimary,
-                };
-                await _workerServiceRepository.AddAsync(workerService, cancellationToken);
-            }
+                // Create Worker Services
 
-            //Create Worker Certificate
-            foreach (var certificate in dto.CerificateUploads)
-            {
-                var workerCertificate = new WorkerCertificate
+                foreach (var service in dto.WorkerService)
                 {
-                    WorkerProfileId = workerProfile.Id,
-                    Title = certificate.Title,
-                    IssuedBy = certificate.IssuedBy,
-                    IssuedAt = certificate.IssuedAt,
-                };
-                await _workerCertificateRepository.AddAsync(workerCertificate, cancellationToken);
-                foreach (var media in certificate.MediaUploads)
-                {
-                    var mediaUp = new Media
+                    var workerService = new WorkerService
                     {
-                        OwnerId = workerCertificate.Id,
-                        UploadedById = user.Id,
-                        OwnerType = MediaOwnerType.Certificate,
-                        Category = MediaCategory.Certificate,
-                        FileUrl = media.FileUrl,
-                        FilePublicId = media.FilePublicId,
+                        WorkerProfileId = workerProfile.Id,
+                        CategoryId = service.CategoryId,
+                        BasePrice = service.BasePrice,
+                        IsPrimary = service.IsPrimary,
                     };
-                    await _mediaRepository.AddAsync(mediaUp, cancellationToken);
+
+                    await _workerServiceRepository.AddAsync(workerService, cancellationToken);
                 }
+
+                // Upload Identification Images
+
+                foreach (var upload in dto.IdentificationUploads)
+                {
+                    var imageUrl = await _blobService.UploadImageAsync(upload);
+
+                    uploadedUrls.Add(imageUrl);
+
+                    var media = new Media
+                    {
+                        OwnerId = user.Id,
+                        UploadedById = user.Id,
+                        OwnerType = MediaOwnerType.User,
+                        Category = MediaCategory.Identification,
+                        FileUrl = imageUrl,
+                    };
+
+                    await _mediaRepository.AddAsync(media, cancellationToken);
+                }
+
+                // Create Certificates
+
+                foreach (var certificate in dto.CertificateUploads)
+                {
+                    var workerCertificate = new WorkerCertificate
+                    {
+                        WorkerProfileId = workerProfile.Id,
+                        Title = certificate.Title,
+                        IssuedBy = certificate.IssuedBy,
+                        IssuedAt = certificate.IssuedAt,
+                    };
+
+                    await _workerCertificateRepository.AddAsync(
+                        workerCertificate,
+                        cancellationToken
+                    );
+
+                    // Upload Certificate Images
+
+                    foreach (var upload in certificate.MediaUploads)
+                    {
+                        var imageUrl = await _blobService.UploadImageAsync(upload);
+
+                        uploadedUrls.Add(imageUrl);
+
+                        var media = new Media
+                        {
+                            OwnerId = workerCertificate.Id,
+                            UploadedById = user.Id,
+                            OwnerType = MediaOwnerType.Certificate,
+                            Category = MediaCategory.Certificate,
+                            FileUrl = imageUrl,
+                        };
+
+                        await _mediaRepository.AddAsync(media, cancellationToken);
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult.Success("Worker register successfully");
             }
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return OperationResult.Success("Worker register successfully");
+            catch
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _blobService.DeleteImageAsync(url);
+                }
+
+                throw;
+            }
         }
 
         public async Task<OperationResult> ApproveWorkerRegisterRequest(
@@ -349,16 +345,6 @@ namespace Infrastructure.Services
             _workerProfileRepository.Update(workerRegisterRequest);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return OperationResult.Success("Worker register was approved successfully");
-        }
-
-        private bool IsEmail(string target)
-        {
-            return Regex.IsMatch(target, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
-        }
-
-        private bool IsPhone(string target)
-        {
-            return Regex.IsMatch(target, @"^\d{9,11}$");
         }
     }
 }

@@ -1,15 +1,13 @@
 ﻿using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.DTOs.WorkerProfile.WorkerService;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.DTOs.WorkerProfile
 {
     public class WorkerRegisterRequestDto
     {
-        public string Target { get; set; } = default!;
-        public string FullName { get; set; } = default!;
-        public string Password { get; set; } = default!;
-
+        public string Target { get; set; } = string.Empty!;
         public string? Bio { get; set; }
         public int ExperienceYears { get; set; }
         public int MaxDistanceKm { get; set; }
@@ -20,12 +18,11 @@ namespace Application.DTOs.WorkerProfile
         public DateTime CitizenIdIssueDate { get; set; }
 
         public string CitizenIdIssuePlace { get; set; } = default!;
-        public ICollection<UploadMediaRequestDto> IdentificationUploads { get; set; } =
-            new List<UploadMediaRequestDto>();
+        public List<IFormFile> IdentificationUploads { get; set; } = new List<IFormFile>();
 
-        public ICollection<WorkerServiceRegisterRequestDto> WorkerService { get; set; } =
+        public List<WorkerServiceRegisterRequestDto> WorkerService { get; set; } =
             new List<WorkerServiceRegisterRequestDto>();
-        public ICollection<WorkerCertificateUploadRequestDto> CerificateUploads { get; set; } =
+        public List<WorkerCertificateUploadRequestDto> CertificateUploads { get; set; } =
             new List<WorkerCertificateUploadRequestDto>();
     }
 }

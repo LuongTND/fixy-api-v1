@@ -12,7 +12,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.OwnerType).HasConversion<string>();
             builder.Property(x => x.Category).HasConversion<string>();
             builder.Property(x => x.FileUrl).IsRequired();
-            builder.Property(x => x.FilePublicId).IsRequired();
+
             builder
                 .HasIndex(x => new
                 {

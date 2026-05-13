@@ -20,7 +20,7 @@ namespace API.Controllers
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(
-            [FromBody] WorkerRegisterRequestDto dto,
+            [FromForm] WorkerRegisterRequestDto dto,
             CancellationToken cancellationToken
         )
         {

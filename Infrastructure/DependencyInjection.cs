@@ -1,5 +1,6 @@
 using System.Text;
 using Application.Common.Interfaces;
+using Application.Common.Settings;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -57,7 +58,7 @@ namespace Infrastructure
 
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
-
+            services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
             services.AddHostedService<EmailBackgroundService>();
@@ -101,7 +102,7 @@ namespace Infrastructure
             services.AddScoped<IWorkerProfileService, WorkerProfileService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IMediaService, MediaService>();
-
+            services.AddScoped<IBlobService, BlobService>();
             //Repository
             services.AddScoped<IMediaRepository, MediaRepository>();
 

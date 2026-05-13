@@ -22,10 +22,10 @@ namespace Application.DTOs.WorkerProfile
         public int ExperienceYears { get; set; }
         public int MaxDistanceKm { get; set; }
         public WorkerStatus Status { get; set; }
-        public ICollection<WorkerCertificateDto> Certificates { get; set; } =
+        public List<WorkerCertificateDto> Certificates { get; set; } =
             new List<WorkerCertificateDto>();
-        public ICollection<WorkerServiceDto> Services { get; set; } = new List<WorkerServiceDto>();
+        public List<WorkerServiceDto> Services { get; set; } = new List<WorkerServiceDto>();
 
-        public ICollection<MediaDto> IdentificateImages { get; set; } = new List<MediaDto>();
+        public List<MediaDto> IdentificateImages { get; set; } = new List<MediaDto>();
     }
 }
