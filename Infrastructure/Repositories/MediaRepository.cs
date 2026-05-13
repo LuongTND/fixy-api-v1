@@ -1,9 +1,8 @@
-﻿using Application.Interfaces.Repositories;
+using Application.Interfaces.Repositories;
 using Domain.Entity;
 using Domain.Enum;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Org.BouncyCastle.Ocsp;
 
 namespace Infrastructure.Repositories
 {

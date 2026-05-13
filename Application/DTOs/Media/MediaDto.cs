@@ -1,4 +1,4 @@
-﻿using Domain.Enum;
+using Domain.Enum;
 
 namespace Application.DTOs.Media
 {

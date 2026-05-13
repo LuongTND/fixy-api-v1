@@ -5,6 +5,9 @@ using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
+using Application.Interfaces.Services.Media;
+using Application.Interfaces.Services.ServiceCategory;
+using Application.Service;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
@@ -13,6 +16,7 @@ using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
+using Infrastructure.Services.Medias;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -50,6 +54,10 @@ namespace Infrastructure
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
+
+            // Cloudinary Settings
+            services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
+
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
             services.AddHostedService<EmailBackgroundService>();
@@ -91,6 +99,9 @@ namespace Infrastructure
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IWorkerProfileService, WorkerProfileService>();
+            services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+            services.AddScoped<IMediaService, MediaService>();
+
             //Repository
             services.AddScoped<IMediaRepository, MediaRepository>();
 
@@ -103,6 +114,8 @@ namespace Infrastructure
             services.AddScoped<IWorkerProfileRepository, WorkerProfileRepository>();
             services.AddScoped<IWorkerCertificateRepository, WorkerCertificateRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
+            services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+            services.AddScoped<IMediaRepository, MediaRepository>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
