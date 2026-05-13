@@ -30,7 +30,7 @@ public class AuthController : ApiController
     {
         var result = await _otpService.SendOtpAsync(request.Target, request.Purpose);
 
-        return Ok(result);
+        return HandleResult(result);
     }
 
     [HttpPost("otp/verify")]
@@ -38,7 +38,7 @@ public class AuthController : ApiController
     {
         var result = await _otpService.VerifyOtpAsync(request.Target, request.OtpCode);
 
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -52,7 +52,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.RegisterAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -66,7 +66,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.LoginAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -80,7 +80,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -94,7 +94,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.ChangePasswordAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -107,6 +107,6 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.ResetPasswordAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 }

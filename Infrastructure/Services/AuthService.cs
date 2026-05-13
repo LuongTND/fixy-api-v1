@@ -83,7 +83,10 @@ namespace Infrastructure.Services.Auth
                 user.Email = request.Target;
                 user.IsEmailVerified = true;
             }
-
+            else
+            {
+                return OperationResult<AuthResponseDto>.Failure("Invalid email or phone number");
+            }
             await _userRepository.AddAsync(user, ct);
 
             var role = await _roleRepository.GetCustomerRoleAsync(ct);

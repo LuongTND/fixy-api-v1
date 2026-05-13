@@ -25,7 +25,7 @@ namespace API.Controllers
 
             var result = await _userService.GetProfileAsync(userId, cancellationToken);
 
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpPut]
@@ -38,7 +38,7 @@ namespace API.Controllers
 
             var result = await _userService.UpdateProfileAsync(userId, dto, cancellationToken);
 
-            return Ok(result);
+            return HandleResult(result);
         }
 
         private Guid GetUserId()

@@ -12,12 +12,27 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.OwnerType).HasConversion<string>();
             builder.Property(x => x.Category).HasConversion<string>();
             builder.Property(x => x.FileUrl).IsRequired();
-            builder.Property(x => x.MimeType).IsRequired();
-            builder.HasIndex(x => new { x.OwnerType, x.OwnerId, x.Category }).HasDatabaseName("idx_media_owner");
-            builder.HasIndex(x => new { x.OwnerType, x.OwnerId, x.SortOrder }).HasDatabaseName("idx_media_sort");
+            builder.Property(x => x.FilePublicId).IsRequired();
+            builder
+                .HasIndex(x => new
+                {
+                    x.OwnerType,
+                    x.OwnerId,
+                    x.Category,
+                })
+                .HasDatabaseName("idx_media_owner");
+            builder
+                .HasIndex(x => new
+                {
+                    x.OwnerType,
+                    x.OwnerId,
+                    x.SortOrder,
+                })
+                .HasDatabaseName("idx_media_sort");
             builder.HasIndex(x => x.UploadedById).HasDatabaseName("idx_media_uploader");
 
-            builder.HasOne(x => x.UploadedBy)
+            builder
+                .HasOne(x => x.UploadedBy)
                 .WithMany()
                 .HasForeignKey(x => x.UploadedById)
                 .OnDelete(DeleteBehavior.Restrict);

@@ -90,13 +90,19 @@ namespace Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IWorkerProfileService, WorkerProfileService>();
             //Repository
+            services.AddScoped<IMediaRepository, MediaRepository>();
+
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserOtpRepository, UserOtpRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IAddressRepository, AddressRepository>();
+            services.AddScoped<IWorkerProfileRepository, WorkerProfileRepository>();
+            services.AddScoped<IWorkerCertificateRepository, WorkerCertificateRepository>();
+            services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
