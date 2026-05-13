@@ -6,7 +6,6 @@ using Application.DTOs.WorkerProfile.WorkerService;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Media;
 using Domain.Entity;
 using Domain.Enum;

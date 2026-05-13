@@ -18,6 +18,7 @@ namespace API.Controllers
             _workerProfileService = workerProfileService;
         }
 
+        [Authorize(Roles = "WORKER")]
         [HttpPost("register")]
         public async Task<IActionResult> Register(
             [FromForm] WorkerRegisterRequestDto dto,
