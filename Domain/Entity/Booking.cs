@@ -29,7 +29,7 @@ namespace Domain.Entity
         public DateTime? DeletedDate { get; set; }
         public string? DeletedBy { get; set; }
 
-        public CustomerProfile? Customer { get; set; }
+        public User? Customer { get; set; }
         public WorkerProfile? Worker { get; set; }
         public ServiceCategory? Category { get; set; }
         public User? CancelledBy { get; set; }

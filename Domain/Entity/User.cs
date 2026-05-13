@@ -45,5 +45,6 @@ namespace Domain.Entity
         public Wallet? Wallet { get; set; }
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public NotificationSetting? NotificationSetting { get; set; }
+        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
 }

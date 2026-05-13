@@ -5,6 +5,7 @@ using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
+using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Email;
 using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.ServiceCategory;
@@ -23,6 +24,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Infrastructure.Services.Medias;
 
 namespace Infrastructure
 {
@@ -58,7 +60,7 @@ namespace Infrastructure
 
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
-            services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
+
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
             services.AddHostedService<EmailBackgroundService>();
@@ -102,9 +104,6 @@ namespace Infrastructure
             services.AddScoped<IWorkerProfileService, WorkerProfileService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IMediaService, MediaService>();
-            services.AddScoped<IBlobService, BlobService>();
-            //Repository
-            services.AddScoped<IMediaRepository, MediaRepository>();
 
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserOtpRepository, UserOtpRepository>();
@@ -118,12 +117,27 @@ namespace Infrastructure
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
+            services.AddScoped<IBookingRepository, BookingRepository>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Common Services
             services.AddScoped<IDateTimeProvider, SystemDateTimeProvider>();
+
+            var redisSettings = configuration.GetSection("RedisSettings").Get<RedisSettings>();
+            if (!string.IsNullOrWhiteSpace(redisSettings?.ConnectionString))
+            {
+                services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = redisSettings.ConnectionString;
+                    options.InstanceName = redisSettings.InstanceName;
+                });
+            }
+            else
+            {
+                services.AddDistributedMemoryCache();
+            }
 
             return services;
         }
