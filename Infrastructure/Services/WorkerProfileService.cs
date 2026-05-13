@@ -125,7 +125,7 @@ namespace Infrastructure.Services
                     Bio = workerProfile.Bio,
                     ExperienceYears = workerProfile.ExperienceYears,
                     MaxDistanceKm = workerProfile.MaxDistanceKm,
-                    Status = workerProfile.Status.ToString(),
+                    Status = workerProfile.Status,
                     CitizenIdNumber = workerProfile.User.CitizenIdNumber,
                     CitizenIdIssuePlace = workerProfile.User.CitizenIdIssuePlace,
                     CitizenIdIssueDate = workerProfile.User.CitizenIdIssueDate,
