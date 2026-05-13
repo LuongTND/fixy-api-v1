@@ -1,4 +1,6 @@
-﻿namespace Application.DTOs.Auth
+﻿using Domain.Enum;
+
+namespace Application.DTOs.Auth
 {
     public class RegisterRequestDto
     {
@@ -7,5 +9,6 @@
         public string Password { get; set; } = default!;
 
         public string Target { get; set; } = default!;
+        public RoleRegister RoleRegister { get; set; }
     }
 }

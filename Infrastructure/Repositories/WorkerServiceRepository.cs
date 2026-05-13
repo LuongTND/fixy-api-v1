@@ -7,9 +7,13 @@ namespace Infrastructure.Repositories
 {
     public class WorkerServiceRepository : Repository<WorkerService>, IWorkerServiceRepository
     {
-        public WorkerServiceRepository(AppDbContext context) : base(context) { }
+        public WorkerServiceRepository(AppDbContext context)
+            : base(context) { }
 
-        public async Task<(long? MinPrice, long? MaxPrice)> GetPriceRangeAsync(Guid categoryId,CancellationToken cancellationToken = default)
+        public async Task<(long? MinPrice, long? MaxPrice)> GetPriceRangeAsync(
+            Guid categoryId,
+            CancellationToken cancellationToken = default
+        )
         {
             var query = _dbSet
                 .AsNoTracking()

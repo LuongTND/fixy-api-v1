@@ -1,10 +1,12 @@
 using System.Text;
 using Application.Common.Interfaces;
+using Application.Common.Settings;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
+using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.ServiceCategory;
 using Application.Service;
 using Application.Settings;
@@ -15,13 +17,12 @@ using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
-using Application.Interfaces.Services.Media;
+using Infrastructure.Services.Medias;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Infrastructure.Services.Medias;
 
 namespace Infrastructure
 {
@@ -54,10 +55,10 @@ namespace Infrastructure
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
-            
+
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
-
+            services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
             services.AddHostedService<EmailBackgroundService>();
@@ -98,20 +99,25 @@ namespace Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IWorkerProfileService, WorkerProfileService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IMediaService, MediaService>();
-
+            services.AddScoped<IBlobService, BlobService>();
             //Repository
+            services.AddScoped<IMediaRepository, MediaRepository>();
+
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserOtpRepository, UserOtpRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRoleRepository, UserRoleRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IAddressRepository, AddressRepository>();
+            services.AddScoped<IWorkerProfileRepository, WorkerProfileRepository>();
+            services.AddScoped<IWorkerCertificateRepository, WorkerCertificateRepository>();
+            services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
-
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
