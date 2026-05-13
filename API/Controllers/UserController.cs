@@ -40,17 +40,5 @@ namespace API.Controllers
 
             return HandleResult(result);
         }
-
-        private Guid GetUserId()
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            return Guid.Parse(userId);
-        }
     }
 }

@@ -9,11 +9,12 @@ namespace Application.Interfaces.Services
             WorkerRegisterRequestDto dto,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerRegisterRequest(
-            PagedQuery query,
+        Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
+            WorkerProfileQuery query,
+            string? role,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetailRequest(
+        Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetail(
             Guid id,
             CancellationToken cancellationToken
         );

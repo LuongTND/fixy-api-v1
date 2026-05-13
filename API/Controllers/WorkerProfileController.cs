@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [Route("api/workerprofile")]
+    [Route("api/worker-profiles")]
     [ApiController]
     public class WorkerProfileController : ApiController
     {
@@ -30,29 +30,26 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
-        [Authorize(Roles = "ADMIN")]
-        [HttpGet("requests")]
-        public async Task<IActionResult> GetPaged(
-            [FromQuery] PagedQuery query,
+        [HttpGet]
+        public async Task<IActionResult> GetAdminProfiles(
+            [FromQuery] WorkerProfileQuery query,
             CancellationToken cancellationToken
         )
         {
-            var result = await _workerProfileService.GetPagedWorkerRegisterRequest(
+            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var result = await _workerProfileService.GetPagedWorkerProfiles(
                 query,
+                userRole,
                 cancellationToken
             );
 
             return HandleResult(result);
         }
 
-        [Authorize(Roles = "ADMIN")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDetail(Guid id, CancellationToken cancellationToken)
         {
-            var result = await _workerProfileService.GetWorkerProfileDetailRequest(
-                id,
-                cancellationToken
-            );
+            var result = await _workerProfileService.GetWorkerProfileDetail(id, cancellationToken);
 
             return HandleResult(result);
         }
@@ -74,32 +71,20 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "ADMIN")]
-        [HttpPut("{id}/reject")]
+        [HttpPut("{id:guid}/reject")]
         public async Task<IActionResult> Reject(
             Guid id,
-            [FromBody] string reason,
+            [FromBody] RejectWorkerProfileRequestDto dto,
             CancellationToken cancellationToken
         )
         {
             var result = await _workerProfileService.RejectWorkerRegisterRequest(
                 id,
-                reason,
+                dto.Reason,
                 cancellationToken
             );
 
             return HandleResult(result);
-        }
-
-        private Guid GetUserId()
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            return Guid.Parse(userId);
         }
     }
 }

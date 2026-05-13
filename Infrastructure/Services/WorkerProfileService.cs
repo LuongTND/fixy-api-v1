@@ -43,15 +43,20 @@ namespace Infrastructure.Services
             _blobService = blobService;
         }
 
-        public async Task<
-            OperationResult<PagedResponse<WorkerProfileDto>>
-        > GetPagedWorkerRegisterRequest(PagedQuery query, CancellationToken cancellationToken)
+        public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
+            WorkerProfileQuery query,
+            string? role,
+            CancellationToken cancellationToken
+        )
         {
-            var (items, totalCount) =
-                await _workerProfileRepository.GetPagedWorkerRegisterRequestAsync(
-                    query,
-                    cancellationToken
-                );
+            if (role != "ADMIN")
+            {
+                query.Status = WorkerStatus.Approved;
+            }
+            var (items, totalCount) = await _workerProfileRepository.GetWorkerProfilesAsync(
+                query,
+                cancellationToken
+            );
             var dtoItems = items
                 .Select(i => new WorkerProfileDto
                 {
@@ -62,6 +67,16 @@ namespace Infrastructure.Services
                     FullName = i.User!.FullName,
                     Gender = i.User?.Gender,
                     Status = i.Status.ToString(),
+                    Service = i
+                        .Services.Select(s => new WorkerServiceDto
+                        {
+                            Id = s.Id,
+                            CategoryId = s.CategoryId,
+                            CategoryName = s.Category?.Name,
+                            BasePrice = s.BasePrice,
+                            IsPrimary = s.IsPrimary,
+                        })
+                        .ToList(),
                 })
                 .ToList();
             return OperationResult<PagedResponse<WorkerProfileDto>>.Success(
@@ -76,7 +91,7 @@ namespace Infrastructure.Services
             );
         }
 
-        public async Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetailRequest(
+        public async Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetail(
             Guid id,
             CancellationToken cancellationToken
         )
@@ -123,6 +138,7 @@ namespace Infrastructure.Services
                         {
                             Id = s.Id,
                             CategoryId = s.CategoryId,
+                            CategoryName = s.Category?.Name,
                             BasePrice = s.BasePrice,
                             IsPrimary = s.IsPrimary,
                         })
