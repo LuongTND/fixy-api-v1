@@ -104,6 +104,7 @@ namespace Infrastructure
             services.AddScoped<IWorkerProfileService, WorkerProfileService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IMediaService, MediaService>();
+            services.AddScoped<IBlobService, BlobService>();
 
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserOtpRepository, UserOtpRepository>();
