@@ -116,6 +116,7 @@ namespace Infrastructure
             services.AddScoped<IWorkerCertificateRepository, WorkerCertificateRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+            services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
 
             // Unit Of Work
