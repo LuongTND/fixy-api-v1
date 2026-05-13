@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513092546_UpdateWalletAndWalletTransactionEntity")]
+    partial class UpdateWalletAndWalletTransactionEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -921,25 +924,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-
-                            CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3337),
+                            CreatedDate = new DateTime(2026, 5, 13, 9, 25, 44, 810, DateTimeKind.Utc).AddTicks(910),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-
-                            CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3339),
+                            CreatedDate = new DateTime(2026, 5, 13, 9, 25, 44, 810, DateTimeKind.Utc).AddTicks(913),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-
-                            CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3341),
-
+                            CreatedDate = new DateTime(2026, 5, 13, 9, 25, 44, 810, DateTimeKind.Utc).AddTicks(916),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1907,7 +1906,7 @@ namespace Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entity.User", "Customer")
+                    b.HasOne("Domain.Entity.CustomerProfile", "Customer")
                         .WithMany("Bookings")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2458,6 +2457,8 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.CustomerProfile", b =>
                 {
+                    b.Navigation("Bookings");
+
                     b.Navigation("Reviews");
                 });
 
@@ -2504,8 +2505,6 @@ namespace Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Domain.Entity.User", b =>
                 {
                     b.Navigation("Addresses");
-
-                    b.Navigation("Bookings");
 
                     b.Navigation("CustomerProfile");
 
