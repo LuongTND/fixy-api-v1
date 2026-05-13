@@ -109,7 +109,7 @@ namespace Infrastructure.Services.Medias
                     {
                         Id = media.Id,
                         FileUrl = media.FileUrl,
-                        Category = media.Category,
+                        Category = media.Category.ToString(),
                     }
                 );
             }

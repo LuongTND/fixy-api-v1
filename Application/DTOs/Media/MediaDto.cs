@@ -6,8 +6,8 @@ namespace Application.DTOs.Media
     {
         public Guid Id { get; set; }
         public Guid OwnerId { get; set; }
-        public MediaOwnerType OwnerType { get; set; }
-        public MediaCategory Category { get; set; }
+        public string OwnerType { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public string FileUrl { get; set; } = string.Empty;
         public string FilePublicId { get; set; } = string.Empty;
     }

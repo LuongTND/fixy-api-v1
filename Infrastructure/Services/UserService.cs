@@ -72,7 +72,7 @@ namespace Infrastructure.Services
             user.FullName = dto.FullName;
             user.Phone = dto.Phone;
             user.DateOfBirth = dto.DateOfBirth;
-            user.Gender = dto.Gender;
+            user.Gender = dto.Gender.ToString();
 
             _userRepository.Update(user);
 

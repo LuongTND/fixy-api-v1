@@ -72,7 +72,7 @@ namespace Infrastructure.Services
                     DateOfBirth = i.User?.DateOfBirth,
                     FullName = i.User!.FullName,
                     Gender = i.User?.Gender,
-                    Status = i.Status,
+                    Status = i.Status.ToString(),
                 })
                 .ToList();
             return OperationResult<PagedResponse<WorkerProfileDto>>.Success(
