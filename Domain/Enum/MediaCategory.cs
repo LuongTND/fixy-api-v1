@@ -3,13 +3,12 @@ namespace Domain.Enum
     public enum MediaCategory
     {
         Avatar,
-        CccdFront,
-        CccdBack,
+        Identification,
         Portfolio,
         Request,
         Completion,
         Review,
         Attachment,
-        Certificate
+        Certificate,
     }
 }

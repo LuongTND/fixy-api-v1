@@ -18,6 +18,12 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.PasswordHash).HasMaxLength(500);
 
+            builder.Property(x => x.CitizenIdNumber).HasMaxLength(20);
+            builder.Property(x => x.CitizenIdIssuePlace).HasMaxLength(255);
+            builder.Property(x => x.CitizenIdIssueDate);
+            builder.Property(x => x.IsCitizenIdVerified);
+            builder.Property(x => x.CitizenIdVerifiedAt);
+
             builder.Property(x => x.OAuthId).HasMaxLength(255);
 
             builder.Property(x => x.TotpSecret).HasMaxLength(500);

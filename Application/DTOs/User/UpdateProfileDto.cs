@@ -1,4 +1,6 @@
-﻿namespace Application.DTOs.Profile
+﻿using Domain.Enum;
+
+namespace Application.DTOs.Profile
 {
     public class UpdateProfileRequestDto
     {
@@ -8,6 +10,6 @@
 
         public DateOnly? DateOfBirth { get; set; }
 
-        public string? Gender { get; set; }
+        public Gender Gender { get; set; }
     }
 }

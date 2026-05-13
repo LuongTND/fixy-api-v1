@@ -1,7 +1,7 @@
 using API.Middlewares;
+using API.Services;
 using Application;
 using Application.Common.Interfaces;
-using API.Services;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -21,7 +21,6 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssembly(typeof(Application.DependencyInjection).Assembly);
-
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

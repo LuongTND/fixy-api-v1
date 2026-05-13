@@ -9,14 +9,16 @@ namespace Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<WorkerService> builder)
         {
             builder.HasKey(x => x.Id);
-            builder.HasIndex(x => new { x.WorkerId, x.CategoryId }).IsUnique();
+            builder.HasIndex(x => new { x.WorkerProfileId, x.CategoryId }).IsUnique();
 
-            builder.HasOne(x => x.Worker)
+            builder
+                .HasOne(x => x.Worker)
                 .WithMany(x => x.Services)
-                .HasForeignKey(x => x.WorkerId)
+                .HasForeignKey(x => x.WorkerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(x => x.Category)
+            builder
+                .HasOne(x => x.Category)
                 .WithMany(x => x.WorkerServices)
                 .HasForeignKey(x => x.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);

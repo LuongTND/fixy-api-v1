@@ -27,25 +27,30 @@ namespace Infrastructure.Services.Medias
             IMediaRepository mediaRepository,
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            ILogger<MediaService> logger)
+            ILogger<MediaService> logger
+        )
         {
             var settings = config?.Value ?? throw new ArgumentNullException(nameof(config));
-            var acc = new Account(
-                settings.CloudName,
-                settings.ApiKey,
-                settings.ApiSecret
-            );
+            var acc = new Account(settings.CloudName, settings.ApiKey, settings.ApiSecret);
 
             _cloudinary = new Cloudinary(acc);
-            _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
+            _mediaRepository =
+                mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _currentUserService =
+                currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<OperationResult<List<MediaDto>>> UploadMediaAsync(UploadMediaFormDto request,CancellationToken cancellationToken = default)
+        public async Task<OperationResult<List<MediaDto>>> UploadMediaAsync(
+            UploadMediaFormDto request,
+            CancellationToken cancellationToken = default
+        )
         {
-            if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var uploadedById))
+            if (
+                string.IsNullOrWhiteSpace(_currentUserService.UserId)
+                || !Guid.TryParse(_currentUserService.UserId, out var uploadedById)
+            )
             {
                 _logger.LogWarning("User ID not found in token");
                 return OperationResult<List<MediaDto>>.Failure("User ID not found in token");
@@ -62,28 +67,32 @@ namespace Infrastructure.Services.Medias
                     var uploadParams = new ImageUploadParams
                     {
                         File = new FileDescription(file.FileName, stream),
-                        Transformation = new Transformation().Quality("auto").FetchFormat("auto")
+                        Transformation = new Transformation().Quality("auto").FetchFormat("auto"),
                     };
 
-                    var uploadResult = await _cloudinary.UploadAsync(uploadParams, cancellationToken);
+                    var uploadResult = await _cloudinary.UploadAsync(
+                        uploadParams,
+                        cancellationToken
+                    );
 
                     if (uploadResult.Error != null)
                     {
-                        _logger.LogError("Cloudinary upload error: {ErrorMessage}", uploadResult.Error.Message);
-                        return OperationResult<List<MediaDto>>.Failure($"Upload failed: {uploadResult.Error.Message}");
+                        _logger.LogError(
+                            "Cloudinary upload error: {ErrorMessage}",
+                            uploadResult.Error.Message
+                        );
+                        return OperationResult<List<MediaDto>>.Failure(
+                            $"Upload failed: {uploadResult.Error.Message}"
+                        );
                     }
 
                     var media = new Media
                     {
                         FileUrl = uploadResult.SecureUrl.ToString(),
-                        ThumbnailUrl = uploadResult.SecureUrl.ToString().Replace("/upload/", "/upload/w_200,h_200,c_fill/"),
-                        OriginalName = file.FileName,
-                        MimeType = file.ContentType,
-                        FileSizeKb = (int)(file.Length / 1024),
                         UploadedById = uploadedById,
                         Category = request.Category,
                         OwnerType = request.OwnerType,
-                        OwnerId = request.OwnerId ?? uploadedById
+                        OwnerId = request.OwnerId ?? uploadedById,
                     };
 
                     await _mediaRepository.AddAsync(media, cancellationToken);
@@ -95,19 +104,21 @@ namespace Infrastructure.Services.Medias
 
             foreach (var media in uploadedMediaList)
             {
-                results.Add(new MediaDto
-                {
-                    Id = media.Id,
-                    FileUrl = media.FileUrl,
-                    ThumbnailUrl = media.ThumbnailUrl,
-                    OriginalName = media.OriginalName,
-                    MimeType = media.MimeType,
-                    FileSizeKb = media.FileSizeKb,
-                    Category = media.Category
-                });
+                results.Add(
+                    new MediaDto
+                    {
+                        Id = media.Id,
+                        FileUrl = media.FileUrl,
+                        Category = media.Category.ToString(),
+                    }
+                );
             }
 
-            _logger.LogInformation("Successfully uploaded {Count} media files for user {UserId}", results.Count, uploadedById);
+            _logger.LogInformation(
+                "Successfully uploaded {Count} media files for user {UserId}",
+                results.Count,
+                uploadedById
+            );
 
             return OperationResult<List<MediaDto>>.Success(results, "Upload successful");
         }

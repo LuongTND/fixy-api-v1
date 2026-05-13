@@ -25,7 +25,7 @@ namespace API.Controllers
 
             var result = await _userService.GetProfileAsync(userId, cancellationToken);
 
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpPut]
@@ -38,19 +38,7 @@ namespace API.Controllers
 
             var result = await _userService.UpdateProfileAsync(userId, dto, cancellationToken);
 
-            return Ok(result);
-        }
-
-        private Guid GetUserId()
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            return Guid.Parse(userId);
+            return HandleResult(result);
         }
     }
 }
