@@ -12,18 +12,21 @@ namespace Application.Service
     public class ServiceCategoryService : IServiceCategoryService
     {
         private readonly IServiceCategoryRepository _serviceCategoryRepository;
+        private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ILogger<ServiceCategoryService> _logger;
 
         public ServiceCategoryService(
             IServiceCategoryRepository serviceCategoryRepository,
+            IWorkerServiceRepository workerServiceRepository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ILogger<ServiceCategoryService> logger
         )
         {
             _serviceCategoryRepository = serviceCategoryRepository ?? throw new ArgumentNullException(nameof(serviceCategoryRepository));
+            _workerServiceRepository = workerServiceRepository ?? throw new ArgumentNullException(nameof(workerServiceRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -49,6 +52,34 @@ namespace Application.Service
             }
 
             return OperationResult<ServiceCategoryDto>.Success(_mapper.Map<ServiceCategoryDto>(category), "Service category retrieved successfully");
+        }
+
+        public async Task<OperationResult<ServiceCategoryPriceDto>> GetPriceAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            var categoryExists = await _serviceCategoryRepository.ExistsByIdAsync(id, cancellationToken);
+
+            if (!categoryExists)
+            {
+                _logger.LogWarning("Service category not found. Id: {ServiceCategoryId}", id);
+                return OperationResult<ServiceCategoryPriceDto>.Failure("Service category not found");
+            }
+
+            var (minPrice, maxPrice) = await _workerServiceRepository.GetPriceRangeAsync(id, cancellationToken);
+
+            if (!minPrice.HasValue || !maxPrice.HasValue)
+            {
+                return OperationResult<ServiceCategoryPriceDto>.Failure("Service category price not found");
+            }
+
+            return OperationResult<ServiceCategoryPriceDto>.Success(
+                new ServiceCategoryPriceDto
+                {
+                    CategoryId = id,
+                    MinPrice = minPrice,
+                    MaxPrice = maxPrice
+                },
+                "Service category price retrieved successfully"
+            );
         }
 
         public async Task<OperationResult<ServiceCategoryDto>> CreateAsync(CreateServiceCategoryDto dto, CancellationToken cancellationToken = default)
