@@ -1,20 +1,36 @@
-using Domain.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Infrastructure.Persistence.Configurations
+public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
 {
-    public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
+    public void Configure(EntityTypeBuilder<Wallet> builder)
     {
-        public void Configure(EntityTypeBuilder<Wallet> builder)
-        {
-            builder.HasKey(x => x.Id);
-            builder.HasIndex(x => x.UserId).IsUnique();
+        builder.ToTable("Wallets");
 
-            builder.HasOne(x => x.User)
-                .WithOne(x => x.Wallet)
-                .HasForeignKey<Wallet>(x => x.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-        }
+        builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.UserId).IsRequired();
+
+        builder.Property(x => x.OwnerType).IsRequired();
+
+        builder.Property(x => x.Balance).HasDefaultValue(0);
+
+        builder.Property(x => x.LifetimeEarned).HasDefaultValue(0);
+
+        builder.Property(x => x.LifetimeSpent).HasDefaultValue(0);
+
+        builder.Property(x => x.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+        builder.Property(x => x.UpdatedAt).IsRequired(false);
+
+        builder.Property(x => x.RowVersion).IsRowVersion().IsConcurrencyToken();
+
+        builder
+            .HasMany(x => x.Transactions)
+            .WithOne(x => x.Wallet)
+            .HasForeignKey(x => x.WalletId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(x => x.UserId);
     }
 }

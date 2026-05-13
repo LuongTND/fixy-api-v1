@@ -1,30 +1,28 @@
-using Domain.Entity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Infrastructure.Persistence.Configurations
+public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTransaction>
 {
-    public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTransaction>
+    public void Configure(EntityTypeBuilder<WalletTransaction> builder)
     {
-        public void Configure(EntityTypeBuilder<WalletTransaction> builder)
-        {
-            builder.HasKey(x => x.Id);
-            builder.Property(x => x.Type).HasConversion<string>();
-            builder.Property(x => x.Direction).HasConversion<string>();
-            builder.Property(x => x.Status).HasConversion<string>();
-            builder.HasIndex(x => new { x.WalletId, x.CreatedDate }).HasDatabaseName("idx_wtxn_wallet");
-            builder.HasIndex(x => new { x.ReferenceType, x.ReferenceId }).HasDatabaseName("idx_wtxn_ref");
-            builder.HasIndex(x => new { x.Status, x.CreatedDate }).HasDatabaseName("idx_wtxn_status");
+        builder.ToTable("WalletTransactions");
 
-            builder.HasOne(x => x.Wallet)
-                .WithMany(x => x.Transactions)
-                .HasForeignKey(x => x.WalletId)
-                .OnDelete(DeleteBehavior.Restrict);
+        builder.HasKey(x => x.Id);
 
-            builder.HasOne(x => x.ReversedBy)
-                .WithMany()
-                .HasForeignKey(x => x.ReversedById)
-                .OnDelete(DeleteBehavior.Restrict);
-        }
+        builder.Property(x => x.Amount).IsRequired();
+
+        builder.Property(x => x.Type).IsRequired();
+
+        builder.Property(x => x.Direction).IsRequired();
+
+        builder.Property(x => x.Status).IsRequired();
+
+        builder.Property(x => x.CreatedDate).HasDefaultValueSql("GETUTCDATE()");
+
+        builder.HasIndex(x => x.WalletId);
+        builder.HasIndex(x => x.ExternalTransactionId);
+        builder.HasIndex(x => x.ReferenceId);
+
+        builder.HasOne(x => x.Wallet).WithMany(x => x.Transactions).HasForeignKey(x => x.WalletId);
     }
 }
