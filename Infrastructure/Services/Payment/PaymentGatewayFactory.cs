@@ -19,6 +19,8 @@ namespace Infrastructure.Services.Payment
             {
                 PaymentMethod.Vnpay => _serviceProvider.GetRequiredService<VnPayService>(),
 
+                PaymentMethod.Momo => _serviceProvider.GetRequiredService<MoMoService>(),
+
                 _ => throw new Exception("Payment method not supported"),
             };
         }

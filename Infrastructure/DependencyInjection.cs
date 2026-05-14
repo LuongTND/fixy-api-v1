@@ -62,7 +62,7 @@ namespace Infrastructure
             services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
             // VNPay Settings
             services.Configure<VNPaySettings>(configuration.GetSection("VnPaySettings"));
-
+            services.Configure<MoMoSettings>(configuration.GetSection("MoMoSettings"));
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
 
@@ -131,7 +131,7 @@ namespace Infrastructure
             services.AddScoped<IMediaRepository, MediaRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
-
+            services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
             services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
             services.AddScoped<IPaymentService, PaymentService>();
