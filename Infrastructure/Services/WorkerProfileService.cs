@@ -204,6 +204,16 @@ namespace Infrastructure.Services
                     "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
                 );
             }
+            if (dto.CreateAddressRequestDto == null)
+            {
+                return OperationResult.Failure("Worker need to provice address.");
+            }
+            if (dto.ProfolioUploads.Count > 10)
+            {
+                return OperationResult.Failure(
+                    "Worker is only allowed to upload a maximum of 10 image profolio."
+                );
+            }
 
             if (dto.IdentificationUploads.Count != 2)
             {
