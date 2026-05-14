@@ -27,5 +27,6 @@ namespace Application.DTOs.WorkerProfile
         public List<WorkerServiceDto> Services { get; set; } = new List<WorkerServiceDto>();
 
         public List<MediaDto> IdentificateImages { get; set; } = new List<MediaDto>();
+        public List<MediaDto> ProfolioImages { get; set; } = new List<MediaDto>();
     }
 }

@@ -15,6 +15,7 @@ namespace Infrastructure.Services
     public class WorkerProfileService : IWorkerProfileService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IAddressRepository _addressRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IWorkerCertificateRepository _workerCertificateRepository;
@@ -27,6 +28,7 @@ namespace Infrastructure.Services
 
         public WorkerProfileService(
             IUserRepository userRepository,
+            IAddressRepository addressRepository,
             IWorkerProfileRepository workerProfileRepository,
             IWorkerServiceRepository workerServiceRepository,
             IWorkerCertificateRepository workerCertificateRepository,
@@ -37,7 +39,7 @@ namespace Infrastructure.Services
         )
         {
             _userRepository = userRepository;
-
+            _addressRepository = addressRepository;
             _workerProfileRepository = workerProfileRepository;
             _workerServiceRepository = workerServiceRepository;
             _workerCertificateRepository = workerCertificateRepository;
@@ -113,6 +115,10 @@ namespace Infrastructure.Services
                 workerProfile.User!.Id,
                 cancellationToken
             );
+            var profolioImages = await _mediaRepository.GetIdentificateImagesByUserId(
+                workerProfile.User!.Id,
+                cancellationToken
+            );
             var certificateIds = workerProfile.Certificates.Select(x => x.Id).ToList();
 
             var workerCertificateImages =
@@ -174,6 +180,14 @@ namespace Infrastructure.Services
                             FileUrl = x.FileUrl,
                         })
                         .ToList(),
+                    ProfolioImages = profolioImages
+                        .Select(x => new MediaDto
+                        {
+                            Id = x.Id,
+                            OwnerId = x.OwnerId,
+                            FileUrl = x.FileUrl,
+                        })
+                        .ToList(),
                 },
                 "Get worker profile by Id successfully"
             );
@@ -188,6 +202,16 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure(
                     "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
+                );
+            }
+            if (dto.CreateAddressRequestDto == null)
+            {
+                return OperationResult.Failure("Worker need to provice address.");
+            }
+            if (dto.ProfolioUploads.Count > 10)
+            {
+                return OperationResult.Failure(
+                    "Worker is only allowed to upload a maximum of 10 image profolio."
                 );
             }
 
@@ -229,6 +253,18 @@ namespace Infrastructure.Services
 
                 await _workerProfileRepository.AddAsync(workerProfile, cancellationToken);
 
+                // Create Worker Address
+                var workerAddress = new Address
+                {
+                    City = dto.CreateAddressRequestDto.City,
+                    District = dto.CreateAddressRequestDto.District,
+                    Ward = dto.CreateAddressRequestDto.Ward,
+                    Detail = dto.CreateAddressRequestDto.Detail,
+                    Lat = dto.CreateAddressRequestDto.Lat,
+                    Lng = dto.CreateAddressRequestDto.Lng,
+                    IsDefault = true,
+                };
+                await _addressRepository.AddAsync(workerAddress, cancellationToken);
                 // Create Worker Services
 
                 foreach (var service in dto.WorkerService)
@@ -243,7 +279,25 @@ namespace Infrastructure.Services
 
                     await _workerServiceRepository.AddAsync(workerService, cancellationToken);
                 }
+                // Upload Profolio Images
 
+                foreach (var upload in dto.ProfolioUploads)
+                {
+                    var imageUrl = await _blobService.UploadImageAsync(upload);
+
+                    uploadedUrls.Add(imageUrl);
+
+                    var media = new Media
+                    {
+                        OwnerId = user.Id,
+                        UploadedById = user.Id,
+                        OwnerType = MediaOwnerType.WorkerProfile,
+                        Category = MediaCategory.Portfolio,
+                        FileUrl = imageUrl,
+                    };
+
+                    await _mediaRepository.AddAsync(media, cancellationToken);
+                }
                 // Upload Identification Images
 
                 foreach (var upload in dto.IdentificationUploads)

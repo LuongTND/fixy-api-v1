@@ -38,5 +38,19 @@ namespace Infrastructure.Repositories
                 )
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<List<Media>> GetProfolioImagesByUserId(
+            Guid id,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    x.OwnerType == MediaOwnerType.WorkerProfile
+                    && x.Category == MediaCategory.Portfolio
+                    && x.OwnerId == id
+                )
+                .ToListAsync(cancellationToken);
+        }
     }
 }
