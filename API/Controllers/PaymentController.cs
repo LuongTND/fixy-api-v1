@@ -36,6 +36,25 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "CUSTOMER")]
+        [HttpPost("topup/momo")]
+        public async Task<IActionResult> CreateTopUpMomo(
+            [FromBody] long amount,
+            CancellationToken cancellationToken
+        )
+        {
+            var userId = GetUserId();
+
+            var result = await _paymentService.CreateTopUpPaymentUrlAsync(
+                userId,
+                amount,
+                PaymentMethod.Momo,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
         [HttpGet("vnpay-return")]
         public async Task<IActionResult> VnPayReturn(CancellationToken cancellationToken)
         {
