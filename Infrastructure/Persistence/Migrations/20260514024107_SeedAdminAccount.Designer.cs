@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514024107_SeedAdminAccount")]
+    partial class SeedAdminAccount
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -165,9 +168,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid?>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
@@ -187,8 +187,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("ReorderFromId");
-
-                    b.HasIndex("UserId");
 
                     b.HasIndex("Status", "ScheduledAt")
                         .HasDatabaseName("idx_booking_scheduled");
@@ -589,7 +587,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
 
-                    b.Property<Guid?>("BookingId")
+                    b.Property<Guid>("BookingId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
@@ -598,21 +596,17 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("DiscountAmount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L);
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ExternalTransactionId")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                    b.Property<long>("DiscountAmount")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("FinalAmount")
                         .HasColumnType("bigint");
 
                     b.Property<string>("GatewayRef")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("GatewayResponse")
                         .HasColumnType("nvarchar(max)");
@@ -631,36 +625,24 @@ namespace Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId")
-                        .IsUnique()
-                        .HasFilter("[BookingId] IS NOT NULL");
+                        .IsUnique();
 
-                    b.HasIndex("ExternalTransactionId")
-                        .IsUnique()
-                        .HasFilter("[ExternalTransactionId] IS NOT NULL");
+                    b.HasIndex("GatewayRef")
+                        .HasDatabaseName("idx_po_gateway");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("CustomerId", "Status")
+                        .HasDatabaseName("idx_po_customer");
 
-                    b.HasIndex("Type");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PaymentOrders", (string)null);
+                    b.ToTable("PaymentOrders");
                 });
 
             modelBuilder.Entity("Domain.Entity.PayoutRequest", b =>
@@ -942,24 +924,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-
-                            CreatedDate = new DateTime(2026, 5, 14, 2, 45, 56, 839, DateTimeKind.Utc).AddTicks(2281),
+                            CreatedDate = new DateTime(2026, 5, 14, 2, 41, 5, 536, DateTimeKind.Utc).AddTicks(1910),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-
-                            CreatedDate = new DateTime(2026, 5, 14, 2, 45, 56, 839, DateTimeKind.Utc).AddTicks(2287),
+                            CreatedDate = new DateTime(2026, 5, 14, 2, 41, 5, 536, DateTimeKind.Utc).AddTicks(1914),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-
-                            CreatedDate = new DateTime(2026, 5, 14, 2, 45, 56, 839, DateTimeKind.Utc).AddTicks(2289),
+                            CreatedDate = new DateTime(2026, 5, 14, 2, 41, 5, 536, DateTimeKind.Utc).AddTicks(1915),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1224,7 +1203,7 @@ namespace Infrastructure.Persistence.Migrations
                             IsDeleted = false,
                             IsEmailVerified = true,
                             IsPhoneVerified = true,
-                            PasswordHash = "$2a$11$2Sn0EJfhBql3sJvuD/UDeODXtuVKzfkeAO8EWTplBPNMFi/P1Gz/.",
+                            PasswordHash = "$2a$12$R9h/lIPzHZluvJ5lnpEzeu6.WWf.6eT7S/H8ZpXU.v7.4GfP8P1e.",
                             Phone = "0000000000",
                             TotpEnabled = false
                         });
@@ -1953,7 +1932,7 @@ namespace Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("Domain.Entity.User", "Customer")
-                        .WithMany()
+                        .WithMany("Bookings")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1962,10 +1941,6 @@ namespace Infrastructure.Persistence.Migrations
                         .WithMany("Reorders")
                         .HasForeignKey("ReorderFromId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Domain.Entity.User", null)
-                        .WithMany("Bookings")
-                        .HasForeignKey("UserId");
 
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany("Bookings")
@@ -2098,17 +2073,18 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.Booking", "Booking")
                         .WithOne("PaymentOrder")
                         .HasForeignKey("Domain.Entity.PaymentOrder", "BookingId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.HasOne("Domain.Entity.User", "User")
+                    b.HasOne("Domain.Entity.User", "Customer")
                         .WithMany()
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Booking");
 
-                    b.Navigation("User");
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("Domain.Entity.PayoutRequest", b =>
