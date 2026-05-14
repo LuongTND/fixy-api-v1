@@ -61,6 +61,9 @@ namespace Infrastructure
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
 
+            // Blob Settings
+            services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
+
             services.AddSingleton<IEmailQueue, EmailQueue>();
 
             services.AddHostedService<EmailBackgroundService>();

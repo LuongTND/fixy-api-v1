@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace Application.DTOs.ServiceCategory
 {
     public class CreateServiceCategoryDto
@@ -8,7 +10,7 @@ namespace Application.DTOs.ServiceCategory
 
         public string? Description { get; set; }
 
-        public string? ImageUrl { get; set; }
+        public IFormFile? ImageFile { get; set; }
 
         public int? SortOrder { get; set; }
 
