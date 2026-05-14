@@ -2,6 +2,7 @@ using Application.Common;
 using Application.DTOs.ServiceCategory;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
+using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.ServiceCategory;
 using AutoMapper;
 using Domain.Entity;
@@ -15,6 +16,7 @@ namespace Application.Service
         private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IBlobService _blobService;
         private readonly ILogger<ServiceCategoryService> _logger;
 
         public ServiceCategoryService(
@@ -22,6 +24,7 @@ namespace Application.Service
             IWorkerServiceRepository workerServiceRepository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
+            IBlobService blobService,
             ILogger<ServiceCategoryService> logger
         )
         {
@@ -29,6 +32,7 @@ namespace Application.Service
             _workerServiceRepository = workerServiceRepository ?? throw new ArgumentNullException(nameof(workerServiceRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _blobService = blobService ?? throw new ArgumentNullException(nameof(blobService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -93,6 +97,11 @@ namespace Application.Service
 
             var category = _mapper.Map<ServiceCategory>(dto);
 
+            if (dto.ImageFile != null)
+            {
+                category.ImageUrl = await _blobService.UploadImageAsync(dto.ImageFile);
+            }
+
             await _serviceCategoryRepository.AddAsync(category, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -118,6 +127,12 @@ namespace Application.Service
             }
 
             _mapper.Map(dto, category);
+
+            if (dto.ImageFile != null)
+            {
+                category.ImageUrl = await _blobService.UploadImageAsync(dto.ImageFile, category.ImageUrl);
+            }
+
             category.UpdatedDate = DateTime.UtcNow;
             _serviceCategoryRepository.Update(category);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
