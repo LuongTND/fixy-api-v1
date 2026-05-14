@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Domain.Common;
 using Domain.Entity;
 using Infrastructure.Persistence.Seeds;
@@ -62,6 +62,7 @@ namespace Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
             RoleSeeder.Seed(modelBuilder);
+            UserSeeder.Seed(modelBuilder);
             // Apply all configurations from assembly
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
