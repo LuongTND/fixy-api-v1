@@ -26,17 +26,31 @@ public class AuthController : ApiController
     // =========================
 
     [HttpPost("otp/send")]
-    public async Task<IActionResult> SendOtp([FromBody] SendOtpRequestDto request)
+    public async Task<IActionResult> SendOtp(
+        [FromBody] SendOtpRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _otpService.SendOtpAsync(request.Target, request.Purpose);
+        var result = await _otpService.SendOtpAsync(
+            request.Target,
+            request.Purpose,
+            cancellationToken
+        );
 
         return HandleResult(result);
     }
 
     [HttpPost("otp/verify")]
-    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
+    public async Task<IActionResult> VerifyOtp(
+        [FromBody] VerifyOtpRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _otpService.VerifyOtpAsync(request.Target, request.OtpCode);
+        var result = await _otpService.VerifyOtpAsync(
+            request.Target,
+            request.OtpCode,
+            cancellationToken
+        );
 
         return HandleResult(result);
     }

@@ -41,53 +41,5 @@ namespace API.Controllers
 
             return HandleResult(result);
         }
-
-        [HttpPost("topup")]
-        public async Task<IActionResult> TopUp(
-            [FromBody] TopUpRequestDto request,
-            CancellationToken cancellationToken
-        )
-        {
-            var result = await _walletService.TopUpAsync(
-                request.UserId,
-                request.Amount,
-                request.ExternalTransactionId,
-                cancellationToken
-            );
-
-            return HandleResult(result);
-        }
-
-        [HttpPost("pay")]
-        public async Task<IActionResult> Pay(
-            [FromBody] PayRequestDto request,
-            CancellationToken cancellationToken
-        )
-        {
-            var result = await _walletService.PayAsync(
-                GetUserId(),
-                request.Amount,
-                request.ReferenceId,
-                cancellationToken
-            );
-
-            return HandleResult(result);
-        }
-
-        [HttpPost("refund")]
-        public async Task<IActionResult> Refund(
-            [FromBody] RefundRequestDto request,
-            CancellationToken cancellationToken
-        )
-        {
-            var result = await _walletService.RefundAsync(
-                GetUserId(),
-                request.Amount,
-                request.ReferenceId,
-                cancellationToken
-            );
-
-            return HandleResult(result);
-        }
     }
 }

@@ -8,6 +8,7 @@ using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Email;
 using Application.Interfaces.Services.Media;
+using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.ServiceCategory;
 using Application.Service;
 using Application.Settings;
@@ -19,12 +20,12 @@ using Infrastructure.Services;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
+using Infrastructure.Services.Payment;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Infrastructure.Services.Medias;
 
 namespace Infrastructure
 {
@@ -57,12 +58,15 @@ namespace Infrastructure
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
+            // Blob Settings
+            services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
+            // VNPay Settings
+            services.Configure<VNPaySettings>(configuration.GetSection("VnPaySettings"));
 
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
 
             services.AddSingleton<IEmailQueue, EmailQueue>();
-
             services.AddHostedService<EmailBackgroundService>();
             // Authentication
             services
@@ -103,6 +107,7 @@ namespace Infrastructure
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IWorkerProfileService, WorkerProfileService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+            services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IMediaService, MediaService>();
             services.AddScoped<IBlobService, BlobService>();
 
@@ -116,10 +121,17 @@ namespace Infrastructure
             services.AddScoped<IWorkerCertificateRepository, WorkerCertificateRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+            services.AddScoped<IWalletRepository, WalletRepository>();
+            services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
 
+            services.AddScoped<VnPayService>();
+            services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
+            services.AddScoped<IPaymentService, PaymentService>();
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 

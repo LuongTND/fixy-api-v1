@@ -2,36 +2,49 @@
 using System.Text.RegularExpressions;
 using Application.Common;
 using Application.Common.Models.Email;
+using Application.DTOs.Auth;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Email;
 using Domain.Entity;
 using Domain.Enum;
+using Infrastructure.Repositories;
 
 namespace Infrastructure.Services.Email
 {
     public class OtpService : IOtpService
     {
+        private readonly IUserRepository _userRepository;
         private readonly IUserOtpRepository _userOtpRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailQueue _emailQueue;
         private readonly ITemplateEngine _templateEngine;
 
         public OtpService(
+            IUserRepository userRepository,
             IUserOtpRepository userOtpRepository,
             IUnitOfWork unitOfWork,
             IEmailQueue emailQueue,
             ITemplateEngine templateEngine
         )
         {
+            _userRepository = userRepository;
             _userOtpRepository = userOtpRepository;
             _unitOfWork = unitOfWork;
             _emailQueue = emailQueue;
             _templateEngine = templateEngine;
         }
 
-        public async Task<OperationResult> SendOtpAsync(string target, EmailPurpose purpose)
+        public async Task<OperationResult> SendOtpAsync(
+            string target,
+            EmailPurpose purpose,
+            CancellationToken cancellationToken
+        )
         {
+            var existedUser = await _userRepository.GetByTargetAsync(target, cancellationToken);
+
+            if (existedUser != null)
+                return OperationResult.Failure("Email or phone number already used");
             var oldOtps = await _userOtpRepository.GetUnusedOtpsAsync(target);
 
             foreach (var otp in oldOtps)
@@ -48,9 +61,9 @@ namespace Infrastructure.Services.Email
                 IsVerified = false,
             };
 
-            await _userOtpRepository.AddAsync(entity);
+            await _userOtpRepository.AddAsync(entity, cancellationToken);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             if (IsEmail(target))
             {
@@ -87,9 +100,17 @@ namespace Infrastructure.Services.Email
             return OperationResult.Success("OTP sent successfully");
         }
 
-        public async Task<OperationResult> VerifyOtpAsync(string target, string otpCode)
+        public async Task<OperationResult> VerifyOtpAsync(
+            string target,
+            string otpCode,
+            CancellationToken cancellationToken
+        )
         {
-            var otp = await _userOtpRepository.GetLatestOtpAsync(target, otpCode);
+            var otp = await _userOtpRepository.GetLatestOtpAsync(
+                target,
+                otpCode,
+                cancellationToken
+            );
 
             if (otp == null)
                 return OperationResult.Failure("Invalid OTP");
@@ -100,7 +121,7 @@ namespace Infrastructure.Services.Email
             otp.IsUsed = true;
             otp.IsVerified = true;
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return OperationResult.Success("OTP verified successfully");
         }

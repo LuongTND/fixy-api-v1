@@ -18,6 +18,8 @@ namespace Infrastructure.Services
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IWorkerCertificateRepository _workerCertificateRepository;
+        private readonly IWalletRepository _walletRepository;
+
         private readonly IMediaRepository _mediaRepository;
         private readonly IUnitOfWork _unitOfWork;
 
@@ -28,6 +30,7 @@ namespace Infrastructure.Services
             IWorkerProfileRepository workerProfileRepository,
             IWorkerServiceRepository workerServiceRepository,
             IWorkerCertificateRepository workerCertificateRepository,
+            IWalletRepository walletRepository,
             IMediaRepository mediaRepository,
             IUnitOfWork unitOfWork,
             IBlobService blobService
@@ -38,6 +41,7 @@ namespace Infrastructure.Services
             _workerProfileRepository = workerProfileRepository;
             _workerServiceRepository = workerServiceRepository;
             _workerCertificateRepository = workerCertificateRepository;
+            _walletRepository = walletRepository;
             _mediaRepository = mediaRepository;
             _unitOfWork = unitOfWork;
             _blobService = blobService;
@@ -333,10 +337,22 @@ namespace Infrastructure.Services
             if (workerRegisterRequest.User != null)
             {
                 workerRegisterRequest.User.IsCitizenIdVerified = true;
-                workerRegisterRequest.User.CitizenIdVerifiedAt = DateTime.Now;
+                await _walletRepository.AddAsync(
+                    new Wallet
+                    {
+                        UserId = workerRegisterRequest.User.Id,
+                        OwnerType = WalletOwnerType.Customer,
+                        Balance = 0,
+                        LifetimeEarned = 0,
+                        LifetimeSpent = 0,
+                        CreatedAt = DateTime.UtcNow,
+                    },
+                    cancellationToken
+                );
             }
 
             _workerProfileRepository.Update(workerRegisterRequest);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return OperationResult.Success("Worker register was approved successfully");
         }
