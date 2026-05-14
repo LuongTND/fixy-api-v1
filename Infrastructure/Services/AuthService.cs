@@ -21,6 +21,7 @@ namespace Infrastructure.Services.Auth
         private readonly IRoleRepository _roleRepository;
         private readonly IUserRoleRepository _userRoleRepository;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly IWalletRepository _walletRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         private readonly IPasswordHasher _passwordHasher;
@@ -34,6 +35,7 @@ namespace Infrastructure.Services.Auth
             IRoleRepository roleRepository,
             IUserRoleRepository userRoleRepository,
             IRefreshTokenRepository refreshTokenRepository,
+            IWalletRepository walletRepository,
             IUnitOfWork unitOfWork,
             IPasswordHasher passwordHasher,
             IJwtService jwtService,
@@ -46,6 +48,7 @@ namespace Infrastructure.Services.Auth
             _roleRepository = roleRepository;
             _userRoleRepository = userRoleRepository;
             _refreshTokenRepository = refreshTokenRepository;
+            _walletRepository = walletRepository;
             _unitOfWork = unitOfWork;
             _passwordHasher = passwordHasher;
             _jwtService = jwtService;
@@ -96,6 +99,19 @@ namespace Infrastructure.Services.Auth
                     : await _roleRepository.GetCustomerRoleAsync(ct);
 
             await _userRoleRepository.AddAsync(new UserRole { User = user, RoleId = role.Id }, ct);
+
+            await _walletRepository.AddAsync(
+                new Wallet
+                {
+                    UserId = user.Id,
+                    OwnerType = WalletOwnerType.Customer,
+                    Balance = 0,
+                    LifetimeEarned = 0,
+                    LifetimeSpent = 0,
+                    CreatedAt = DateTime.UtcNow,
+                },
+                ct
+            );
 
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
