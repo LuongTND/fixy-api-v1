@@ -46,10 +46,15 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetDetail(Guid id, CancellationToken cancellationToken)
+        [Authorize(Roles = "WORKER")]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetDetail(CancellationToken cancellationToken)
         {
-            var result = await _workerProfileService.GetWorkerProfileDetail(id, cancellationToken);
+            var userId = GetUserId();
+            var result = await _workerProfileService.GetWorkerProfileDetail(
+                userId,
+                cancellationToken
+            );
 
             return HandleResult(result);
         }

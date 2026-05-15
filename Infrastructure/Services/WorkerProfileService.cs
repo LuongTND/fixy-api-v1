@@ -105,7 +105,7 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByIdAsync(
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
                 id,
                 cancellationToken
             );
@@ -386,7 +386,7 @@ namespace Infrastructure.Services
         )
         {
             var workerRegisterRequest =
-                await _workerProfileRepository.GetWorkerProfileDetailByIdAsync(
+                await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
                     id,
                     cancellationToken
                 );
