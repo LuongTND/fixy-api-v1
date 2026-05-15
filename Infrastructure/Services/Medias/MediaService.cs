@@ -110,6 +110,8 @@ namespace Infrastructure.Services.Medias
                         Id = media.Id,
                         FileUrl = media.FileUrl,
                         Category = media.Category.ToString(),
+                        OwnerId = media.OwnerId,
+                        OwnerType = media.OwnerType.ToString(),
                     }
                 );
             }

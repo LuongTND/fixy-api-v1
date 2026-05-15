@@ -21,6 +21,6 @@ namespace Application.Interfaces.Services.Booking
         Task<OperationResult> StartWorkAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
         // Status: InProgress -> Completed.
-        Task<OperationResult> CompleteAsync(Guid bookingId, CancellationToken cancellationToken = default);
+        Task<OperationResult> CompleteAsync(Guid bookingId, CompleteBookingRequest request, CancellationToken cancellationToken = default);
     }
 }

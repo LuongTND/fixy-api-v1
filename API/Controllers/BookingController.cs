@@ -1,3 +1,4 @@
+using Application.DTOs.Booking;
 using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Worker;
 using Microsoft.AspNetCore.Authorization;
@@ -66,9 +67,9 @@ namespace API.Controllers
         [Authorize(Roles = "WORKER")]
         // Worker completes the job. InProgress -> Completed.
         [HttpPost("{id:guid}/complete")]
-        public async Task<IActionResult> Complete(Guid id, CancellationToken cancellationToken)
+        public async Task<IActionResult> Complete(Guid id, [FromBody] CompleteBookingRequest request, CancellationToken cancellationToken)
         {
-            var result = await _bookingService.CompleteAsync(id, cancellationToken);
+            var result = await _bookingService.CompleteAsync(id, request, cancellationToken);
             return HandleResult(result);
         }
         /// <summary>
