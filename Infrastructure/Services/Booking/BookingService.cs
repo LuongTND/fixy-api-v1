@@ -19,6 +19,7 @@ namespace Infrastructure.Services.Booking
         private readonly IBookingHubService _bookingHubService;
         private readonly ICurrentUserService _currentUserService;
         private readonly IMapper _mapper;
+        private readonly IMediaRepository _mediaRepository;
         private readonly ILogger<BookingService> _logger;
 
         /// <summary>
@@ -38,6 +39,7 @@ namespace Infrastructure.Services.Booking
             IUnitOfWork unitOfWork,
             IBookingHubService bookingHubService,
             ICurrentUserService currentUserService,
+            IMediaRepository mediaRepository,
             IMapper mapper,
             ILogger<BookingService> logger
         )
@@ -46,6 +48,7 @@ namespace Infrastructure.Services.Booking
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _bookingHubService = bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -78,6 +81,7 @@ namespace Infrastructure.Services.Booking
                     {
                         booking.WorkerId = workerId;
                     }
+                    return Task.CompletedTask;
                 },
                 cancellationToken
             );
@@ -119,16 +123,29 @@ namespace Infrastructure.Services.Booking
             );
         }
 
-        public async Task<OperationResult> CompleteAsync(Guid bookingId, CancellationToken cancellationToken = default)
+        public async Task<OperationResult> CompleteAsync(Guid bookingId, CompleteBookingRequest request, CancellationToken cancellationToken = default)
         {
             return await TransitionStatusAsync(
                 bookingId,
                 BookingStatus.InProgress,
                 BookingStatus.Completed,
                 "Booking completed",
-                (booking) =>
+                async (booking) =>
                 {
                     booking.CompletedAt = DateTime.UtcNow;
+
+                    // Associate media if any
+                    if (request.MediaIds != null && request.MediaIds.Any())
+                    {
+                        var medias = await _mediaRepository.FindAsync(m => request.MediaIds.Contains(m.Id), cancellationToken);
+                        foreach (var media in medias)
+                        {
+                            media.OwnerId = bookingId;
+                            media.OwnerType = MediaOwnerType.Booking;
+                            media.Category = MediaCategory.Completion;
+                            _mediaRepository.Update(media);
+                        }
+                    }
                 },
                 cancellationToken
             );
@@ -143,7 +160,7 @@ namespace Infrastructure.Services.Booking
             BookingStatus expectedCurrentStatus,
             BookingStatus newStatus,
             string message,
-            Action<BookingEntity>? onTransition,
+            Func<BookingEntity, Task>? onTransition,
             CancellationToken cancellationToken
         )
         {
@@ -176,7 +193,10 @@ namespace Infrastructure.Services.Booking
             // Apply transition
             booking.Status = newStatus;
             booking.UpdatedDate = DateTime.UtcNow;
-            onTransition?.Invoke(booking);
+            if (onTransition != null)
+            {
+                await onTransition(booking);
+            }
 
             _bookingRepository.Update(booking);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
