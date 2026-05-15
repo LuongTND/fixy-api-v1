@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [Authorize]
     [ApiController]
     [Route("api/workers")]
     public class WorkerLocationController : ApiController
@@ -21,6 +20,7 @@ namespace API.Controllers
         /// Worker App calls this periodically (every 10-30s) while traveling to a booking.
         /// Saves GPS to Redis and pushes coordinates to the customer's tracking screen via SignalR.
         /// </summary>
+        [Authorize(Roles = "WORKER")]
         [HttpPost("location")]
         public async Task<IActionResult> UpdateLocation(
             [FromBody] UpdateWorkerLocationRequest request,
