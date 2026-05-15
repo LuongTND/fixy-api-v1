@@ -1,6 +1,7 @@
 using Application.Common;
 using Application.Common.Interfaces;
 using Application.DTOs.Booking;
+using Application.DTOs.Support;
 using Application.Interfaces;
 using Application.Interfaces.Hubs;
 using Application.Interfaces.Repositories;
@@ -20,6 +21,7 @@ namespace Infrastructure.Services.Booking
         private readonly ICurrentUserService _currentUserService;
         private readonly IMapper _mapper;
         private readonly IMediaRepository _mediaRepository;
+        private readonly ISupportTicketRepository _supportTicketRepository;
         private readonly ILogger<BookingService> _logger;
 
         /// <summary>
@@ -40,6 +42,7 @@ namespace Infrastructure.Services.Booking
             IBookingHubService bookingHubService,
             ICurrentUserService currentUserService,
             IMediaRepository mediaRepository,
+            ISupportTicketRepository supportTicketRepository,
             IMapper mapper,
             ILogger<BookingService> logger
         )
@@ -49,6 +52,7 @@ namespace Infrastructure.Services.Booking
             _bookingHubService = bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
             _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
+            _supportTicketRepository = supportTicketRepository ?? throw new ArgumentNullException(nameof(supportTicketRepository));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -149,6 +153,49 @@ namespace Infrastructure.Services.Booking
                 },
                 cancellationToken
             );
+        }
+
+        public async Task<OperationResult<SupportTicketDto>> ReportIssueAsync(Guid bookingId, ReportBookingIssueRequest request, CancellationToken cancellationToken = default)
+        {
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult<SupportTicketDto>.Failure("Booking not found");
+            }
+
+            if (!Guid.TryParse(_currentUserService.UserId, out var reporterId))
+            {
+                return OperationResult<SupportTicketDto>.Failure("User not authenticated");
+            }
+
+            var ticket = new Domain.Entity.SupportTicket
+            {
+                BookingId = bookingId,
+                ReporterId = reporterId,
+                ReporterType = SupportReporterType.Worker,
+                Category = request.Category,
+                Subject = request.Subject,
+                Priority = request.Priority,
+                Status = SupportStatus.Open,
+                CreatedDate = DateTime.UtcNow,
+                Messages = new List<Domain.Entity.SupportMessage>
+                {
+                    new Domain.Entity.SupportMessage
+                    {
+                        SenderId = reporterId,
+                        Content = request.Description,
+                        CreatedDate = DateTime.UtcNow
+                    }
+                }
+            };
+
+            await _supportTicketRepository.AddAsync(ticket, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Issue reported for booking {BookingId} by worker {WorkerId}", bookingId, reporterId);
+
+            var ticketDto = _mapper.Map<SupportTicketDto>(ticket);
+            return OperationResult<SupportTicketDto>.Success(ticketDto, "Issue reported successfully. Support team will contact you.");
         }
 
         /// <summary>

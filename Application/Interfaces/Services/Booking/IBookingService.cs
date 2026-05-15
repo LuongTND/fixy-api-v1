@@ -1,5 +1,6 @@
 using Application.Common;
 using Application.DTOs.Booking;
+using Application.DTOs.Support;
 
 namespace Application.Interfaces.Services.Booking
 {
@@ -20,7 +21,8 @@ namespace Application.Interfaces.Services.Booking
         // Status: Arrived -> InProgress.
         Task<OperationResult> StartWorkAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
-        // Status: InProgress -> Completed.
         Task<OperationResult> CompleteAsync(Guid bookingId, CompleteBookingRequest request, CancellationToken cancellationToken = default);
+
+        Task<OperationResult<SupportTicketDto>> ReportIssueAsync(Guid bookingId, ReportBookingIssueRequest request, CancellationToken cancellationToken = default);
     }
 }

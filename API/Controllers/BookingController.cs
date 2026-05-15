@@ -83,5 +83,13 @@ namespace API.Controllers
             var result = await _workerLocationService.GetBookingTrackingAsync(id, cancellationToken);
             return HandleResult(result);
         }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpPost("{id:guid}/report-issue")]
+        public async Task<IActionResult> ReportIssue(Guid id, [FromBody] ReportBookingIssueRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.ReportIssueAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
     }
 }
