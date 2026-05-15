@@ -6,6 +6,7 @@ using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infrastructure;
+using Infrastructure.Hubs;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -65,6 +66,9 @@ builder.Services.AddApplication();
 
 // Add Infrastructure Layer
 builder.Services.AddInfrastructure(builder.Configuration);
+// SignalR
+builder.Services.AddSignalR();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
@@ -97,5 +101,8 @@ app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Map SignalR Hubs
+app.MapHub<BookingHub>("/hubs/booking");
 
 app.Run();
