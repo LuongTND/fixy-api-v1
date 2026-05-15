@@ -24,4 +24,4 @@ COPY --from=build /app/publish .
 EXPOSE 8080
 
 # start app
-ENTRYPOINT ["dotnet", "FIXY.API.dll"]
+ENTRYPOINT ["dotnet", "API.dll"]
