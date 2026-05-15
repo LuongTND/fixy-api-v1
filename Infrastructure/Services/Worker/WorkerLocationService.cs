@@ -17,6 +17,7 @@ namespace Infrastructure.Services.Worker
         private readonly IBookingRepository _bookingRepository;
         private readonly IBookingHubService _bookingHubService;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly ILogger<WorkerLocationService> _logger;
 
         // Redis key TTL: location data expires after 2 hours of inactivity
@@ -27,6 +28,7 @@ namespace Infrastructure.Services.Worker
             IBookingRepository bookingRepository,
             IBookingHubService bookingHubService,
             ICurrentUserService currentUserService,
+            IWorkerProfileRepository workerProfileRepository,
             ILogger<WorkerLocationService> logger
         )
         {
@@ -34,16 +36,26 @@ namespace Infrastructure.Services.Worker
             _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
             _bookingHubService = bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _workerProfileRepository = workerProfileRepository ?? throw new ArgumentNullException(nameof(workerProfileRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <inheritdoc />
         public async Task<OperationResult> UpdateLocationAsync(
-            Guid workerId,
+            Guid userId,
             UpdateWorkerLocationRequest request,
             CancellationToken cancellationToken = default
         )
         {
+            // 0. Resolve WorkerProfileId from UserId
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(wp => wp.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
+            var workerId = workerProfile.Id;
+
             // 1. Persist latest location to Redis
             var locationData = new WorkerLocationUpdateDto
             {
