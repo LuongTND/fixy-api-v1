@@ -18,6 +18,12 @@ namespace Infrastructure.Services.Email
 
         public async Task SendEmailAsync(string to, string subject, string body)
         {
+            Console.WriteLine("===== SMTP =====");
+            Console.WriteLine($"Host: {_settings.Host}");
+            Console.WriteLine($"Port: {_settings.Port}");
+            Console.WriteLine($"User: {_settings.Username}");
+            Console.WriteLine($"Pass: {_settings.Password}");
+            Console.WriteLine("================");
             var message = new MimeMessage();
 
             message.From.Add(new MailboxAddress("Vua Tho", _settings.From));
