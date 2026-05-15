@@ -139,6 +139,7 @@ namespace Infrastructure
             services.AddScoped<IMediaRepository, MediaRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
+            services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
             services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
