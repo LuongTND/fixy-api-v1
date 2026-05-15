@@ -21,8 +21,9 @@ namespace Infrastructure.Persistence
 
         public DbSet<WorkerProfile> WorkerProfiles { get; set; }
         public DbSet<WorkerCertificate> WorkerCertificates { get; set; }
-        public DbSet<WorkerServiceArea> WorkerServiceAreas { get; set; }
-        public DbSet<WorkerSchedule> WorkerSchedules { get; set; }
+        public DbSet<WorkerWeeklySchedule> WorkerSchedules { get; set; }
+        public DbSet<WorkerScheduleException> WorkerScheduleExceptions { get; set; }
+
         public DbSet<WorkerService> WorkerServices { get; set; }
         public DbSet<WorkerPayoutAccount> WorkerPayoutAccounts { get; set; }
         public DbSet<WorkerFeaturedOrder> WorkerFeaturedOrders { get; set; }
