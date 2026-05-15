@@ -27,8 +27,8 @@ namespace API.Controllers
             CancellationToken cancellationToken
         )
         {
-            var workerId = GetUserId();
-            var result = await _workerLocationService.UpdateLocationAsync(workerId, request, cancellationToken);
+            var userId = GetUserId();
+            var result = await _workerLocationService.UpdateLocationAsync(userId, request, cancellationToken);
             return HandleResult(result);
         }
     }
