@@ -10,16 +10,13 @@ namespace Infrastructure.Services.Email
 
         public RazorTemplateEngine()
         {
-            var templatePath = Path.GetFullPath(
-                Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "..",
-                    "Infrastructure",
-                    "Services",
-                    "Email",
-                    "Templates"
-                )
+            var templatePath = Path.Combine(
+                AppContext.BaseDirectory,
+                "Services",
+                "Email",
+                "Templates"
             );
+
             _engine = new RazorLightEngineBuilder()
                 .UseFileSystemProject(templatePath)
                 .UseMemoryCachingProvider()
