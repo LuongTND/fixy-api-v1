@@ -256,6 +256,7 @@ namespace Infrastructure.Services
                 // Create Worker Address
                 var workerAddress = new Address
                 {
+                    UserId = user.Id,
                     City = dto.CreateAddressRequestDto.City,
                     District = dto.CreateAddressRequestDto.District,
                     Ward = dto.CreateAddressRequestDto.Ward,
