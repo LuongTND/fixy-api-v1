@@ -104,7 +104,10 @@ namespace Infrastructure.Services.Auth
                 new Wallet
                 {
                     UserId = user.Id,
-                    OwnerType = WalletOwnerType.Customer,
+                    OwnerType =
+                        request.RoleRegister == RoleRegister.Customer
+                            ? WalletOwnerType.Customer
+                            : WalletOwnerType.Worker,
                     Balance = 0,
                     LifetimeEarned = 0,
                     LifetimeSpent = 0,

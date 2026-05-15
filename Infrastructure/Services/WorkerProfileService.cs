@@ -25,6 +25,7 @@ namespace Infrastructure.Services
         private readonly IUnitOfWork _unitOfWork;
 
         private readonly IBlobService _blobService;
+        private readonly IWorkerWeeklyScheduleService _workerWeeklyScheduleService;
 
         public WorkerProfileService(
             IUserRepository userRepository,
@@ -35,7 +36,8 @@ namespace Infrastructure.Services
             IWalletRepository walletRepository,
             IMediaRepository mediaRepository,
             IUnitOfWork unitOfWork,
-            IBlobService blobService
+            IBlobService blobService,
+            IWorkerWeeklyScheduleService workerWeeklyScheduleService
         )
         {
             _userRepository = userRepository;
@@ -47,6 +49,7 @@ namespace Infrastructure.Services
             _mediaRepository = mediaRepository;
             _unitOfWork = unitOfWork;
             _blobService = blobService;
+            _workerWeeklyScheduleService = workerWeeklyScheduleService;
         }
 
         public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
@@ -252,7 +255,11 @@ namespace Infrastructure.Services
                 };
 
                 await _workerProfileRepository.AddAsync(workerProfile, cancellationToken);
-
+                // Create Worker Schedule
+                await _workerWeeklyScheduleService.CreateDefaultScheduleAsync(
+                    workerProfile.Id,
+                    cancellationToken
+                );
                 // Create Worker Address
                 var workerAddress = new Address
                 {
