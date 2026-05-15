@@ -30,7 +30,7 @@ namespace Infrastructure.Persistence.Configurations
 
             builder
                 .HasOne(x => x.Customer)
-                .WithMany()
+                .WithMany(x => x.Bookings)
                 .HasForeignKey(x => x.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
