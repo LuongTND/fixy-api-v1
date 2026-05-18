@@ -23,6 +23,15 @@ namespace Application.Interfaces.Services.Booking
 
         Task<OperationResult> CompleteAsync(Guid bookingId, CompleteBookingRequest request, CancellationToken cancellationToken = default);
 
+        // Worker declines the booking with a reason. Updates MatchingQueue and triggers re-routing.
+        Task<OperationResult> DeclineAsync(Guid bookingId, DeclineBookingRequest request, CancellationToken cancellationToken = default);
+
+        // Worker proposes alternative price/time before accepting.
+        Task<OperationResult> ProposeAsync(Guid bookingId, ProposeBookingRequest request, CancellationToken cancellationToken = default);
+
+        // Customer accepts or rejects the worker's counter-proposal.
+        Task<OperationResult> RespondProposalAsync(Guid bookingId, RespondProposalRequest request, CancellationToken cancellationToken = default);
+
         Task<OperationResult<SupportTicketDto>> ReportIssueAsync(Guid bookingId, ReportBookingIssueRequest request, CancellationToken cancellationToken = default);
     }
 }
