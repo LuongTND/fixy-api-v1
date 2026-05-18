@@ -1,0 +1,43 @@
+﻿using Application.DTOs.Media;
+using Application.DTOs.WorkerProfile.WorkerCertificate;
+using Application.DTOs.WorkerProfile.WorkerService;
+using Domain.Enum;
+
+public class WorkerAdminAndOwnerDetailDto
+{
+    public Guid Id { get; set; }
+
+    public string FullName { get; set; } = string.Empty;
+
+    public string Email { get; set; } = string.Empty;
+
+    public string Phone { get; set; } = string.Empty;
+
+    public DateOnly? DateOfBirth { get; set; }
+
+    public string? Gender { get; set; }
+
+    public WorkerStatus Status { get; set; }
+
+    public string? Bio { get; set; }
+
+    public int ExperienceYears { get; set; }
+
+    public double MaxDistanceKm { get; set; }
+
+    public string? CitizenIdNumber { get; set; }
+
+    public string? CitizenIdIssuePlace { get; set; }
+
+    public DateTime? CitizenIdIssueDate { get; set; }
+
+    public string? RejectReason { get; set; }
+
+    public List<WorkerServiceDto> Services { get; set; } = [];
+
+    public List<WorkerCertificateDto> Certificates { get; set; } = [];
+
+    public List<MediaDto> IdentificationImages { get; set; } = [];
+
+    public List<MediaDto> PortfolioImages { get; set; } = [];
+}

@@ -39,7 +39,7 @@ namespace Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<Media>> GetProfolioImagesByUserId(
+        public async Task<List<Media>> GetPorfolioImagesByUserId(
             Guid id,
             CancellationToken cancellationToken
         )

@@ -9,6 +9,7 @@ using Application.Interfaces.Services;
 using Application.Interfaces.Services.Media;
 using Domain.Entity;
 using Domain.Enum;
+using Domain.Exceptions;
 
 namespace Infrastructure.Services
 {
@@ -70,22 +71,13 @@ namespace Infrastructure.Services
                 .Select(i => new WorkerProfileDto
                 {
                     Id = i.Id,
-                    Email = i.User?.Email,
-                    Phone = i.User?.Phone,
                     DateOfBirth = i.User?.DateOfBirth,
                     FullName = i.User!.FullName,
                     Gender = i.User?.Gender,
                     Status = i.Status.ToString(),
-                    Service = i
-                        .Services.Select(s => new WorkerServiceDto
-                        {
-                            Id = s.Id,
-                            CategoryId = s.CategoryId,
-                            CategoryName = s.Category?.Name,
-                            BasePrice = s.BasePrice,
-                            IsPrimary = s.IsPrimary,
-                        })
-                        .ToList(),
+                    ExperienceYears = i.ExperienceYears,
+                    RatingAvg = i.RatingAvg,
+                    Services = i.Services.Select(MapWorkerService).ToList(),
                 })
                 .ToList();
             return OperationResult<PagedResponse<WorkerProfileDto>>.Success(
@@ -100,99 +92,105 @@ namespace Infrastructure.Services
             );
         }
 
-        public async Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetail(
-            Guid id,
+        public async Task<OperationResult<WorkerPublicDetailDto>> GetPublicDetailAsync(
+            Guid workerId,
             CancellationToken cancellationToken
         )
         {
-            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
-                id,
-                cancellationToken
-            );
-            if (workerProfile == null)
-            {
-                return OperationResult<WorkerProfileDetailDto>.Failure("Worker profile not found");
-            }
-
-            var identificateImages = await _mediaRepository.GetIdentificateImagesByUserId(
-                workerProfile.User!.Id,
-                cancellationToken
-            );
-            var profolioImages = await _mediaRepository.GetIdentificateImagesByUserId(
-                workerProfile.User!.Id,
-                cancellationToken
-            );
-            var certificateIds = workerProfile.Certificates.Select(x => x.Id).ToList();
-
-            var workerCertificateImages =
-                await _mediaRepository.GetAllWorkerCertificateImagesByCertificateIds(
-                    certificateIds,
-                    cancellationToken
-                );
-            var imageLookup = workerCertificateImages.ToLookup(x => x.OwnerId);
-            return OperationResult<WorkerProfileDetailDto>.Success(
-                new WorkerProfileDetailDto
+            var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
+            return OperationResult<WorkerPublicDetailDto>.Success(
+                new WorkerPublicDetailDto
                 {
-                    Id = id,
-                    FullName = workerProfile.User!.FullName,
-                    Gender = workerProfile.User.Gender,
-                    Email = workerProfile.User.Email,
-                    Phone = workerProfile.User.Phone,
-                    DateOfBirth = workerProfile.User.DateOfBirth,
-                    Bio = workerProfile.Bio,
-                    ExperienceYears = workerProfile.ExperienceYears,
-                    MaxDistanceKm = workerProfile.MaxDistanceKm,
-                    Status = workerProfile.Status,
-                    CitizenIdNumber = workerProfile.User.CitizenIdNumber,
-                    CitizenIdIssuePlace = workerProfile.User.CitizenIdIssuePlace,
-                    CitizenIdIssueDate = workerProfile.User.CitizenIdIssueDate,
-                    Services = workerProfile
-                        .Services.Select(s => new WorkerServiceDto
-                        {
-                            Id = s.Id,
-                            CategoryId = s.CategoryId,
-                            CategoryName = s.Category?.Name,
-                            BasePrice = s.BasePrice,
-                            IsPrimary = s.IsPrimary,
-                        })
+                    Id = workerId,
+                    FullName = data.WorkerProfile.User!.FullName,
+                    Bio = data.WorkerProfile.Bio,
+                    RatingAvg = data.WorkerProfile.RatingAvg,
+                    ExperienceYears = data.WorkerProfile.ExperienceYears,
+                    Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
+                    Certificates = data
+                        .WorkerProfile.Certificates.Select(c =>
+                            MapCertificate(c, data.CertificateImageLookup)
+                        )
                         .ToList(),
-                    Certificates = workerProfile
-                        .Certificates.Select(c => new WorkerCertificateDto
-                        {
-                            Id = c.Id,
-                            WorkerProfileId = c.WorkerProfileId,
-                            Title = c.Title,
-                            IssuedAt = c.IssuedAt,
-                            IssuedBy = c.IssuedBy,
 
-                            CertificateImage = imageLookup[c.Id]
-                                .Select(x => new MediaDto
-                                {
-                                    Id = x.Id,
-                                    OwnerId = x.OwnerId,
-                                    FileUrl = x.FileUrl,
-                                })
-                                .ToList(),
-                        })
-                        .ToList(),
-                    IdentificateImages = identificateImages
-                        .Select(x => new MediaDto
-                        {
-                            Id = x.Id,
-                            OwnerId = x.OwnerId,
-                            FileUrl = x.FileUrl,
-                        })
-                        .ToList(),
-                    ProfolioImages = profolioImages
-                        .Select(x => new MediaDto
-                        {
-                            Id = x.Id,
-                            OwnerId = x.OwnerId,
-                            FileUrl = x.FileUrl,
-                        })
-                        .ToList(),
+                    PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
                 },
                 "Get worker profile by Id successfully"
+            );
+        }
+
+        public async Task<OperationResult<WorkerPrivateDetailDto>> GetPrivateDetailAsync(
+            Guid workerId,
+            CancellationToken cancellationToken
+        )
+        {
+            var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
+
+            return OperationResult<WorkerPrivateDetailDto>.Success(
+                new WorkerPrivateDetailDto
+                {
+                    Id = workerId,
+                    FullName = data.WorkerProfile.User!.FullName,
+                    Email = data.WorkerProfile.User.Email!,
+                    Phone = data.WorkerProfile.User.Phone!,
+                    RatingAvg = data.WorkerProfile.RatingAvg,
+                    Bio = data.WorkerProfile.Bio,
+                    ExperienceYears = data.WorkerProfile.ExperienceYears,
+                    Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
+                    Certificates = data
+                        .WorkerProfile.Certificates.Select(c =>
+                            MapCertificate(c, data.CertificateImageLookup)
+                        )
+                        .ToList(),
+
+                    PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
+                },
+                "Get worker profile by Id successfully"
+            );
+        }
+
+        public async Task<
+            OperationResult<WorkerAdminAndOwnerDetailDto>
+        > GetAdminAndOwnerDetailAsync(Guid workerId, CancellationToken cancellationToken)
+        {
+            var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
+            var dto = new WorkerAdminAndOwnerDetailDto
+            {
+                Id = data.WorkerProfile.Id,
+                FullName = data.WorkerProfile.User!.FullName,
+                Email = data.WorkerProfile.User.Email!,
+                Phone = data.WorkerProfile.User.Phone!,
+
+                Gender = data.WorkerProfile.User.Gender,
+                DateOfBirth = data.WorkerProfile.User.DateOfBirth,
+
+                Status = data.WorkerProfile.Status,
+
+                Bio = data.WorkerProfile.Bio,
+                ExperienceYears = data.WorkerProfile.ExperienceYears,
+                MaxDistanceKm = data.WorkerProfile.MaxDistanceKm,
+
+                CitizenIdNumber = data.WorkerProfile.User.CitizenIdNumber,
+                CitizenIdIssueDate = data.WorkerProfile.User.CitizenIdIssueDate,
+                CitizenIdIssuePlace = data.WorkerProfile.User.CitizenIdIssuePlace,
+
+                RejectReason = data.WorkerProfile.RejectReason,
+
+                Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
+                Certificates = data
+                    .WorkerProfile.Certificates.Select(c =>
+                        MapCertificate(c, data.CertificateImageLookup)
+                    )
+                    .ToList(),
+
+                PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
+
+                IdentificationImages = data.IdentificationImages.Select(MapMedia).ToList(),
+            };
+
+            return OperationResult<WorkerAdminAndOwnerDetailDto>.Success(
+                dto,
+                "Get admin worker detail successfully"
             );
         }
 
@@ -211,10 +209,10 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure("Worker need to provice address.");
             }
-            if (dto.ProfolioUploads.Count > 10)
+            if (dto.PortfolioUploads.Count > 10)
             {
                 return OperationResult.Failure(
-                    "Worker is only allowed to upload a maximum of 10 image profolio."
+                    "Worker is only allowed to upload a maximum of 10 image portlio."
                 );
             }
 
@@ -233,6 +231,15 @@ namespace Infrastructure.Services
             if (user == null)
             {
                 return OperationResult.Failure("User not found");
+            }
+            var existingWorker = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
+                user.Id,
+                cancellationToken
+            );
+
+            if (existingWorker != null)
+            {
+                return OperationResult.Failure("User already registered as worker");
             }
 
             var uploadedUrls = new List<string>();
@@ -287,9 +294,9 @@ namespace Infrastructure.Services
 
                     await _workerServiceRepository.AddAsync(workerService, cancellationToken);
                 }
-                // Upload Profolio Images
+                // Upload Portfolio Images
 
-                foreach (var upload in dto.ProfolioUploads)
+                foreach (var upload in dto.PortfolioUploads)
                 {
                     var imageUrl = await _blobService.UploadImageAsync(upload);
 
@@ -403,7 +410,7 @@ namespace Infrastructure.Services
                     new Wallet
                     {
                         UserId = workerRegisterRequest.User.Id,
-                        OwnerType = WalletOwnerType.Customer,
+                        OwnerType = WalletOwnerType.Worker,
                         Balance = 0,
                         LifetimeEarned = 0,
                         LifetimeSpent = 0,
@@ -438,6 +445,92 @@ namespace Infrastructure.Services
             _workerProfileRepository.Update(workerRegisterRequest);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return OperationResult.Success("Worker register was approved successfully");
+        }
+
+        //Private method
+        private WorkerServiceDto MapWorkerService(WorkerService service)
+        {
+            return new WorkerServiceDto
+            {
+                Id = service.Id,
+                CategoryId = service.CategoryId,
+                CategoryName = service.Category?.Name,
+                BasePrice = service.BasePrice,
+                IsPrimary = service.IsPrimary,
+            };
+        }
+
+        private MediaDto MapMedia(Media media)
+        {
+            return new MediaDto
+            {
+                Id = media.Id,
+                OwnerId = media.OwnerId,
+                FileUrl = media.FileUrl,
+            };
+        }
+
+        private WorkerCertificateDto MapCertificate(
+            WorkerCertificate certificate,
+            ILookup<Guid, Media> imageLookup
+        )
+        {
+            return new WorkerCertificateDto
+            {
+                Id = certificate.Id,
+                WorkerProfileId = certificate.WorkerProfileId,
+                Title = certificate.Title,
+                IssuedAt = certificate.IssuedAt,
+                IssuedBy = certificate.IssuedBy,
+
+                CertificateImage = imageLookup[certificate.Id].Select(MapMedia).ToList(),
+            };
+        }
+
+        private async Task<(
+            WorkerProfile WorkerProfile,
+            List<Media> PortfolioImages,
+            List<Media> IdentificationImages,
+            ILookup<Guid, Media> CertificateImageLookup
+        )> GetWorkerProfileDataAsync(Guid workerId, CancellationToken cancellationToken)
+        {
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+            {
+                throw new NotFoundException("Worker profile not found");
+            }
+            if (workerProfile.User == null)
+            {
+                throw new NotFoundException("Worker user not found");
+            }
+            var portfolioImages = await _mediaRepository.GetPorfolioImagesByUserId(
+                workerProfile.User.Id,
+                cancellationToken
+            );
+
+            var identificationImages = await _mediaRepository.GetIdentificateImagesByUserId(
+                workerProfile.User.Id,
+                cancellationToken
+            );
+
+            var certificateIds = workerProfile.Certificates.Select(x => x.Id).ToList();
+
+            var workerCertificateImages =
+                await _mediaRepository.GetAllWorkerCertificateImagesByCertificateIds(
+                    certificateIds,
+                    cancellationToken
+                );
+
+            return (
+                workerProfile,
+                portfolioImages,
+                identificationImages,
+                workerCertificateImages.ToLookup(x => x.OwnerId)
+            );
         }
     }
 }
