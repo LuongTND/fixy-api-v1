@@ -1,5 +1,4 @@
-﻿using Application.DTOs.WorkerProfile;
-using Application.DTOs.WorkerProfile.WorkerSchedule;
+﻿using Application.DTOs.WorkerProfile.WorkerSchedule;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Infrastructure.Services;

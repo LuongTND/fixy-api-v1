@@ -26,7 +26,7 @@ namespace Infrastructure.Repositories
         }
 
         public async Task<List<Media>> GetIdentificateImagesByUserId(
-            Guid id,
+            Guid userId,
             CancellationToken cancellationToken
         )
         {
@@ -34,13 +34,13 @@ namespace Infrastructure.Repositories
                 .Where(x =>
                     x.OwnerType == MediaOwnerType.User
                     && x.Category == MediaCategory.Identification
-                    && x.OwnerId == id
+                    && x.OwnerId == userId
                 )
                 .ToListAsync(cancellationToken);
         }
 
         public async Task<List<Media>> GetPorfolioImagesByUserId(
-            Guid id,
+            Guid userId,
             CancellationToken cancellationToken
         )
         {
@@ -48,7 +48,7 @@ namespace Infrastructure.Repositories
                 .Where(x =>
                     x.OwnerType == MediaOwnerType.WorkerProfile
                     && x.Category == MediaCategory.Portfolio
-                    && x.OwnerId == id
+                    && x.OwnerId == userId
                 )
                 .ToListAsync(cancellationToken);
         }

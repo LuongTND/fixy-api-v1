@@ -1,4 +1,5 @@
 ﻿using Application.Common;
+using Application.DTOs.Address;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
@@ -157,6 +158,8 @@ namespace Infrastructure.Services
         > GetAdminAndOwnerDetailAsync(Guid workerId, CancellationToken cancellationToken)
         {
             var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
+
+            var address = data.WorkerProfile.User!.Addresses.FirstOrDefault();
             var dto = new WorkerAdminAndOwnerDetailDto
             {
                 Id = data.WorkerProfile.Id,
@@ -180,6 +183,17 @@ namespace Infrastructure.Services
 
                 RejectReason = data.WorkerProfile.RejectReason,
 
+                Address =
+                    address != null
+                        ? new AddressDto
+                        {
+                            Id = address.Id,
+                            City = address.City,
+                            District = address.District,
+                            Ward = address.Ward,
+                            Detail = address.Detail,
+                        }
+                        : null,
                 Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
                 Certificates = data
                     .WorkerProfile.Certificates.Select(c =>
@@ -396,32 +410,43 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var workerRegisterRequest =
-                await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
-                    id,
-                    cancellationToken
-                );
+            var workerRegisterRequest = await _workerProfileRepository.GetByIdAsync(
+                id,
+                cancellationToken
+            );
+
             if (workerRegisterRequest == null)
             {
                 return OperationResult.Failure("Worker register request not found");
             }
+
             workerRegisterRequest.Status = WorkerStatus.Approved;
             workerRegisterRequest.ApprovedById = userId;
+
             if (workerRegisterRequest.User != null)
             {
                 workerRegisterRequest.User.IsCitizenIdVerified = true;
-                await _walletRepository.AddAsync(
-                    new Wallet
-                    {
-                        UserId = workerRegisterRequest.User.Id,
-                        OwnerType = WalletOwnerType.Worker,
-                        Balance = 0,
-                        LifetimeEarned = 0,
-                        LifetimeSpent = 0,
-                        CreatedAt = DateTime.UtcNow,
-                    },
+                var existingWallet = await _walletRepository.GetByUserIdAsync(
+                    workerRegisterRequest.User.Id,
+                    WalletOwnerType.Worker,
                     cancellationToken
                 );
+
+                if (existingWallet == null)
+                {
+                    await _walletRepository.AddAsync(
+                        new Wallet
+                        {
+                            UserId = workerRegisterRequest.User.Id,
+                            OwnerType = WalletOwnerType.Worker,
+                            Balance = 0,
+                            LifetimeEarned = 0,
+                            LifetimeSpent = 0,
+                            CreatedAt = DateTime.UtcNow,
+                        },
+                        cancellationToken
+                    );
+                }
             }
 
             _workerProfileRepository.Update(workerRegisterRequest);
@@ -451,12 +476,390 @@ namespace Infrastructure.Services
             return OperationResult.Success("Worker register was approved successfully");
         }
 
+        public async Task<OperationResult> UpdateWorkerProfileAsync(
+            Guid workerId,
+            WorkerProfileUpdateRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            if (dto.Services.Count is < 1 or > 5)
+            {
+                return OperationResult.Failure(
+                    "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
+                );
+            }
+
+            if (dto.Services.Count(x => x.IsPrimary) != 1)
+            {
+                return OperationResult.Failure("Worker must have exactly one primary service.");
+            }
+
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
+            var user = workerProfile.User;
+
+            if (user == null)
+            {
+                return OperationResult.Failure("User not found");
+            }
+
+            // =========================
+            // Update User
+            // =========================
+
+            user.Phone = dto.Phone;
+
+            _userRepository.Update(user);
+
+            // =========================
+            // Update Worker Profile
+            // =========================
+
+            workerProfile.Bio = dto.Bio;
+            workerProfile.ExperienceYears = dto.ExperienceYears;
+            workerProfile.MaxDistanceKm = dto.MaxDistanceKm;
+            workerProfile.RejectReason = null;
+            // pending lại cần admin duyệt lại
+            workerProfile.Status = WorkerStatus.Pending;
+
+            _workerProfileRepository.Update(workerProfile);
+
+            // =========================
+            // Update Address
+            // =========================
+
+            var address = await _addressRepository.GetDefaultByUserIdAsync(
+                user.Id,
+                cancellationToken
+            );
+
+            if (address == null)
+            {
+                return OperationResult.Failure("Address not found");
+            }
+
+            address.City = dto.Address.City;
+            address.District = dto.Address.District;
+            address.Ward = dto.Address.Ward;
+            address.Detail = dto.Address.Detail;
+            address.Lat = dto.Address.Lat;
+            address.Lng = dto.Address.Lng;
+
+            _addressRepository.Update(address);
+
+            // =========================
+            // Replace Services
+            // =========================
+
+            _workerServiceRepository.RemoveRange(workerProfile.Services);
+
+            var newServices = dto.Services.Select(x => new WorkerService
+            {
+                WorkerProfileId = workerProfile.Id,
+                CategoryId = x.CategoryId,
+                BasePrice = x.BasePrice,
+                IsPrimary = x.IsPrimary,
+            });
+
+            await _workerServiceRepository.AddRangeAsync(newServices, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult.Success("Update worker profile successfully");
+        }
+
+        public async Task<OperationResult> UploadPortfolioImagesAsync(
+            Guid workerId,
+            UploadPortfolioImagesRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            if (dto.Images.Count == 0)
+            {
+                return OperationResult.Failure("Please upload at least one image.");
+            }
+
+            var currentImages = await _mediaRepository.GetPorfolioImagesByUserId(
+                workerId,
+                cancellationToken
+            );
+
+            if (currentImages.Count + dto.Images.Count > 10)
+            {
+                return OperationResult.Failure("Maximum 10 portfolio images allowed.");
+            }
+
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                foreach (var image in dto.Images)
+                {
+                    var imageUrl = await _blobService.UploadImageAsync(image);
+
+                    uploadedUrls.Add(imageUrl);
+
+                    var media = new Media
+                    {
+                        OwnerId = workerId,
+                        UploadedById = workerId,
+                        OwnerType = MediaOwnerType.WorkerProfile,
+                        Category = MediaCategory.Portfolio,
+                        FileUrl = imageUrl,
+                    };
+
+                    await _mediaRepository.AddAsync(media, cancellationToken);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult.Success("Upload portfolio images successfully.");
+            }
+            catch
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _blobService.DeleteImageAsync(url);
+                }
+
+                throw;
+            }
+        }
+
+        public async Task<OperationResult> DeletePortfolioImageAsync(
+            Guid workerId,
+            Guid mediaId,
+            CancellationToken cancellationToken
+        )
+        {
+            var media = await _mediaRepository.GetByIdAsync(mediaId, cancellationToken);
+
+            if (media == null)
+            {
+                return OperationResult.Failure("Image not found");
+            }
+
+            if (
+                media.OwnerId != workerId
+                || media.Category != MediaCategory.Portfolio
+                || media.OwnerType != MediaOwnerType.WorkerProfile
+            )
+            {
+                return OperationResult.Failure("Forbidden");
+            }
+
+            _mediaRepository.Remove(media);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _blobService.DeleteImageAsync(media.FileUrl);
+
+            return OperationResult.Success("Delete portfolio image successfully.");
+        }
+
+        public async Task<OperationResult> UpdateIdentificationAsync(
+            Guid workerId,
+            UpdateIdentificationRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker register request not found");
+            }
+            if (dto.Images.Count != 2)
+            {
+                return OperationResult.Failure(
+                    "Identification must include front and back images."
+                );
+            }
+            workerProfile.Status = WorkerStatus.Pending;
+            if (workerProfile.User != null)
+            {
+                workerProfile.User.CitizenIdNumber = dto.CitizenIdNumber;
+                workerProfile.User.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
+                workerProfile.User.CitizenIdIssueDate = dto.CitizenIdIssueDate;
+            }
+            var currentImages = await _mediaRepository.GetIdentificateImagesByUserId(
+                workerId,
+                cancellationToken
+            );
+
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                var newMedias = new List<Media>();
+
+                foreach (var image in dto.Images)
+                {
+                    var imageUrl = await _blobService.UploadImageAsync(image);
+
+                    uploadedUrls.Add(imageUrl);
+
+                    newMedias.Add(
+                        new Media
+                        {
+                            OwnerId = workerId,
+                            UploadedById = workerId,
+                            OwnerType = MediaOwnerType.User,
+                            Category = MediaCategory.Identification,
+                            FileUrl = imageUrl,
+                        }
+                    );
+                }
+
+                // delete old blob
+                foreach (var oldImage in currentImages)
+                {
+                    await _blobService.DeleteImageAsync(oldImage.FileUrl);
+                }
+
+                // remove old db
+                foreach (var oldImage in currentImages)
+                {
+                    _mediaRepository.Remove(oldImage);
+                }
+
+                // add new db
+                foreach (var media in newMedias)
+                {
+                    await _mediaRepository.AddAsync(media, cancellationToken);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult.Success("Update identification images successfully.");
+            }
+            catch
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _blobService.DeleteImageAsync(url);
+                }
+
+                throw;
+            }
+        }
+
+        public async Task<OperationResult> UpdateCentificatesAsync(
+            Guid workerId,
+            List<WorkerCertificateUploadRequestDto> dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                var oldCertificates = workerProfile.Certificates.ToList();
+
+                var oldCertificateIds = oldCertificates.Select(x => x.Id).ToList();
+
+                var oldCertificateImages =
+                    await _mediaRepository.GetAllWorkerCertificateImagesByCertificateIds(
+                        oldCertificateIds,
+                        cancellationToken
+                    );
+
+                foreach (var image in oldCertificateImages)
+                {
+                    await _blobService.DeleteImageAsync(image.FileUrl);
+                }
+
+                foreach (var image in oldCertificateImages)
+                {
+                    _mediaRepository.Remove(image);
+                }
+
+                _workerCertificateRepository.RemoveRange(oldCertificates);
+
+                foreach (var certificate in dto)
+                {
+                    var workerCertificate = new WorkerCertificate
+                    {
+                        WorkerProfileId = workerProfile.Id,
+                        Title = certificate.Title,
+                        IssuedBy = certificate.IssuedBy,
+                        IssuedAt = certificate.IssuedAt,
+                    };
+
+                    await _workerCertificateRepository.AddAsync(
+                        workerCertificate,
+                        cancellationToken
+                    );
+
+                    // Upload certificate images
+
+                    foreach (var upload in certificate.MediaUploads)
+                    {
+                        var imageUrl = await _blobService.UploadImageAsync(upload);
+
+                        uploadedUrls.Add(imageUrl);
+
+                        var media = new Media
+                        {
+                            OwnerId = workerCertificate.Id,
+                            UploadedById = workerId,
+                            OwnerType = MediaOwnerType.Certificate,
+                            Category = MediaCategory.Certificate,
+                            FileUrl = imageUrl,
+                        };
+
+                        await _mediaRepository.AddAsync(media, cancellationToken);
+                    }
+                }
+
+                // pending lại để admin duyệt lại
+                workerProfile.Status = WorkerStatus.Pending;
+
+                _workerProfileRepository.Update(workerProfile);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult.Success("Update certificates successfully");
+            }
+            catch
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _blobService.DeleteImageAsync(url);
+                }
+
+                throw;
+            }
+        }
+
         //Private method
         private WorkerServiceDto MapWorkerService(WorkerService service)
         {
             return new WorkerServiceDto
             {
                 Id = service.Id,
+                WorkerProfileId = service.WorkerProfileId,
                 CategoryId = service.CategoryId,
                 CategoryName = service.Category?.Name,
                 BasePrice = service.BasePrice,
@@ -486,7 +889,6 @@ namespace Infrastructure.Services
                 Title = certificate.Title,
                 IssuedAt = certificate.IssuedAt,
                 IssuedBy = certificate.IssuedBy,
-
                 CertificateImage = imageLookup[certificate.Id].Select(MapMedia).ToList(),
             };
         }
