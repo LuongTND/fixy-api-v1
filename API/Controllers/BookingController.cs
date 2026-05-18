@@ -85,6 +85,33 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "WORKER")]
+        // Worker declines the booking with a reason. Triggers re-routing to next worker.
+        [HttpPost("{id:guid}/decline")]
+        public async Task<IActionResult> Decline(Guid id, [FromBody] DeclineBookingRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.DeclineAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        // Worker proposes alternative price/time before accepting.
+        [HttpPost("{id:guid}/propose")]
+        public async Task<IActionResult> Propose(Guid id, [FromBody] ProposeBookingRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.ProposeAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "CUSTOMER")]
+        // Customer accepts or rejects the worker's counter-proposal.
+        [HttpPost("{id:guid}/respond-proposal")]
+        public async Task<IActionResult> RespondProposal(Guid id, [FromBody] RespondProposalRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.RespondProposalAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
         [HttpPost("{id:guid}/report-issue")]
         public async Task<IActionResult> ReportIssue(Guid id, [FromBody] ReportBookingIssueRequest request, CancellationToken cancellationToken)
         {

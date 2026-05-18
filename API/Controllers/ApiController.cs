@@ -31,7 +31,7 @@ namespace API.Controllers
                 return NotFound();
 
             if (result.IsSuccess)
-                return Ok(new { message = result.Message });
+                return Ok(result);
 
             if (result.Errors != null && result.Errors.Any())
                 return BadRequest(result.Errors);
