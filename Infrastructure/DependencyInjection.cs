@@ -76,6 +76,7 @@ namespace Infrastructure
 
             services.AddSingleton<IEmailQueue, EmailQueue>();
             services.AddHostedService<EmailBackgroundService>();
+            services.AddHostedService<BookingTimeoutBackgroundService>();
             // Authentication
             services
                 .AddAuthentication(options =>
@@ -148,6 +149,7 @@ namespace Infrastructure
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
+            services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
             services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();

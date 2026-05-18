@@ -20,6 +20,9 @@ namespace Application.DTOs.Booking
         public string? CancelReason { get; set; }
         public DateTime? CancelledAt { get; set; }
         public DateTime? CompletedAt { get; set; }
+        public long? WorkerProposedPrice { get; set; }
+        public DateTime? WorkerProposedTime { get; set; }
+        public string? WorkerProposedNote { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }

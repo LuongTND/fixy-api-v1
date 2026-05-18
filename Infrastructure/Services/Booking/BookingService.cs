@@ -6,9 +6,10 @@ using Application.Interfaces;
 using Application.Interfaces.Hubs;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Booking;
-using Domain.Enum;
-using Microsoft.Extensions.Logging;
 using AutoMapper;
+using Domain.Enum;
+using Infrastructure.Repositories;
+using Microsoft.Extensions.Logging;
 using BookingEntity = Domain.Entity.Booking;
 
 namespace Infrastructure.Services.Booking
@@ -22,6 +23,8 @@ namespace Infrastructure.Services.Booking
         private readonly IMapper _mapper;
         private readonly IMediaRepository _mediaRepository;
         private readonly ISupportTicketRepository _supportTicketRepository;
+        private readonly IWorkerMatchingQueueRepository _matchingQueueRepository;
+        private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly ILogger<BookingService> _logger;
 
         /// <summary>
@@ -43,16 +46,20 @@ namespace Infrastructure.Services.Booking
             ICurrentUserService currentUserService,
             IMediaRepository mediaRepository,
             ISupportTicketRepository supportTicketRepository,
+            IWorkerMatchingQueueRepository matchingQueueRepository,
+            IWorkerProfileRepository workerProfileRepository,
             IMapper mapper,
             ILogger<BookingService> logger
         )
         {
             _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
+            _workerProfileRepository = workerProfileRepository ?? throw new ArgumentNullException(nameof(workerProfileRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _bookingHubService = bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
             _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _supportTicketRepository = supportTicketRepository ?? throw new ArgumentNullException(nameof(supportTicketRepository));
+            _matchingQueueRepository = matchingQueueRepository ?? throw new ArgumentNullException(nameof(matchingQueueRepository));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -196,6 +203,266 @@ namespace Infrastructure.Services.Booking
 
             var ticketDto = _mapper.Map<SupportTicketDto>(ticket);
             return OperationResult<SupportTicketDto>.Success(ticketDto, "Issue reported successfully. Support team will contact you.");
+        }
+
+        public async Task<OperationResult> DeclineAsync(Guid bookingId, DeclineBookingRequest request, CancellationToken cancellationToken = default)
+        {
+            if (!Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult.Failure("User not authenticated");
+            }
+
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+            var workerId = workerProfile.Id;
+
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult.Failure("Booking not found");
+            }
+
+            // Find the offered queue entry for this worker
+            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerId, cancellationToken);
+            if (queueEntry == null)
+            {
+                return OperationResult.Failure("No active offer found for this worker and booking");
+            }
+
+            // Mark as rejected
+            queueEntry.Status = MatchingStatus.Rejected;
+            queueEntry.RejectReason = request.RejectReason;
+            queueEntry.RespondedAt = DateTime.UtcNow;
+            _matchingQueueRepository.Update(queueEntry);
+
+            // Try to offer to the next worker
+            await OfferToNextWorkerAsync(booking, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}",
+                workerId, bookingId, request.RejectReason);
+
+            // Notify via SignalR
+            await _bookingHubService.SendStatusUpdateAsync(
+                bookingId,
+                new BookingStatusUpdateDto
+                {
+                    BookingId = bookingId,
+                    Status = booking.Status.ToString(),
+                    UpdatedAt = DateTime.UtcNow,
+                    Message = "Worker declined. Finding another worker..."
+                },
+                cancellationToken
+            );
+
+            return OperationResult.Success("Booking declined successfully");
+        }
+
+        public async Task<OperationResult> ProposeAsync(Guid bookingId, ProposeBookingRequest request, CancellationToken cancellationToken = default)
+        {
+            if (!Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult.Failure("User not authenticated");
+            }
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+            var workerId = workerProfile.Id;
+
+            if (request.ProposedPrice == null && request.ProposedTime == null)
+            {
+                return OperationResult.Failure("At least one of ProposedPrice or ProposedTime must be provided");
+            }
+
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult.Failure("Booking not found");
+            }
+
+            // Verify there is an active offer for this worker
+            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerId, cancellationToken);
+            if (queueEntry == null)
+            {
+                return OperationResult.Failure("No active offer found for this worker and booking");
+            }
+
+            // Store the worker's counter-proposal on the booking
+            booking.WorkerProposedPrice = request.ProposedPrice;
+            booking.WorkerProposedTime = request.ProposedTime;
+            booking.WorkerProposedNote = request.ProposedNote;
+            booking.WorkerId = workerId;
+            booking.UpdatedDate = DateTime.UtcNow;
+            _bookingRepository.Update(booking);
+
+            // Pause the timeout by clearing ExpiresAt while customer reviews
+            queueEntry.ExpiresAt = null;
+            _matchingQueueRepository.Update(queueEntry);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Worker {WorkerId} proposed changes for booking {BookingId}. Price: {Price}, Time: {Time}",
+                workerId, bookingId, request.ProposedPrice, request.ProposedTime);
+
+            // Notify customer via SignalR
+            await _bookingHubService.SendStatusUpdateAsync(
+                bookingId,
+                new BookingStatusUpdateDto
+                {
+                    BookingId = bookingId,
+                    Status = booking.Status.ToString(),
+                    UpdatedAt = DateTime.UtcNow,
+                    Message = "Worker has proposed alternative price/time. Please review."
+                },
+                cancellationToken
+            );
+
+            return OperationResult.Success("Proposal submitted successfully");
+        }
+
+        public async Task<OperationResult> RespondProposalAsync(Guid bookingId, RespondProposalRequest request, CancellationToken cancellationToken = default)
+        {
+            if (!Guid.TryParse(_currentUserService.UserId, out var customerId))
+            {
+                return OperationResult.Failure("User not authenticated");
+            }
+
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult.Failure("Booking not found");
+            }
+
+            // Verify this is the customer's booking
+            if (booking.CustomerId != customerId)
+            {
+                return OperationResult.Failure("You are not authorized to respond to this booking's proposal");
+            }
+
+            // Verify there is a pending proposal
+            if (booking.WorkerProposedPrice == null && booking.WorkerProposedTime == null)
+            {
+                return OperationResult.Failure("No pending proposal found for this booking");
+            }
+
+            if (booking.WorkerId == null)
+            {
+                return OperationResult.Failure("No worker assigned to this booking");
+            }
+
+            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, booking.WorkerId.Value, cancellationToken);
+
+            if (request.Accept)
+            {
+                // Customer accepts the proposal
+                booking.FinalPrice = booking.WorkerProposedPrice ?? booking.EstimatedPrice;
+                booking.ScheduledAt = booking.WorkerProposedTime ?? booking.ScheduledAt;
+                booking.Status = BookingStatus.Confirmed;
+                booking.UpdatedDate = DateTime.UtcNow;
+                _bookingRepository.Update(booking);
+
+                if (queueEntry != null)
+                {
+                    queueEntry.Status = MatchingStatus.Accepted;
+                    queueEntry.RespondedAt = DateTime.UtcNow;
+                    _matchingQueueRepository.Update(queueEntry);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Customer {CustomerId} accepted proposal for booking {BookingId}",
+                    customerId, bookingId);
+
+                await _bookingHubService.SendStatusUpdateAsync(
+                    bookingId,
+                    new BookingStatusUpdateDto
+                    {
+                        BookingId = bookingId,
+                        Status = BookingStatus.Confirmed.ToString(),
+                        UpdatedAt = DateTime.UtcNow,
+                        Message = "Customer accepted the proposal. Booking confirmed."
+                    },
+                    cancellationToken
+                );
+
+                return OperationResult.Success("Proposal accepted. Booking confirmed.");
+            }
+            else
+            {
+                // Customer rejects the proposal — clear proposal fields and re-route
+                booking.WorkerProposedPrice = null;
+                booking.WorkerProposedTime = null;
+                booking.WorkerProposedNote = null;
+                booking.WorkerId = null;
+                booking.UpdatedDate = DateTime.UtcNow;
+                _bookingRepository.Update(booking);
+
+                if (queueEntry != null)
+                {
+                    queueEntry.Status = MatchingStatus.Rejected;
+                    queueEntry.RejectReason = request.RejectReason ?? "Customer rejected the proposal";
+                    queueEntry.RespondedAt = DateTime.UtcNow;
+                    _matchingQueueRepository.Update(queueEntry);
+                }
+
+                // Try to offer to the next worker
+                await OfferToNextWorkerAsync(booking, cancellationToken);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Customer {CustomerId} rejected proposal for booking {BookingId}. Reason: {Reason}",
+                    customerId, bookingId, request.RejectReason);
+
+                await _bookingHubService.SendStatusUpdateAsync(
+                    bookingId,
+                    new BookingStatusUpdateDto
+                    {
+                        BookingId = bookingId,
+                        Status = booking.Status.ToString(),
+                        UpdatedAt = DateTime.UtcNow,
+                        Message = "Proposal rejected. Finding another worker..."
+                    },
+                    cancellationToken
+                );
+
+                return OperationResult.Success("Proposal rejected. Finding another worker.");
+            }
+        }
+
+        /// <summary>
+        /// Attempts to offer the booking to the next candidate worker in the matching queue.
+        /// If no candidates remain, the booking status is set back to Matching.
+        /// </summary>
+        private async Task OfferToNextWorkerAsync(BookingEntity booking, CancellationToken cancellationToken)
+        {
+            var nextCandidate = await _matchingQueueRepository.GetNextCandidateAsync(booking.Id, cancellationToken);
+
+            if (nextCandidate != null)
+            {
+                nextCandidate.Status = MatchingStatus.Offered;
+                nextCandidate.OfferedAt = DateTime.UtcNow;
+                nextCandidate.ExpiresAt = DateTime.UtcNow.AddMinutes(15); // Default timeout, will be read from PlatformConfig in the future
+                _matchingQueueRepository.Update(nextCandidate);
+
+                _logger.LogInformation("Offered booking {BookingId} to next worker {WorkerId}",
+                    booking.Id, nextCandidate.WorkerId);
+            }
+            else
+            {
+                // No more candidates — set booking back to Matching so the system can re-search
+                booking.Status = BookingStatus.Matching;
+                booking.UpdatedDate = DateTime.UtcNow;
+                _bookingRepository.Update(booking);
+
+                _logger.LogWarning("No more candidates for booking {BookingId}. Status set to Matching.",
+                    booking.Id);
+            }
         }
 
         /// <summary>
