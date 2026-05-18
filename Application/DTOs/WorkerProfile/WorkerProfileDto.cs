@@ -6,6 +6,7 @@ namespace Application.DTOs.WorkerProfile
     public class WorkerProfileDto
     {
         public Guid Id { get; set; }
+        public Guid UserId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public DateOnly? DateOfBirth { get; set; }
         public int ExperienceYears { get; set; }
