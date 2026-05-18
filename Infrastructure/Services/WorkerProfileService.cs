@@ -457,6 +457,7 @@ namespace Infrastructure.Services
             return new WorkerServiceDto
             {
                 Id = service.Id,
+                WorkerProfileId = service.WorkerProfileId,
                 CategoryId = service.CategoryId,
                 CategoryName = service.Category?.Name,
                 BasePrice = service.BasePrice,
@@ -486,7 +487,6 @@ namespace Infrastructure.Services
                 Title = certificate.Title,
                 IssuedAt = certificate.IssuedAt,
                 IssuedBy = certificate.IssuedBy,
-
                 CertificateImage = imageLookup[certificate.Id].Select(MapMedia).ToList(),
             };
         }
