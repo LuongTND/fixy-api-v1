@@ -48,5 +48,15 @@ namespace API.Controllers
 
             return Guid.Parse(userId);
         }
+
+        protected string GetUserRoles()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value;
+
+            if (string.IsNullOrWhiteSpace(role))
+                throw new UnauthorizedAccessException("User role not found.");
+
+            return role;
+        }
     }
 }
