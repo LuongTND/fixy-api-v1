@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Application.Common;
 using Application.DTOs.WorkerProfile;
 using Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -31,28 +30,53 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAdminProfiles(
+        public async Task<IActionResult> GetPaged(
             [FromQuery] WorkerProfileQuery query,
             CancellationToken cancellationToken
         )
         {
-            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
             var result = await _workerProfileService.GetPagedWorkerProfiles(
                 query,
-                userRole,
+                role,
                 cancellationToken
             );
 
             return HandleResult(result);
         }
 
+        [HttpGet("{id:guid}/public")]
+        public async Task<IActionResult> GetPublicDetail(
+            Guid id,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _workerProfileService.GetPublicDetailAsync(id, cancellationToken);
+
+            return HandleResult(result);
+        }
+
+        [Authorize]
+        [HttpGet("{id:guid}/private")]
+        public async Task<IActionResult> GetPrivateDetail(
+            Guid id,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _workerProfileService.GetPrivateDetailAsync(id, cancellationToken);
+
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "WORKER")]
         [HttpGet("me")]
-        public async Task<IActionResult> GetDetail(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
         {
-            var userId = GetUserId();
-            var result = await _workerProfileService.GetWorkerProfileDetail(
-                userId,
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.GetAdminAndOwnerDetailAsync(
+                workerId,
                 cancellationToken
             );
 
@@ -60,10 +84,24 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "ADMIN")]
-        [HttpPut("{id}/approve")]
+        [HttpGet("{id:guid}/admin")]
+        public async Task<IActionResult> GetAdminDetail(
+            Guid id,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _workerProfileService.GetAdminAndOwnerDetailAsync(
+                id,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpPut("{id:guid}/approve")]
         public async Task<IActionResult> Approve(Guid id, CancellationToken cancellationToken)
         {
-            // test tạm
             var adminId = GetUserId();
 
             var result = await _workerProfileService.ApproveWorkerRegisterRequest(

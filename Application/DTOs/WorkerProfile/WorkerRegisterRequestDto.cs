@@ -21,7 +21,7 @@ namespace Application.DTOs.WorkerProfile
         public CreateAddressRequestDto CreateAddressRequestDto { get; set; } =
             new CreateAddressRequestDto();
         public List<IFormFile> IdentificationUploads { get; set; } = new List<IFormFile>();
-        public List<IFormFile> ProfolioUploads { get; set; } = new List<IFormFile>();
+        public List<IFormFile> PortfolioUploads { get; set; } = new List<IFormFile>();
 
         public List<WorkerServiceRegisterRequestDto> WorkerService { get; set; } =
             new List<WorkerServiceRegisterRequestDto>();

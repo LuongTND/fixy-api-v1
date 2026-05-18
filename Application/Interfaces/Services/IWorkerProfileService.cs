@@ -14,8 +14,16 @@ namespace Application.Interfaces.Services
             string? role,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetail(
-            Guid userId,
+        Task<OperationResult<WorkerPublicDetailDto>> GetPublicDetailAsync(
+            Guid workerId,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult<WorkerPrivateDetailDto>> GetPrivateDetailAsync(
+            Guid workerId,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult<WorkerAdminAndOwnerDetailDto>> GetAdminAndOwnerDetailAsync(
+            Guid workerId,
             CancellationToken cancellationToken
         );
         Task<OperationResult> ApproveWorkerRegisterRequest(
