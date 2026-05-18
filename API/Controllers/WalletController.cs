@@ -21,7 +21,7 @@ namespace API.Controllers
         {
             var result = await _walletService.GetWalletOverviewAsync(
                 GetUserId(),
-                WalletOwnerType.Customer,
+                GetUserRoles() == "CUSTOMER" ? WalletOwnerType.Customer : WalletOwnerType.Worker,
                 cancellationToken
             );
 
@@ -36,7 +36,7 @@ namespace API.Controllers
         {
             var result = await _walletService.GetWalletTransactionsAsync(
                 GetUserId(),
-                WalletOwnerType.Customer,
+                GetUserRoles() == "CUSTOMER" ? WalletOwnerType.Customer : WalletOwnerType.Worker,
                 query,
                 cancellationToken
             );
