@@ -25,6 +25,20 @@ namespace Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<Media?> GetAvatarByUserIdAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    x.OwnerType == MediaOwnerType.User
+                    && x.Category == MediaCategory.Avatar
+                    && x.OwnerId == userId
+                )
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<List<Media>> GetIdentificateImagesByUserId(
             Guid userId,
             CancellationToken cancellationToken

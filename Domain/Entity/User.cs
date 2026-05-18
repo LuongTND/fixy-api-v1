@@ -13,6 +13,7 @@ namespace Domain.Entity
         public string? Email { get; set; }
         public bool IsEmailVerified { get; set; }
         public string PasswordHash { get; set; } = string.Empty;
+        public string? AvatarUrl { get; set; }
 
         // Identification
         public string? CitizenIdNumber { get; set; }
