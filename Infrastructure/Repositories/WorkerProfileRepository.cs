@@ -55,12 +55,19 @@ namespace Infrastructure.Repositories
             var totalCount = await queryDb.CountAsync(cancellationToken);
 
             var items = await queryDb
-                .OrderByDescending(x => x.CreatedDate)
                 .Skip((query.PageNumber - 1) * query.PageSize)
                 .Take(query.PageSize)
                 .ToListAsync(cancellationToken);
 
             return (items, totalCount);
+        }
+
+        public async Task<WorkerProfile?> GetWorkerProfileByUserIdAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _dbSet.Include(x => x.User).FirstOrDefaultAsync(x => x.UserId == userId);
         }
 
         public async Task<WorkerProfile?> GetWorkerProfileDetailByUserIdAsync(
@@ -70,10 +77,11 @@ namespace Infrastructure.Repositories
         {
             return await _dbSet
                 .Include(x => x.User)
+                    .ThenInclude(x => x!.Addresses)
                 .Include(x => x.Certificates)
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
-                .FirstOrDefaultAsync(x => x.UserId == userId);
+                .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
         }
     }
 }

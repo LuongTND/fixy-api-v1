@@ -1,6 +1,6 @@
 ﻿using Application.Common;
 using Application.DTOs.WorkerProfile;
-using Application.DTOs.WorkerProfile.WorkerService;
+using Application.DTOs.WorkerProfile.WorkerCertificate;
 
 namespace Application.Interfaces.Services
 {
@@ -55,9 +55,14 @@ namespace Application.Interfaces.Services
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult> UpdateIdentificationImagesAsync(
+        Task<OperationResult> UpdateIdentificationAsync(
             Guid workerId,
-            UpdateIdentificationImagesRequestDto dto,
+            UpdateIdentificationRequestDto dto,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult> UpdateCentificatesAsync(
+            Guid workerId,
+            List<WorkerCertificateUploadRequestDto> dto,
             CancellationToken cancellationToken
         );
     }

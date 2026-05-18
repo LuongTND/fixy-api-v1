@@ -1,4 +1,5 @@
 ﻿using Application.Common;
+using Application.DTOs.Address;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
@@ -157,6 +158,8 @@ namespace Infrastructure.Services
         > GetAdminAndOwnerDetailAsync(Guid workerId, CancellationToken cancellationToken)
         {
             var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
+
+            var address = data.WorkerProfile.User!.Addresses.FirstOrDefault();
             var dto = new WorkerAdminAndOwnerDetailDto
             {
                 Id = data.WorkerProfile.Id,
@@ -180,6 +183,17 @@ namespace Infrastructure.Services
 
                 RejectReason = data.WorkerProfile.RejectReason,
 
+                Address =
+                    address != null
+                        ? new AddressDto
+                        {
+                            Id = address.Id,
+                            City = address.City,
+                            District = address.District,
+                            Ward = address.Ward,
+                            Detail = address.Detail,
+                        }
+                        : null,
                 Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
                 Certificates = data
                     .WorkerProfile.Certificates.Select(c =>
@@ -396,11 +410,10 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var workerRegisterRequest =
-                await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
-                    id,
-                    cancellationToken
-                );
+            var workerRegisterRequest = await _workerProfileRepository.GetByIdAsync(
+                id,
+                cancellationToken
+            );
 
             if (workerRegisterRequest == null)
             {
@@ -502,7 +515,6 @@ namespace Infrastructure.Services
             // Update User
             // =========================
 
-            user.Email = dto.Email;
             user.Phone = dto.Phone;
 
             _userRepository.Update(user);
@@ -514,7 +526,7 @@ namespace Infrastructure.Services
             workerProfile.Bio = dto.Bio;
             workerProfile.ExperienceYears = dto.ExperienceYears;
             workerProfile.MaxDistanceKm = dto.MaxDistanceKm;
-
+            workerProfile.RejectReason = null;
             // pending lại cần admin duyệt lại
             workerProfile.Status = WorkerStatus.Pending;
 
@@ -644,28 +656,43 @@ namespace Infrastructure.Services
                 return OperationResult.Failure("Forbidden");
             }
 
-            await _blobService.DeleteImageAsync(media.FileUrl);
-
             _mediaRepository.Remove(media);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            await _blobService.DeleteImageAsync(media.FileUrl);
+
             return OperationResult.Success("Delete portfolio image successfully.");
         }
 
-        public async Task<OperationResult> UpdateIdentificationImagesAsync(
+        public async Task<OperationResult> UpdateIdentificationAsync(
             Guid workerId,
-            UpdateIdentificationImagesRequestDto dto,
+            UpdateIdentificationRequestDto dto,
             CancellationToken cancellationToken
         )
         {
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker register request not found");
+            }
             if (dto.Images.Count != 2)
             {
                 return OperationResult.Failure(
                     "Identification must include front and back images."
                 );
             }
-
+            workerProfile.Status = WorkerStatus.Pending;
+            if (workerProfile.User != null)
+            {
+                workerProfile.User.CitizenIdNumber = dto.CitizenIdNumber;
+                workerProfile.User.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
+                workerProfile.User.CitizenIdIssueDate = dto.CitizenIdIssueDate;
+            }
             var currentImages = await _mediaRepository.GetIdentificateImagesByUserId(
                 workerId,
                 cancellationToken
@@ -716,6 +743,104 @@ namespace Infrastructure.Services
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return OperationResult.Success("Update identification images successfully.");
+            }
+            catch
+            {
+                foreach (var url in uploadedUrls)
+                {
+                    await _blobService.DeleteImageAsync(url);
+                }
+
+                throw;
+            }
+        }
+
+        public async Task<OperationResult> UpdateCentificatesAsync(
+            Guid workerId,
+            List<WorkerCertificateUploadRequestDto> dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
+            var uploadedUrls = new List<string>();
+
+            try
+            {
+                var oldCertificates = workerProfile.Certificates.ToList();
+
+                var oldCertificateIds = oldCertificates.Select(x => x.Id).ToList();
+
+                var oldCertificateImages =
+                    await _mediaRepository.GetAllWorkerCertificateImagesByCertificateIds(
+                        oldCertificateIds,
+                        cancellationToken
+                    );
+
+                foreach (var image in oldCertificateImages)
+                {
+                    await _blobService.DeleteImageAsync(image.FileUrl);
+                }
+
+                foreach (var image in oldCertificateImages)
+                {
+                    _mediaRepository.Remove(image);
+                }
+
+                _workerCertificateRepository.RemoveRange(oldCertificates);
+
+                foreach (var certificate in dto)
+                {
+                    var workerCertificate = new WorkerCertificate
+                    {
+                        WorkerProfileId = workerProfile.Id,
+                        Title = certificate.Title,
+                        IssuedBy = certificate.IssuedBy,
+                        IssuedAt = certificate.IssuedAt,
+                    };
+
+                    await _workerCertificateRepository.AddAsync(
+                        workerCertificate,
+                        cancellationToken
+                    );
+
+                    // Upload certificate images
+
+                    foreach (var upload in certificate.MediaUploads)
+                    {
+                        var imageUrl = await _blobService.UploadImageAsync(upload);
+
+                        uploadedUrls.Add(imageUrl);
+
+                        var media = new Media
+                        {
+                            OwnerId = workerCertificate.Id,
+                            UploadedById = workerId,
+                            OwnerType = MediaOwnerType.Certificate,
+                            Category = MediaCategory.Certificate,
+                            FileUrl = imageUrl,
+                        };
+
+                        await _mediaRepository.AddAsync(media, cancellationToken);
+                    }
+                }
+
+                // pending lại để admin duyệt lại
+                workerProfile.Status = WorkerStatus.Pending;
+
+                _workerProfileRepository.Update(workerProfile);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult.Success("Update certificates successfully");
             }
             catch
             {

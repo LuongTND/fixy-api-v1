@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using Application.DTOs.WorkerProfile;
-using Application.DTOs.WorkerProfile.WorkerService;
+using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -194,15 +194,33 @@ namespace API.Controllers
         [Authorize(Roles = "WORKER")]
         [HttpPut("me/identification-images")]
         public async Task<IActionResult> UpdateIdentificationImages(
-            [FromForm] UpdateIdentificationImagesRequestDto dto,
+            [FromForm] UpdateIdentificationRequestDto dto,
             CancellationToken cancellationToken
         )
         {
             var workerId = GetUserId();
 
-            var result = await _workerProfileService.UpdateIdentificationImagesAsync(
+            var result = await _workerProfileService.UpdateIdentificationAsync(
                 workerId,
                 dto,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpPut("me/centificates")]
+        public async Task<IActionResult> UpdateIdentificationImages(
+            [FromForm] List<WorkerCertificateUploadRequestDto> dtos,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.UpdateCentificatesAsync(
+                workerId,
+                dtos,
                 cancellationToken
             );
 
