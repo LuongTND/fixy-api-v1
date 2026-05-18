@@ -438,25 +438,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("FileSizeKb")
-                        .HasColumnType("int");
-
                     b.Property<string>("FileUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("HeightPx")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
-
-                    b.Property<string>("MimeType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OriginalName")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier");
@@ -468,17 +455,11 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
-                    b.Property<string>("ThumbnailUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("UploadedById")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<int?>("WidthPx")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -603,7 +584,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
 
-                    b.Property<Guid>("BookingId")
+                    b.Property<Guid?>("BookingId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CreatedBy")
@@ -612,17 +593,21 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<long>("DiscountAmount")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<string>("ExternalTransactionId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<long>("FinalAmount")
                         .HasColumnType("bigint");
 
                     b.Property<string>("GatewayRef")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("GatewayResponse")
                         .HasColumnType("nvarchar(max)");
@@ -641,24 +626,36 @@ namespace Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[BookingId] IS NOT NULL");
 
-                    b.HasIndex("GatewayRef")
-                        .HasDatabaseName("idx_po_gateway");
+                    b.HasIndex("ExternalTransactionId")
+                        .IsUnique()
+                        .HasFilter("[ExternalTransactionId] IS NOT NULL");
 
-                    b.HasIndex("CustomerId", "Status")
-                        .HasDatabaseName("idx_po_customer");
+                    b.HasIndex("Status");
 
-                    b.ToTable("PaymentOrders");
+                    b.HasIndex("Type");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PaymentOrders", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entity.PayoutRequest", b =>
@@ -940,24 +937,23 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3337),
+                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6139),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-                            CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3339),
+                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6142),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-                            CreatedDate = new DateTime(2026, 5, 11, 8, 28, 17, 353, DateTimeKind.Utc).AddTicks(3341),
-
+                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6145),
                             IsActive = true,
-                            Name = "STAFF"
+                            Name = "WORKER"
                         });
                 });
 
@@ -982,7 +978,17 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
@@ -992,6 +998,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -1116,6 +1125,20 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("CitizenIdIssueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CitizenIdIssuePlace")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("CitizenIdNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("CitizenIdVerifiedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -1142,6 +1165,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCitizenIdVerified")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDeleted")
@@ -1190,6 +1216,23 @@ namespace Infrastructure.Persistence.Migrations
                         .HasFilter("[Phone] IS NOT NULL");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("f1a7d8c1-3e21-4a8c-9b11-2d7f4c5e1000"),
+                            CreatedDate = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@fixy.com",
+                            FullName = "System Admin",
+                            IsActive = true,
+                            IsCitizenIdVerified = false,
+                            IsDeleted = false,
+                            IsEmailVerified = true,
+                            IsPhoneVerified = true,
+                            PasswordHash = "$2a$11$2Sn0EJfhBql3sJvuD/UDeODXtuVKzfkeAO8EWTplBPNMFi/P1Gz/.",
+                            Phone = "0000000000",
+                            TotpEnabled = false
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entity.UserOtp", b =>
@@ -1266,6 +1309,14 @@ namespace Infrastructure.Persistence.Migrations
                         .HasDatabaseName("idx_user_roles_user");
 
                     b.ToTable("UserRoles");
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = new Guid("f1a7d8c1-3e21-4a8c-9b11-2d7f4c5e1000"),
+                            RoleId = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
+                            AssignedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
@@ -1333,111 +1384,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("Vouchers");
                 });
 
-            modelBuilder.Entity("Domain.Entity.Wallet", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<long>("Balance")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("LifetimeEarned")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("LifetimeSpent")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("PendingBalance")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Wallets");
-                });
-
-            modelBuilder.Entity("Domain.Entity.WalletTransaction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<long>("Amount")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("BalanceAfter")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("BalanceBefore")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Direction")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReferenceId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ReferenceType")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<Guid?>("ReversedById")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReversedById");
-
-                    b.HasIndex("ReferenceType", "ReferenceId")
-                        .HasDatabaseName("idx_wtxn_ref");
-
-                    b.HasIndex("Status", "CreatedDate")
-                        .HasDatabaseName("idx_wtxn_status");
-
-                    b.HasIndex("WalletId", "CreatedDate")
-                        .HasDatabaseName("idx_wtxn_wallet");
-
-                    b.ToTable("WalletTransactions");
-                });
-
             modelBuilder.Entity("Domain.Entity.WorkerCertificate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1460,12 +1406,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId")
+                    b.HasIndex("WorkerProfileId")
                         .HasDatabaseName("idx_cert_worker");
 
                     b.ToTable("WorkerCertificates");
@@ -1720,17 +1666,17 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("FeaturedUntil")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsAcceptingJobs")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsBusy")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsOnline")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastLocationAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<double?>("Lat")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Lng")
-                        .HasColumnType("float");
 
                     b.Property<int>("MaxDistanceKm")
                         .HasColumnType("int");
@@ -1764,9 +1710,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("Lat", "Lng")
-                        .HasDatabaseName("idx_worker_geo");
-
                     b.HasIndex("Status", "IsOnline")
                         .HasDatabaseName("idx_worker_available");
 
@@ -1776,43 +1719,49 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("WorkerProfiles");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerSchedule", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerScheduleException", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("BlockedDates")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DayOfWeek")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
 
-                    b.Property<TimeOnly>("EndTime")
+                    b.Property<TimeOnly?>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("bit");
+                    b.Property<bool>("IsDayOff")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
-                    b.Property<TimeOnly>("StartTime")
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<TimeOnly?>("StartTime")
                         .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId", "DayOfWeek")
+                    b.HasIndex("Date");
+
+                    b.HasIndex("WorkerProfileId");
+
+                    b.HasIndex("WorkerProfileId", "Date")
                         .IsUnique();
 
-                    b.ToTable("WorkerSchedules");
+                    b.ToTable("WorkerScheduleExceptions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerService", b =>
@@ -1836,20 +1785,20 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("WorkerId", "CategoryId")
+                    b.HasIndex("WorkerProfileId", "CategoryId")
                         .IsUnique();
 
                     b.ToTable("WorkerServices");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerServiceArea", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerWeeklySchedule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1858,26 +1807,141 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("District")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
 
-                    b.Property<string>("Province")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId", "Province", "District")
+                    b.HasIndex("WorkerProfileId");
+
+                    b.HasIndex("WorkerProfileId", "DayOfWeek")
                         .IsUnique();
 
-                    b.ToTable("WorkerServiceAreas");
+                    b.ToTable("WorkerWeeklySchedules", (string)null);
+                });
+
+            modelBuilder.Entity("Wallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Balance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("LifetimeEarned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<long>("LifetimeSpent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<int>("OwnerType")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets", (string)null);
+                });
+
+            modelBuilder.Entity("WalletTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BalanceAfter")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BalanceBefore")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExternalTransactionId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ReferenceId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalTransactionId");
+
+                    b.HasIndex("ReferenceId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("WalletTransactions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entity.Address", b =>
@@ -1904,7 +1968,7 @@ namespace Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entity.CustomerProfile", "Customer")
+                    b.HasOne("Domain.Entity.User", "Customer")
                         .WithMany("Bookings")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -2046,18 +2110,17 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.Booking", "Booking")
                         .WithOne("PaymentOrder")
                         .HasForeignKey("Domain.Entity.PaymentOrder", "BookingId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Domain.Entity.User", "Customer")
+                    b.HasOne("Domain.Entity.User", "User")
                         .WithMany()
-                        .HasForeignKey("CustomerId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Booking");
 
-                    b.Navigation("Customer");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entity.PayoutRequest", b =>
@@ -2265,40 +2328,11 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("CreatedBy");
                 });
 
-            modelBuilder.Entity("Domain.Entity.Wallet", b =>
-                {
-                    b.HasOne("Domain.Entity.User", "User")
-                        .WithOne("Wallet")
-                        .HasForeignKey("Domain.Entity.Wallet", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Domain.Entity.WalletTransaction", b =>
-                {
-                    b.HasOne("Domain.Entity.WalletTransaction", "ReversedBy")
-                        .WithMany()
-                        .HasForeignKey("ReversedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Domain.Entity.Wallet", "Wallet")
-                        .WithMany("Transactions")
-                        .HasForeignKey("WalletId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ReversedBy");
-
-                    b.Navigation("Wallet");
-                });
-
             modelBuilder.Entity("Domain.Entity.WorkerCertificate", b =>
                 {
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany("Certificates")
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2398,15 +2432,15 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerSchedule", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerScheduleException", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
-                        .WithMany("Schedules")
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                        .WithMany("ScheduleExceptions")
+                        .HasForeignKey("WorkerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerService", b =>
@@ -2419,7 +2453,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany("Services")
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2428,15 +2462,37 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Worker");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerServiceArea", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerWeeklySchedule", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
-                        .WithMany("ServiceAreas")
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                        .WithMany("WeeklySchedules")
+                        .HasForeignKey("WorkerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
+                });
+
+            modelBuilder.Entity("Wallet", b =>
+                {
+                    b.HasOne("Domain.Entity.User", "User")
+                        .WithOne("Wallet")
+                        .HasForeignKey("Wallet", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("WalletTransaction", b =>
+                {
+                    b.HasOne("Wallet", "Wallet")
+                        .WithMany("Transactions")
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("Domain.Entity.Booking", b =>
@@ -2462,8 +2518,6 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.CustomerProfile", b =>
                 {
-                    b.Navigation("Bookings");
-
                     b.Navigation("Reviews");
                 });
 
@@ -2511,6 +2565,8 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Addresses");
 
+                    b.Navigation("Bookings");
+
                     b.Navigation("CustomerProfile");
 
                     b.Navigation("NotificationSetting");
@@ -2533,11 +2589,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("BookingVouchers");
                 });
 
-            modelBuilder.Entity("Domain.Entity.Wallet", b =>
-                {
-                    b.Navigation("Transactions");
-                });
-
             modelBuilder.Entity("Domain.Entity.WorkerPayoutAccount", b =>
                 {
                     b.Navigation("PayoutRequests");
@@ -2557,11 +2608,16 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Navigation("Reviews");
 
-                    b.Navigation("Schedules");
-
-                    b.Navigation("ServiceAreas");
+                    b.Navigation("ScheduleExceptions");
 
                     b.Navigation("Services");
+
+                    b.Navigation("WeeklySchedules");
+                });
+
+            modelBuilder.Entity("Wallet", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

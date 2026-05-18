@@ -1,8 +1,5 @@
-namespace Domain.Enum
+public enum WalletDirection
 {
-    public enum WalletDirection
-    {
-        Credit,
-        Debit
-    }
+    Credit, // + tiền vào ví
+    Debit, // - tiền khỏi ví
 }

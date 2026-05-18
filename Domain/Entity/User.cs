@@ -13,6 +13,19 @@ namespace Domain.Entity
         public string? Email { get; set; }
         public bool IsEmailVerified { get; set; }
         public string PasswordHash { get; set; } = string.Empty;
+
+        // Identification
+        public string? CitizenIdNumber { get; set; }
+
+        public DateTime? CitizenIdIssueDate { get; set; }
+
+        public string? CitizenIdIssuePlace { get; set; }
+
+        // Verify
+        public bool IsCitizenIdVerified { get; set; } = false;
+
+        public DateTime? CitizenIdVerifiedAt { get; set; }
+
         public OAuthProvider? OAuthProvider { get; set; }
         public string? OAuthId { get; set; }
         public bool IsActive { get; set; } = true;
@@ -32,5 +45,6 @@ namespace Domain.Entity
         public Wallet? Wallet { get; set; }
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public NotificationSetting? NotificationSetting { get; set; }
+        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
 }

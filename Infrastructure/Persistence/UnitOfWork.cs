@@ -1,12 +1,14 @@
 ﻿using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Infrastructure.Persistence.Repositories;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Infrastructure.Persistence
 {
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
+        private IDbContextTransaction? _transaction;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -26,6 +28,37 @@ namespace Infrastructure.Persistence
         public void Dispose()
         {
             _context?.Dispose();
+        }
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (_transaction != null)
+                return _transaction;
+
+            _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            return _transaction;
+        }
+
+        public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (_transaction == null)
+                return;
+
+            await _transaction.CommitAsync(cancellationToken);
+            await _transaction.DisposeAsync();
+            _transaction = null;
+        }
+
+        public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (_transaction == null)
+                return;
+
+            await _transaction.RollbackAsync(cancellationToken);
+            await _transaction.DisposeAsync();
+            _transaction = null;
         }
     }
 }

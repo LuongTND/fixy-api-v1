@@ -24,7 +24,7 @@ namespace API.Controllers
             var userId = GetUserId();
             var result = await _addressService.GetAddressByUserIdAsync(userId, cancellationToken);
 
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpPost]
@@ -36,7 +36,7 @@ namespace API.Controllers
             var userId = GetUserId();
             var result = await _addressService.CreateAsync(userId, dto, cancellationToken);
 
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpPut("{addressId}")]
@@ -55,7 +55,7 @@ namespace API.Controllers
                 cancellationToken
             );
 
-            return Ok(result);
+            return HandleResult(result);
         }
 
         [HttpDelete("{addressId}")]
@@ -64,19 +64,7 @@ namespace API.Controllers
             var userId = GetUserId();
             var result = await _addressService.DeleteAsync(addressId, userId, cancellationToken);
 
-            return Ok(result);
-        }
-
-        private Guid GetUserId()
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrWhiteSpace(userId))
-            {
-                throw new UnauthorizedAccessException();
-            }
-
-            return Guid.Parse(userId);
+            return HandleResult(result);
         }
     }
 }

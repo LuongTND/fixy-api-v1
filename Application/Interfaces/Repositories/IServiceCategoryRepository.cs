@@ -6,5 +6,6 @@ namespace Application.Interfaces.Repositories
     {
         Task<bool> ExistsByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> HasChildrenAsync(Guid parentId, CancellationToken cancellationToken = default);
+        Task<string?> GetLastSiblingCodeAsync(Guid? parentId, CancellationToken cancellationToken = default);
     }
 }

@@ -34,9 +34,18 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [AllowAnonymous]
+        [HttpGet("{id:guid}/price")]
+        public async Task<IActionResult> GetPrice(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _serviceCategoryService.GetPriceAsync(id, cancellationToken);
+
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "ADMIN")]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateServiceCategoryDto dto,CancellationToken cancellationToken)
+        public async Task<IActionResult> Create([FromForm] CreateServiceCategoryDto dto,CancellationToken cancellationToken)
         {
             var result = await _serviceCategoryService.CreateAsync(dto, cancellationToken);
 
@@ -45,7 +54,7 @@ namespace API.Controllers
 
         [Authorize(Roles = "ADMIN")]
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateServiceCategoryDto dto, CancellationToken cancellationToken)
+        public async Task<IActionResult> Update(Guid id, [FromForm] UpdateServiceCategoryDto dto, CancellationToken cancellationToken)
         {
             var result = await _serviceCategoryService.UpdateAsync(id, dto, cancellationToken);
 

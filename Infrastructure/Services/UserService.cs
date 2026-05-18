@@ -53,7 +53,17 @@ namespace Infrastructure.Services
             {
                 return OperationResult<ProfileDto>.Failure("User not found");
             }
-
+            if (dto.Phone != null)
+            {
+                var existUser = await _userRepository.GetByTargetAsync(
+                    dto.Phone,
+                    cancellationToken
+                );
+                if (existUser != null && existUser.Id != userId)
+                {
+                    return OperationResult<ProfileDto>.Failure("Phone already exists");
+                }
+            }
             if (user.Phone != dto.Phone)
             {
                 user.IsPhoneVerified = false;
@@ -62,7 +72,7 @@ namespace Infrastructure.Services
             user.FullName = dto.FullName;
             user.Phone = dto.Phone;
             user.DateOfBirth = dto.DateOfBirth;
-            user.Gender = dto.Gender;
+            user.Gender = dto.Gender.ToString();
 
             _userRepository.Update(user);
 

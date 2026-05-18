@@ -6,5 +6,6 @@ namespace Application.Interfaces.Repositories
     {
         Task<Role?> GetByNameAsync(string name, CancellationToken ct = default);
         Task<Role> GetCustomerRoleAsync(CancellationToken ct = default);
+        Task<Role> GetWorkerRoleAsync(CancellationToken ct = default);
     }
 }

@@ -26,19 +26,33 @@ public class AuthController : ApiController
     // =========================
 
     [HttpPost("otp/send")]
-    public async Task<IActionResult> SendOtp([FromBody] SendOtpRequestDto request)
+    public async Task<IActionResult> SendOtp(
+        [FromBody] SendOtpRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _otpService.SendOtpAsync(request.Target, request.Purpose);
+        var result = await _otpService.SendOtpAsync(
+            request.Target,
+            request.Purpose,
+            cancellationToken
+        );
 
-        return Ok(result);
+        return HandleResult(result);
     }
 
     [HttpPost("otp/verify")]
-    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
+    public async Task<IActionResult> VerifyOtp(
+        [FromBody] VerifyOtpRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
-        var result = await _otpService.VerifyOtpAsync(request.Target, request.OtpCode);
+        var result = await _otpService.VerifyOtpAsync(
+            request.Target,
+            request.OtpCode,
+            cancellationToken
+        );
 
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -52,7 +66,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.RegisterAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -66,7 +80,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.LoginAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -80,7 +94,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.RefreshTokenAsync(request.RefreshToken, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -94,7 +108,7 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.ChangePasswordAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 
     // =========================
@@ -107,6 +121,6 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.ResetPasswordAsync(request, cancellationToken);
-        return Ok(result);
+        return HandleResult(result);
     }
 }

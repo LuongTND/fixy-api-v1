@@ -19,5 +19,10 @@ namespace Infrastructure.Repositories
         {
             return await _dbSet.FirstAsync(x => x.Name == "CUSTOMER", ct);
         }
+
+        public async Task<Role> GetWorkerRoleAsync(CancellationToken ct)
+        {
+            return await _dbSet.FirstAsync(x => x.Name == "WORKER", ct);
+        }
     }
 }

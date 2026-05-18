@@ -1,9 +1,12 @@
 using API.Middlewares;
+using API.Services;
 using Application;
+using Application.Common.Interfaces;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infrastructure;
+using Infrastructure.Hubs;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,12 +15,13 @@ builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Add FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssembly(typeof(Application.DependencyInjection).Assembly);
-
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -62,6 +66,9 @@ builder.Services.AddApplication();
 
 // Add Infrastructure Layer
 builder.Services.AddInfrastructure(builder.Configuration);
+// SignalR
+builder.Services.AddSignalR();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
@@ -94,5 +101,8 @@ app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Map SignalR Hubs
+app.MapHub<BookingHub>("/hubs/booking");
 
 app.Run();

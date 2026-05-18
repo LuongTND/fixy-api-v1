@@ -13,7 +13,6 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.Badge).HasConversion<string>();
             builder.Property(x => x.FeaturedPackage).HasConversion<string>();
             builder.HasIndex(x => x.UserId).IsUnique();
-            builder.HasIndex(x => new { x.Lat, x.Lng }).HasDatabaseName("idx_worker_geo");
             builder
                 .HasIndex(x => new { x.Status, x.RatingAvg })
                 .HasDatabaseName("idx_worker_search");

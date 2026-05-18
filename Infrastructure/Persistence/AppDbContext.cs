@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Domain.Common;
 using Domain.Entity;
 using Infrastructure.Persistence.Seeds;
@@ -21,8 +21,9 @@ namespace Infrastructure.Persistence
 
         public DbSet<WorkerProfile> WorkerProfiles { get; set; }
         public DbSet<WorkerCertificate> WorkerCertificates { get; set; }
-        public DbSet<WorkerServiceArea> WorkerServiceAreas { get; set; }
-        public DbSet<WorkerSchedule> WorkerSchedules { get; set; }
+        public DbSet<WorkerWeeklySchedule> WorkerSchedules { get; set; }
+        public DbSet<WorkerScheduleException> WorkerScheduleExceptions { get; set; }
+
         public DbSet<WorkerService> WorkerServices { get; set; }
         public DbSet<WorkerPayoutAccount> WorkerPayoutAccounts { get; set; }
         public DbSet<WorkerFeaturedOrder> WorkerFeaturedOrders { get; set; }
@@ -62,6 +63,7 @@ namespace Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
             RoleSeeder.Seed(modelBuilder);
+            UserSeeder.Seed(modelBuilder);
             // Apply all configurations from assembly
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
