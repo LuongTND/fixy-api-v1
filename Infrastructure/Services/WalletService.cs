@@ -1,8 +1,8 @@
 ﻿using Application.Common;
+using Application.DTOs.Wallet;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Domain.Entity;
 using Domain.Enum;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +23,7 @@ public class WalletService : IWalletService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<OperationResult<Wallet>> GetWalletAsync(
+    public async Task<OperationResult<WalletOverviewDto>> GetWalletOverviewAsync(
         Guid userId,
         WalletOwnerType type,
         CancellationToken cancellationToken
@@ -32,25 +32,82 @@ public class WalletService : IWalletService
         var wallet = await _walletRepository.GetByUserIdAsync(userId, type, cancellationToken);
 
         if (wallet == null)
-            return OperationResult<Wallet>.Failure("Wallet not found");
+            return OperationResult<WalletOverviewDto>.Failure("Wallet not found");
 
-        return OperationResult<Wallet>.Success(wallet, "Get wallet successfully");
+        var recentTransactions = await _walletTransactionRepository.GetRecentByWalletIdAsync(
+            wallet.Id,
+            10,
+            cancellationToken
+        );
+
+        return OperationResult<WalletOverviewDto>.Success(
+            new WalletOverviewDto
+            {
+                Id = wallet.Id,
+                Balance = wallet.Balance,
+                LifetimeEarned = wallet.LifetimeEarned,
+                LifetimeSpent = wallet.LifetimeSpent,
+                RecentTransactions = recentTransactions
+                    .Select(t => new WalletTransactionDto
+                    {
+                        Id = t.Id,
+                        Type = t.Type.ToString(),
+                        Direction = t.Direction.ToString(),
+                        Amount = t.Amount,
+                        BalanceAfter = t.BalanceAfter,
+                        BalanceBefore = t.BalanceBefore,
+                        CreatedDate = t.CreatedDate,
+                        Status = t.Status.ToString(),
+                    })
+                    .ToList(),
+            },
+            "Get wallet overview successfully"
+        );
     }
 
-    public async Task<OperationResult<List<WalletTransaction>>> GetWalletTransactionAsync(
+    public async Task<
+        OperationResult<PagedResponse<WalletTransactionDto>>
+    > GetWalletTransactionsAsync(
         Guid userId,
         WalletOwnerType type,
+        PagedQuery query,
         CancellationToken cancellationToken
     )
     {
         var wallet = await _walletRepository.GetByUserIdAsync(userId, type, cancellationToken);
 
         if (wallet == null)
-            return OperationResult<List<WalletTransaction>>.Failure("Wallet not found");
+        {
+            return OperationResult<PagedResponse<WalletTransactionDto>>.Failure("Wallet not found");
+        }
 
-        return OperationResult<List<WalletTransaction>>.Success(
-            wallet.Transactions.ToList(),
-            "Get wallet transcation successfully"
+        var result = await _walletTransactionRepository.GetPagedByWalletIdAsync(
+            wallet.Id,
+            query,
+            cancellationToken
+        );
+
+        return OperationResult<PagedResponse<WalletTransactionDto>>.Success(
+            new PagedResponse<WalletTransactionDto>
+            {
+                Items = result
+                    .Item1.Select(t => new WalletTransactionDto
+                    {
+                        Id = t.Id,
+                        Type = t.Type.ToString(),
+                        Direction = t.Direction.ToString(),
+                        Amount = t.Amount,
+                        BalanceAfter = t.BalanceAfter,
+                        BalanceBefore = t.BalanceBefore,
+                        CreatedDate = t.CreatedDate,
+                        Status = t.Status.ToString(),
+                    })
+                    .ToList(),
+                TotalCount = result.Item2,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+            },
+            "Get transactions successfully"
         );
     }
 
