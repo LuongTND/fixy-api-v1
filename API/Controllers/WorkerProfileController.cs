@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Application.DTOs.WorkerProfile;
+using Application.DTOs.WorkerProfile.WorkerService;
 using Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,36 +47,28 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
-        [HttpGet("{id:guid}/public")]
+        [HttpGet("{workerId:guid}/public")]
         public async Task<IActionResult> GetPublicDetail(
-            Guid id,
+            Guid workerId,
             CancellationToken cancellationToken
         )
         {
-            var result = await _workerProfileService.GetPublicDetailAsync(id, cancellationToken);
+            var result = await _workerProfileService.GetPublicDetailAsync(
+                workerId,
+                cancellationToken
+            );
 
             return HandleResult(result);
         }
 
         [Authorize]
-        [HttpGet("{id:guid}/private")]
+        [HttpGet("{workerId:guid}/private")]
         public async Task<IActionResult> GetPrivateDetail(
-            Guid id,
+            Guid workerId,
             CancellationToken cancellationToken
         )
         {
-            var result = await _workerProfileService.GetPrivateDetailAsync(id, cancellationToken);
-
-            return HandleResult(result);
-        }
-
-        [Authorize(Roles = "WORKER")]
-        [HttpGet("me")]
-        public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
-        {
-            var workerId = GetUserId();
-
-            var result = await _workerProfileService.GetAdminAndOwnerDetailAsync(
+            var result = await _workerProfileService.GetPrivateDetailAsync(
                 workerId,
                 cancellationToken
             );
@@ -84,14 +77,14 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "ADMIN")]
-        [HttpGet("{id:guid}/admin")]
+        [HttpGet("{workerId:guid}/admin")]
         public async Task<IActionResult> GetAdminDetail(
-            Guid id,
+            Guid workerId,
             CancellationToken cancellationToken
         )
         {
             var result = await _workerProfileService.GetAdminAndOwnerDetailAsync(
-                id,
+                workerId,
                 cancellationToken
             );
 
@@ -124,6 +117,92 @@ namespace API.Controllers
             var result = await _workerProfileService.RejectWorkerRegisterRequest(
                 id,
                 dto.Reason,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyProfile(CancellationToken cancellationToken)
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.GetAdminAndOwnerDetailAsync(
+                workerId,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateProfile(
+            [FromBody] WorkerProfileUpdateRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.UpdateWorkerProfileAsync(
+                workerId,
+                dto,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpPost("me/portfolio-images")]
+        public async Task<IActionResult> UploadPortfolioImages(
+            [FromForm] UploadPortfolioImagesRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.UploadPortfolioImagesAsync(
+                workerId,
+                dto,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpDelete("me/portfolio-images/{mediaId:guid}")]
+        public async Task<IActionResult> DeletePortfolioImage(
+            Guid mediaId,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.DeletePortfolioImageAsync(
+                workerId,
+                mediaId,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpPut("me/identification-images")]
+        public async Task<IActionResult> UpdateIdentificationImages(
+            [FromForm] UpdateIdentificationImagesRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.UpdateIdentificationImagesAsync(
+                workerId,
+                dto,
                 cancellationToken
             );
 

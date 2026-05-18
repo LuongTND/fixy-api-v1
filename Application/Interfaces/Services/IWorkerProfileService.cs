@@ -1,5 +1,6 @@
 ﻿using Application.Common;
 using Application.DTOs.WorkerProfile;
+using Application.DTOs.WorkerProfile.WorkerService;
 
 namespace Application.Interfaces.Services
 {
@@ -7,6 +8,11 @@ namespace Application.Interfaces.Services
     {
         Task<OperationResult> WorkerRegisterAsync(
             WorkerRegisterRequestDto dto,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult> UpdateWorkerProfileAsync(
+            Guid workerId,
+            WorkerProfileUpdateRequestDto dto,
             CancellationToken cancellationToken
         );
         Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
@@ -34,6 +40,24 @@ namespace Application.Interfaces.Services
         Task<OperationResult> RejectWorkerRegisterRequest(
             Guid id,
             string reason,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult> UploadPortfolioImagesAsync(
+            Guid workerId,
+            UploadPortfolioImagesRequestDto dto,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult> DeletePortfolioImageAsync(
+            Guid workerId,
+            Guid mediaId,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult> UpdateIdentificationImagesAsync(
+            Guid workerId,
+            UpdateIdentificationImagesRequestDto dto,
             CancellationToken cancellationToken
         );
     }
