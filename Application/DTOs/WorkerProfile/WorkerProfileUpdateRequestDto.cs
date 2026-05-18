@@ -1,5 +1,6 @@
 ﻿using Application.DTOs.Address;
 using Application.DTOs.WorkerProfile.WorkerService;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.DTOs.WorkerProfile
 {
@@ -10,6 +11,7 @@ namespace Application.DTOs.WorkerProfile
 
         public int ExperienceYears { get; set; }
         public int MaxDistanceKm { get; set; }
+        public IFormFile? Avatar { get; set; }
 
         public UpdateAddressRequestDto Address { get; set; } = default!;
 

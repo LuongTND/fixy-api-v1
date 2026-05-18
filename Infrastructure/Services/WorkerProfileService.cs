@@ -568,6 +568,59 @@ namespace Infrastructure.Services
                 BasePrice = x.BasePrice,
                 IsPrimary = x.IsPrimary,
             });
+            if (dto.Avatar != null)
+            {
+                string? newAvatarUrl = null;
+
+                try
+                {
+                    // upload new avatar
+                    newAvatarUrl = await _blobService.UploadImageAsync(dto.Avatar);
+
+                    // get old avatar media
+                    var oldAvatarMedia = await _mediaRepository.GetAvatarByUserIdAsync(
+                        user.Id,
+                        cancellationToken
+                    );
+
+                    // delete old blob
+                    if (!string.IsNullOrWhiteSpace(user.AvatarUrl))
+                    {
+                        await _blobService.DeleteImageAsync(user.AvatarUrl);
+                    }
+
+                    // remove old media
+                    if (oldAvatarMedia != null)
+                    {
+                        _mediaRepository.Remove(oldAvatarMedia);
+                    }
+
+                    // add new media
+                    await _mediaRepository.AddAsync(
+                        new Media
+                        {
+                            OwnerId = user.Id,
+                            UploadedById = user.Id,
+                            OwnerType = MediaOwnerType.User,
+                            Category = MediaCategory.Avatar,
+                            FileUrl = newAvatarUrl,
+                        },
+                        cancellationToken
+                    );
+
+                    // update user avatar
+                    user.AvatarUrl = newAvatarUrl;
+                }
+                catch
+                {
+                    if (!string.IsNullOrWhiteSpace(newAvatarUrl))
+                    {
+                        await _blobService.DeleteImageAsync(newAvatarUrl);
+                    }
+
+                    throw;
+                }
+            }
 
             await _workerServiceRepository.AddRangeAsync(newServices, cancellationToken);
 

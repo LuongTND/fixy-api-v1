@@ -1,4 +1,5 @@
 ﻿using Domain.Enum;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.DTOs.Profile
 {
@@ -11,5 +12,6 @@ namespace Application.DTOs.Profile
         public DateOnly? DateOfBirth { get; set; }
 
         public Gender Gender { get; set; }
+        public IFormFile? Avatar { get; set; }
     }
 }
