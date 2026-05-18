@@ -7,7 +7,7 @@ namespace Application.DTOs.WorkerProfile
     public class WorkerPublicDetailDto
     {
         public Guid Id { get; set; }
-
+        public Guid UserId { get; set; }
         public string FullName { get; set; } = string.Empty;
 
         public int ExperienceYears { get; set; }

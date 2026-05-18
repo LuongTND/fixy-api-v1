@@ -71,6 +71,7 @@ namespace Infrastructure.Services
                 .Select(i => new WorkerProfileDto
                 {
                     Id = i.Id,
+                    UserId = i.UserId,
                     DateOfBirth = i.User?.DateOfBirth,
                     FullName = i.User!.FullName,
                     Gender = i.User?.Gender,
@@ -101,7 +102,8 @@ namespace Infrastructure.Services
             return OperationResult<WorkerPublicDetailDto>.Success(
                 new WorkerPublicDetailDto
                 {
-                    Id = workerId,
+                    Id = data.WorkerProfile.Id,
+                    UserId = workerId,
                     FullName = data.WorkerProfile.User!.FullName,
                     Bio = data.WorkerProfile.Bio,
                     RatingAvg = data.WorkerProfile.RatingAvg,
@@ -129,7 +131,8 @@ namespace Infrastructure.Services
             return OperationResult<WorkerPrivateDetailDto>.Success(
                 new WorkerPrivateDetailDto
                 {
-                    Id = workerId,
+                    Id = data.WorkerProfile.Id,
+                    UserId = workerId,
                     FullName = data.WorkerProfile.User!.FullName,
                     Email = data.WorkerProfile.User.Email!,
                     Phone = data.WorkerProfile.User.Phone!,
@@ -157,6 +160,7 @@ namespace Infrastructure.Services
             var dto = new WorkerAdminAndOwnerDetailDto
             {
                 Id = data.WorkerProfile.Id,
+                UserId = workerId,
                 FullName = data.WorkerProfile.User!.FullName,
                 Email = data.WorkerProfile.User.Email!,
                 Phone = data.WorkerProfile.User.Phone!,
