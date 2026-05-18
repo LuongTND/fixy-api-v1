@@ -1,4 +1,5 @@
-﻿using Domain.Entity;
+﻿using Application.Common;
+using Domain.Entity;
 
 namespace Application.Interfaces.Repositories
 {
@@ -9,15 +10,15 @@ namespace Application.Interfaces.Repositories
             CancellationToken cancellationToken = default
         );
 
-        Task<List<WalletTransaction>> GetByWalletIdAsync(
+        Task<List<WalletTransaction>> GetRecentByWalletIdAsync(
             Guid walletId,
+            int take = 10,
             CancellationToken cancellationToken = default
         );
 
-        Task<List<WalletTransaction>> GetByWalletAndDateAsync(
+        Task<(List<WalletTransaction>, int)> GetPagedByWalletIdAsync(
             Guid walletId,
-            DateTime from,
-            DateTime to,
+            PagedQuery query,
             CancellationToken cancellationToken = default
         );
     }

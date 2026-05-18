@@ -1,4 +1,5 @@
 ﻿using Application.Common;
+using Application.DTOs.Wallet;
 using Domain.Entity;
 using Domain.Enum;
 
@@ -6,14 +7,16 @@ namespace Application.Interfaces.Services
 {
     public interface IWalletService
     {
-        Task<OperationResult<Wallet>> GetWalletAsync(
+        Task<OperationResult<WalletOverviewDto>> GetWalletOverviewAsync(
             Guid userId,
             WalletOwnerType type,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<List<WalletTransaction>>> GetWalletTransactionAsync(
+
+        Task<OperationResult<PagedResponse<WalletTransactionDto>>> GetWalletTransactionsAsync(
             Guid userId,
             WalletOwnerType type,
+            PagedQuery query,
             CancellationToken cancellationToken
         );
         Task<OperationResult<WalletTransaction>> TopUpAsync(
