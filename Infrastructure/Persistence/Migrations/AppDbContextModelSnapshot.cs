@@ -165,9 +165,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid?>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
@@ -187,8 +184,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("ReorderFromId");
-
-                    b.HasIndex("UserId");
 
                     b.HasIndex("Status", "ScheduledAt")
                         .HasDatabaseName("idx_booking_scheduled");
@@ -942,24 +937,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-
-                            CreatedDate = new DateTime(2026, 5, 14, 2, 45, 56, 839, DateTimeKind.Utc).AddTicks(2281),
+                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6139),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-
-                            CreatedDate = new DateTime(2026, 5, 14, 2, 45, 56, 839, DateTimeKind.Utc).AddTicks(2287),
+                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6142),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-
-                            CreatedDate = new DateTime(2026, 5, 14, 2, 45, 56, 839, DateTimeKind.Utc).AddTicks(2289),
+                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6145),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -986,7 +978,17 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
@@ -996,6 +998,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -1661,17 +1666,17 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("FeaturedUntil")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsAcceptingJobs")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsBusy")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsOnline")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastLocationAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<double?>("Lat")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Lng")
-                        .HasColumnType("float");
 
                     b.Property<int>("MaxDistanceKm")
                         .HasColumnType("int");
@@ -1705,9 +1710,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("Lat", "Lng")
-                        .HasDatabaseName("idx_worker_geo");
-
                     b.HasIndex("Status", "IsOnline")
                         .HasDatabaseName("idx_worker_available");
 
@@ -1717,43 +1719,49 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("WorkerProfiles");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerSchedule", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerScheduleException", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("BlockedDates")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DayOfWeek")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
 
-                    b.Property<TimeOnly>("EndTime")
+                    b.Property<TimeOnly?>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("bit");
+                    b.Property<bool>("IsDayOff")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
-                    b.Property<TimeOnly>("StartTime")
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<TimeOnly?>("StartTime")
                         .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId", "DayOfWeek")
+                    b.HasIndex("Date");
+
+                    b.HasIndex("WorkerProfileId");
+
+                    b.HasIndex("WorkerProfileId", "Date")
                         .IsUnique();
 
-                    b.ToTable("WorkerSchedules");
+                    b.ToTable("WorkerScheduleExceptions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerService", b =>
@@ -1790,7 +1798,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.ToTable("WorkerServices");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerServiceArea", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerWeeklySchedule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1799,26 +1807,34 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("District")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
 
-                    b.Property<string>("Province")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId", "Province", "District")
+                    b.HasIndex("WorkerProfileId");
+
+                    b.HasIndex("WorkerProfileId", "DayOfWeek")
                         .IsUnique();
 
-                    b.ToTable("WorkerServiceAreas");
+                    b.ToTable("WorkerWeeklySchedules", (string)null);
                 });
 
             modelBuilder.Entity("Wallet", b =>
@@ -1953,7 +1969,7 @@ namespace Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("Domain.Entity.User", "Customer")
-                        .WithMany()
+                        .WithMany("Bookings")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1962,10 +1978,6 @@ namespace Infrastructure.Persistence.Migrations
                         .WithMany("Reorders")
                         .HasForeignKey("ReorderFromId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Domain.Entity.User", null)
-                        .WithMany("Bookings")
-                        .HasForeignKey("UserId");
 
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany("Bookings")
@@ -2420,15 +2432,15 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerSchedule", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerScheduleException", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
-                        .WithMany("Schedules")
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                        .WithMany("ScheduleExceptions")
+                        .HasForeignKey("WorkerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerService", b =>
@@ -2450,15 +2462,15 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Worker");
                 });
 
-            modelBuilder.Entity("Domain.Entity.WorkerServiceArea", b =>
+            modelBuilder.Entity("Domain.Entity.WorkerWeeklySchedule", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
-                        .WithMany("ServiceAreas")
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                        .WithMany("WeeklySchedules")
+                        .HasForeignKey("WorkerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Wallet", b =>
@@ -2596,11 +2608,11 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Navigation("Reviews");
 
-                    b.Navigation("Schedules");
-
-                    b.Navigation("ServiceAreas");
+                    b.Navigation("ScheduleExceptions");
 
                     b.Navigation("Services");
+
+                    b.Navigation("WeeklySchedules");
                 });
 
             modelBuilder.Entity("Wallet", b =>

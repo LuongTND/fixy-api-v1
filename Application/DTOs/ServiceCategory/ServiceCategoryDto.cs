@@ -12,6 +12,8 @@ namespace Application.DTOs.ServiceCategory
 
         public string? ImageUrl { get; set; }
 
+        public string Code { get; set; } = string.Empty;
+
         public int SortOrder { get; set; }
 
         public bool IsActive { get; set; }

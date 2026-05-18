@@ -63,8 +63,8 @@ namespace Infrastructure.Repositories
             return (items, totalCount);
         }
 
-        public async Task<WorkerProfile?> GetWorkerProfileDetailByIdAsync(
-            Guid id,
+        public async Task<WorkerProfile?> GetWorkerProfileDetailByUserIdAsync(
+            Guid userId,
             CancellationToken cancellationToken = default
         )
         {
@@ -73,7 +73,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Certificates)
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .FirstOrDefaultAsync(x => x.UserId == userId);
         }
     }
 }

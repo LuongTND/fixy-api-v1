@@ -11,6 +11,7 @@ using Domain.Enum;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using BookingEntity = Domain.Entity.Booking;
 
 namespace Infrastructure.Services
 {
@@ -245,7 +246,7 @@ namespace Infrastructure.Services
                 return OperationResult<BookingDraftConfirmedDto>.Failure("Address information is invalid");
             }
 
-            var booking = new Booking
+            var booking = new BookingEntity
             {
                 CustomerId = userId,
                 WorkerId = draft.WorkerId,

@@ -8,6 +8,7 @@ namespace Application.Interfaces.Repositories
             Guid id,
             CancellationToken cancellationToken
         );
+        Task<List<Media>> GetProfolioImagesByUserId(Guid id, CancellationToken cancellationToken);
         Task<List<Media>> GetAllWorkerCertificateImagesByCertificateIds(
             List<Guid> certificateIds,
             CancellationToken cancellationToken

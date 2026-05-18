@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Media;
+﻿using Application.DTOs.Address;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.DTOs.WorkerProfile.WorkerService;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +18,10 @@ namespace Application.DTOs.WorkerProfile
         public DateTime CitizenIdIssueDate { get; set; }
 
         public string CitizenIdIssuePlace { get; set; } = default!;
+        public CreateAddressRequestDto CreateAddressRequestDto { get; set; } =
+            new CreateAddressRequestDto();
         public List<IFormFile> IdentificationUploads { get; set; } = new List<IFormFile>();
+        public List<IFormFile> ProfolioUploads { get; set; } = new List<IFormFile>();
 
         public List<WorkerServiceRegisterRequestDto> WorkerService { get; set; } =
             new List<WorkerServiceRegisterRequestDto>();

@@ -15,7 +15,7 @@ namespace Application.Interfaces.Services
             CancellationToken cancellationToken
         );
         Task<OperationResult<WorkerProfileDetailDto>> GetWorkerProfileDetail(
-            Guid id,
+            Guid userId,
             CancellationToken cancellationToken
         );
         Task<OperationResult> ApproveWorkerRegisterRequest(
