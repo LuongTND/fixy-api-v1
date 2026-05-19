@@ -206,7 +206,7 @@ namespace Infrastructure.Services.Email
 
         private bool IsPhone(string target)
         {
-            return Regex.IsMatch(target, @"^(0|\+84)\d{9}$");
+            return Regex.IsMatch(target, @"^\d{9,11}$");
         }
     }
 }
