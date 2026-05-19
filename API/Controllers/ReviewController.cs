@@ -21,7 +21,7 @@ namespace API.Controllers
         [HttpPost("{bookingId}")]
         public async Task<IActionResult> CreateReview(
             Guid bookingId,
-            [FromBody] CreateReviewRequestDto dto,
+            [FromForm] CreateReviewRequestDto dto,
             CancellationToken cancellationToken
         )
         {
@@ -39,7 +39,7 @@ namespace API.Controllers
         [HttpPost("{reviewId}/reply")]
         public async Task<IActionResult> ReplyReview(
             Guid reviewId,
-            [FromBody] ReplyReviewRequestDto dto,
+            [FromForm] ReplyReviewRequestDto dto,
             CancellationToken cancellationToken
         )
         {

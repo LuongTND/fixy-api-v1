@@ -5,6 +5,9 @@ namespace Application.Interfaces.Services.Media
 {
     public interface IMediaService
     {
-        Task<OperationResult<List<MediaDto>>> UploadMediaAsync(UploadMediaFormDto request,CancellationToken cancellationToken = default);
+        Task<OperationResult<List<MediaDto>>> UploadMediaAsync(
+            UploadMediaFormDto request,
+            CancellationToken cancellationToken = default
+        );
     }
 }

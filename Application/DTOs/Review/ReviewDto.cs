@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Application.DTOs.Media;
 
 namespace Application.DTOs.Review
 {
@@ -21,6 +17,7 @@ namespace Application.DTOs.Review
         public DateTime? RepliedAt { get; set; }
 
         public Guid BookingId { get; set; }
+        public List<MediaDto> Images { get; set; } = new List<MediaDto>();
 
         public CustomerReviewInfoDto Customer { get; set; } = default!;
     }
