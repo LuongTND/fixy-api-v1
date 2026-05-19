@@ -123,6 +123,7 @@ namespace Infrastructure
             services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IMediaService, MediaService>();
             services.AddScoped<IBlobService, BlobService>();
+            services.AddScoped<IEnumService, EnumService>();
             services.AddScoped<IBookingHubService, BookingHubService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IWorkerLocationService, WorkerLocationService>();
