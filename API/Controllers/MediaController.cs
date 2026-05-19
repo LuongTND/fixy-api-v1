@@ -21,5 +21,23 @@ namespace API.Controllers
             var result = await _mediaService.UploadMediaAsync(request, cancellationToken);
             return HandleResult(result);
         }
+
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _mediaService.GetMediaByIdAsync(id, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyMedia(
+            [FromQuery] Domain.Enum.MediaCategory? category,
+            [FromQuery] Domain.Enum.MediaOwnerType? ownerType,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _mediaService.GetMyMediaAsync(category, ownerType, cancellationToken);
+            return HandleResult(result);
+        }
     }
 }
