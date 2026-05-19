@@ -27,6 +27,7 @@ namespace Infrastructure.Services
         private readonly IServiceCategoryRepository _serviceCategoryRepository;
         private readonly IMediaRepository _mediaRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
+        private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public BookingDraftService(
@@ -40,6 +41,7 @@ namespace Infrastructure.Services
             IServiceCategoryRepository serviceCategoryRepository,
             IMediaRepository mediaRepository,
             IWorkerProfileRepository workerProfileRepository,
+            IWorkerServiceRepository workerServiceRepository,
             IUnitOfWork unitOfWork)
         {
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
@@ -52,6 +54,7 @@ namespace Infrastructure.Services
             _serviceCategoryRepository = serviceCategoryRepository ?? throw new ArgumentNullException(nameof(serviceCategoryRepository));
             _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _workerProfileRepository = workerProfileRepository ?? throw new ArgumentNullException(nameof(workerProfileRepository));
+            _workerServiceRepository = workerServiceRepository ?? throw new ArgumentNullException(nameof(workerServiceRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
@@ -273,6 +276,22 @@ namespace Infrastructure.Services
                 }
             }
 
+            // Resolve Estimated Price automatically
+            long? estimatedPrice = null;
+            if (actualWorkerId.HasValue)
+            {
+                var workerService = await _workerServiceRepository.FirstOrDefaultAsync(
+                    ws => ws.WorkerProfileId == actualWorkerId.Value && ws.CategoryId == draft.CategoryId,
+                    cancellationToken
+                );
+                estimatedPrice = workerService?.BasePrice;
+            }
+            else
+            {
+                var (minPrice, _) = await _workerServiceRepository.GetPriceRangeAsync(draft.CategoryId, cancellationToken);
+                estimatedPrice = minPrice;
+            }
+
             var booking = new BookingEntity
             {
                 CustomerId = userId,
@@ -284,7 +303,8 @@ namespace Infrastructure.Services
                 Lng = lng.Value,
                 ScheduledType = draft.ScheduledType,
                 ScheduledAt = draft.ScheduledAt,
-                Status = BookingStatus.Pending
+                Status = BookingStatus.Pending,
+                EstimatedPrice = estimatedPrice
             };
 
             await _bookingRepository.AddAsync(booking, cancellationToken);
