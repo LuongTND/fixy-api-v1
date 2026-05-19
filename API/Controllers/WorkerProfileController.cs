@@ -140,7 +140,7 @@ namespace API.Controllers
         [Authorize(Roles = "WORKER")]
         [HttpPut("me")]
         public async Task<IActionResult> UpdateProfile(
-            [FromBody] WorkerProfileUpdateRequestDto dto,
+            [FromForm] WorkerProfileUpdateRequestDto dto,
             CancellationToken cancellationToken
         )
         {
