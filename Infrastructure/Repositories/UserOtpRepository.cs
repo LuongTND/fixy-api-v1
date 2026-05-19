@@ -51,5 +51,13 @@ namespace Infrastructure.Persistence.Repositories
                 .OrderByDescending(x => x.CreatedDate)
                 .FirstOrDefaultAsync(ct);
         }
+
+        public async Task<UserOtp?> GetLatestOtpByTargetAsync(string target, CancellationToken ct)
+        {
+            return await _dbSet
+                .Where(x => x.Target == target)
+                .OrderByDescending(x => x.CreatedDate)
+                .FirstOrDefaultAsync(ct);
+        }
     }
 }
