@@ -34,11 +34,9 @@ namespace Infrastructure.Services.Medias
             var acc = new Account(settings.CloudName, settings.ApiKey, settings.ApiSecret);
 
             _cloudinary = new Cloudinary(acc);
-            _mediaRepository =
-                mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
+            _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-            _currentUserService =
-                currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -47,9 +45,7 @@ namespace Infrastructure.Services.Medias
             CancellationToken cancellationToken = default
         )
         {
-            if (
-                string.IsNullOrWhiteSpace(_currentUserService.UserId)
-                || !Guid.TryParse(_currentUserService.UserId, out var uploadedById)
+            if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var uploadedById)
             )
             {
                 _logger.LogWarning("User ID not found in token");
@@ -70,10 +66,7 @@ namespace Infrastructure.Services.Medias
                         Transformation = new Transformation().Quality("auto").FetchFormat("auto"),
                     };
 
-                    var uploadResult = await _cloudinary.UploadAsync(
-                        uploadParams,
-                        cancellationToken
-                    );
+                    var uploadResult = await _cloudinary.UploadAsync(uploadParams,cancellationToken);
 
                     if (uploadResult.Error != null)
                     {
@@ -92,7 +85,7 @@ namespace Infrastructure.Services.Medias
                         UploadedById = uploadedById,
                         Category = request.Category,
                         OwnerType = request.OwnerType,
-                        OwnerId = request.OwnerId ?? uploadedById,
+                        OwnerId = uploadedById,
                     };
 
                     await _mediaRepository.AddAsync(media, cancellationToken);
