@@ -1,8 +1,6 @@
-﻿using System.Security.Claims;
-using Application.DTOs.Wallet;
+﻿using Application.Common;
 using Application.Interfaces.Services;
 using Domain.Enum;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -21,9 +19,9 @@ namespace API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMyWallet(CancellationToken cancellationToken)
         {
-            var result = await _walletService.GetWalletAsync(
+            var result = await _walletService.GetWalletOverviewAsync(
                 GetUserId(),
-                WalletOwnerType.Customer,
+                GetUserRoles() == "CUSTOMER" ? WalletOwnerType.Customer : WalletOwnerType.Worker,
                 cancellationToken
             );
 
@@ -31,11 +29,15 @@ namespace API.Controllers
         }
 
         [HttpGet("transactions")]
-        public async Task<IActionResult> GetTransactions(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetTransactions(
+            [FromQuery] PagedQuery query,
+            CancellationToken cancellationToken
+        )
         {
-            var result = await _walletService.GetWalletTransactionAsync(
+            var result = await _walletService.GetWalletTransactionsAsync(
                 GetUserId(),
-                WalletOwnerType.Customer,
+                GetUserRoles() == "CUSTOMER" ? WalletOwnerType.Customer : WalletOwnerType.Worker,
+                query,
                 cancellationToken
             );
 

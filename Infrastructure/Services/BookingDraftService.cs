@@ -11,6 +11,7 @@ using Domain.Enum;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using BookingEntity = Domain.Entity.Booking;
 
 namespace Infrastructure.Services
 {
@@ -25,6 +26,7 @@ namespace Infrastructure.Services
         private readonly IAddressRepository _addressRepository;
         private readonly IServiceCategoryRepository _serviceCategoryRepository;
         private readonly IMediaRepository _mediaRepository;
+        private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public BookingDraftService(
@@ -37,6 +39,7 @@ namespace Infrastructure.Services
             IAddressRepository addressRepository,
             IServiceCategoryRepository serviceCategoryRepository,
             IMediaRepository mediaRepository,
+            IWorkerProfileRepository workerProfileRepository,
             IUnitOfWork unitOfWork)
         {
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
@@ -48,6 +51,7 @@ namespace Infrastructure.Services
             _addressRepository = addressRepository ?? throw new ArgumentNullException(nameof(addressRepository));
             _serviceCategoryRepository = serviceCategoryRepository ?? throw new ArgumentNullException(nameof(serviceCategoryRepository));
             _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
+            _workerProfileRepository = workerProfileRepository ?? throw new ArgumentNullException(nameof(workerProfileRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
@@ -245,10 +249,34 @@ namespace Infrastructure.Services
                 return OperationResult<BookingDraftConfirmedDto>.Failure("Address information is invalid");
             }
 
-            var booking = new Booking
+            Guid? actualWorkerId = null;
+            if (draft.WorkerId.HasValue)
+            {
+                // First, check if draft.WorkerId is already a valid WorkerProfile ID
+                var workerProfileExists = await _workerProfileRepository.ExistsAsync(x => x.Id == draft.WorkerId.Value, cancellationToken);
+                if (workerProfileExists)
+                {
+                    actualWorkerId = draft.WorkerId.Value;
+                }
+                else
+                {
+                    // Second, if not, check if draft.WorkerId is actually a UserId, and find the corresponding WorkerProfile ID
+                    var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(draft.WorkerId.Value, cancellationToken);
+                    if (workerProfile != null)
+                    {
+                        actualWorkerId = workerProfile.Id;
+                    }
+                    else
+                    {
+                        return OperationResult<BookingDraftConfirmedDto>.Failure("Worker profile not found");
+                    }
+                }
+            }
+
+            var booking = new BookingEntity
             {
                 CustomerId = userId,
-                WorkerId = draft.WorkerId,
+                WorkerId = actualWorkerId,
                 CategoryId = draft.CategoryId,
                 Description = draft.Description,
                 Address = addressText,

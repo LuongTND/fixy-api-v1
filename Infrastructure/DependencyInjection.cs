@@ -2,6 +2,7 @@ using System.Text;
 using Application.Common.Interfaces;
 using Application.Common.Settings;
 using Application.Interfaces;
+using Application.Interfaces.Hubs;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Auth;
@@ -10,7 +11,9 @@ using Application.Interfaces.Services.Email;
 using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.ServiceCategory;
-using Application.Service;
+using Application.Interfaces.Services.Worker;
+using Application.Interfaces.Services.Chat;
+using Application.Services;
 using Application.Settings;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
@@ -18,9 +21,13 @@ using Infrastructure.Persistence.Repositories;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Infrastructure.Services.Auth;
+using Infrastructure.Services.Booking;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
 using Infrastructure.Services.Payment;
+using Infrastructure.Services.ServiceCategories;
+using Infrastructure.Services.Worker;
+using Infrastructure.Services.Chat;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -71,6 +78,7 @@ namespace Infrastructure
 
             services.AddSingleton<IEmailQueue, EmailQueue>();
             services.AddHostedService<EmailBackgroundService>();
+            services.AddHostedService<BookingTimeoutBackgroundService>();
             // Authentication
             services
                 .AddAuthentication(options =>
@@ -109,10 +117,18 @@ namespace Infrastructure
             services.AddScoped<IAddressService, AddressService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IWorkerProfileService, WorkerProfileService>();
+            services.AddScoped<IWorkerWeeklyScheduleService, WorkerWeeklyScheduleService>();
+            services.AddScoped<IWorkerScheduleExceptionService, WorkerScheduleExceptionService>();
             services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
             services.AddScoped<IWalletService, WalletService>();
             services.AddScoped<IMediaService, MediaService>();
             services.AddScoped<IBlobService, BlobService>();
+            services.AddScoped<IEnumService, EnumService>();
+            services.AddScoped<IBookingHubService, BookingHubService>();
+            services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IWorkerLocationService, WorkerLocationService>();
+            services.AddScoped<IBookingDraftService, BookingDraftService>();
+            services.AddScoped<IChatService, ChatService>();
 
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserOtpRepository, UserOtpRepository>();
@@ -123,6 +139,11 @@ namespace Infrastructure
             services.AddScoped<IWorkerProfileRepository, WorkerProfileRepository>();
             services.AddScoped<IWorkerCertificateRepository, WorkerCertificateRepository>();
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
+            services.AddScoped<IWorkerWeeklyScheduleRepository, WorkerWeeklyScheduleRepository>();
+            services.AddScoped<
+                IWorkerScheduleExceptionRepository,
+                WorkerScheduleExceptionRepository
+            >();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
@@ -130,7 +151,10 @@ namespace Infrastructure
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
+            services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
+            services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
             services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();

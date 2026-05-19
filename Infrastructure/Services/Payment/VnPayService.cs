@@ -3,6 +3,7 @@ using Application.Interfaces.Services.Payment;
 using Application.Settings;
 using Domain.Entity;
 using Infrastructure.Helpers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Payment
@@ -10,10 +11,15 @@ namespace Infrastructure.Services.Payment
     public class VnPayService : IPaymentGateway
     {
         private readonly VNPaySettings _settings;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public VnPayService(IOptions<VNPaySettings> settings)
+        public VnPayService(
+            IOptions<VNPaySettings> settings,
+            IHttpContextAccessor httpContextAccessor
+        )
         {
             _settings = settings.Value;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public Task<string> CreatePaymentUrlAsync(
@@ -34,9 +40,9 @@ namespace Infrastructure.Services.Payment
                 { "vnp_Amount", (order.FinalAmount * 100).ToString() },
                 { "vnp_CreateDate", vnTime.ToString("yyyyMMddHHmmss") },
                 { "vnp_CurrCode", "VND" },
-                { "vnp_IpAddr", "127.0.0.1" },
+                { "vnp_IpAddr", VnPayHelper.GetIpAddress(_httpContextAccessor.HttpContext!) },
                 { "vnp_Locale", "vn" },
-                { "vnp_OrderInfo", $"Topup {order.Id}" },
+                { "vnp_OrderInfo", $"Topup_{order.Id:N}" },
                 { "vnp_OrderType", "other" },
                 { "vnp_ReturnUrl", _settings.ReturnUrl },
                 { "vnp_TxnRef", order.Id.ToString("N") },

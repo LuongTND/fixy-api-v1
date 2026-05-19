@@ -10,8 +10,12 @@ namespace Application.Interfaces.Repositories
             WorkerProfileQuery query,
             CancellationToken cancellationToken
         );
-        Task<WorkerProfile?> GetWorkerProfileDetailByIdAsync(
-            Guid id,
+        Task<WorkerProfile?> GetWorkerProfileByUserIdAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        );
+        Task<WorkerProfile?> GetWorkerProfileDetailByUserIdAsync(
+            Guid userId,
             CancellationToken cancellationToken = default
         );
     }

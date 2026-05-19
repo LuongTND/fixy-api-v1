@@ -30,7 +30,7 @@ namespace API.Controllers
 
         [HttpPut]
         public async Task<IActionResult> UpdateProfile(
-            [FromBody] UpdateProfileRequestDto dto,
+            [FromForm] UpdateProfileRequestDto dto,
             CancellationToken cancellationToken
         )
         {

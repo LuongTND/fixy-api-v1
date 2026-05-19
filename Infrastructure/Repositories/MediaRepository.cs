@@ -25,8 +25,22 @@ namespace Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<Media?> GetAvatarByUserIdAsync(
+            Guid userId,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    x.OwnerType == MediaOwnerType.User
+                    && x.Category == MediaCategory.Avatar
+                    && x.OwnerId == userId
+                )
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<List<Media>> GetIdentificateImagesByUserId(
-            Guid id,
+            Guid userId,
             CancellationToken cancellationToken
         )
         {
@@ -34,13 +48,13 @@ namespace Infrastructure.Repositories
                 .Where(x =>
                     x.OwnerType == MediaOwnerType.User
                     && x.Category == MediaCategory.Identification
-                    && x.OwnerId == id
+                    && x.OwnerId == userId
                 )
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<Media>> GetProfolioImagesByUserId(
-            Guid id,
+        public async Task<List<Media>> GetPorfolioImagesByUserId(
+            Guid userId,
             CancellationToken cancellationToken
         )
         {
@@ -48,8 +62,23 @@ namespace Infrastructure.Repositories
                 .Where(x =>
                     x.OwnerType == MediaOwnerType.WorkerProfile
                     && x.Category == MediaCategory.Portfolio
-                    && x.OwnerId == id
+                    && x.OwnerId == userId
                 )
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Media>> GetReviewImagesByReviewIdsAsync(
+            List<Guid> reviewIds,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    reviewIds.Contains(x.OwnerId)
+                    && x.OwnerType == MediaOwnerType.Review
+                    && (x.Category == MediaCategory.Review || x.Category == MediaCategory.Review)
+                )
+                .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
     }
