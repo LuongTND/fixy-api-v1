@@ -297,24 +297,26 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("Booking not found");
             }
 
-            // Verify there is an active offer for this worker
-            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerId, cancellationToken);
-            if (queueEntry == null)
+            // Verify the worker is indeed authorized to propose for this booking and it is in Pending status
+            if (booking.WorkerId != workerId || booking.Status != BookingStatus.Pending)
             {
-                return OperationResult.Failure("No active offer found for this worker and booking");
+                return OperationResult.Failure("You are not authorized to propose changes for this booking or the booking is not pending");
             }
 
             // Store the worker's counter-proposal on the booking
             booking.WorkerProposedPrice = request.ProposedPrice;
             booking.WorkerProposedTime = request.ProposedTime;
             booking.WorkerProposedNote = request.ProposedNote;
-            booking.WorkerId = workerId;
             booking.UpdatedDate = DateTime.UtcNow;
             _bookingRepository.Update(booking);
 
-            // Pause the timeout by clearing ExpiresAt while customer reviews
-            queueEntry.ExpiresAt = null;
-            _matchingQueueRepository.Update(queueEntry);
+            // Pause the timeout if this was an auto-match queue entry (optional)
+            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerId, cancellationToken);
+            if (queueEntry != null)
+            {
+                queueEntry.ExpiresAt = null;
+                _matchingQueueRepository.Update(queueEntry);
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
