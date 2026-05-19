@@ -66,5 +66,20 @@ namespace Infrastructure.Repositories
                 )
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<List<Media>> GetReviewImagesByReviewIdsAsync(
+            List<Guid> reviewIds,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    reviewIds.Contains(x.OwnerId)
+                    && x.OwnerType == MediaOwnerType.Review
+                    && (x.Category == MediaCategory.Review || x.Category == MediaCategory.Review)
+                )
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
     }
 }

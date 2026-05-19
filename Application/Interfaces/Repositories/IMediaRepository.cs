@@ -17,5 +17,9 @@ namespace Application.Interfaces.Repositories
             List<Guid> certificateIds,
             CancellationToken cancellationToken
         );
+        Task<List<Media>> GetReviewImagesByReviewIdsAsync(
+            List<Guid> reviewIds,
+            CancellationToken cancellationToken = default
+        );
     }
 }
