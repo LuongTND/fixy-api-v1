@@ -79,6 +79,8 @@ namespace Infrastructure.Services
                     Status = i.Status.ToString(),
                     ExperienceYears = i.ExperienceYears,
                     RatingAvg = i.RatingAvg,
+                    TotalReviews = i.TotalReviews,
+                    TotalOrders = i.TotalOrders,
                     Services = i.Services.Select(MapWorkerService).ToList(),
                 })
                 .ToList();
@@ -108,6 +110,8 @@ namespace Infrastructure.Services
                     FullName = data.WorkerProfile.User!.FullName,
                     Bio = data.WorkerProfile.Bio,
                     RatingAvg = data.WorkerProfile.RatingAvg,
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+                    TotalOrders = data.WorkerProfile.TotalOrders,
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
                     Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
                     Certificates = data
@@ -138,6 +142,8 @@ namespace Infrastructure.Services
                     Email = data.WorkerProfile.User.Email!,
                     Phone = data.WorkerProfile.User.Phone!,
                     RatingAvg = data.WorkerProfile.RatingAvg,
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+                    TotalOrders = data.WorkerProfile.TotalOrders,
                     Bio = data.WorkerProfile.Bio,
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
                     Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
@@ -176,6 +182,10 @@ namespace Infrastructure.Services
                 Bio = data.WorkerProfile.Bio,
                 ExperienceYears = data.WorkerProfile.ExperienceYears,
                 MaxDistanceKm = data.WorkerProfile.MaxDistanceKm,
+
+                RatingAvg = data.WorkerProfile.RatingAvg,
+                TotalReviews = data.WorkerProfile.TotalReviews,
+                TotalOrders = data.WorkerProfile.TotalOrders,
 
                 CitizenIdNumber = data.WorkerProfile.User.CitizenIdNumber,
                 CitizenIdIssueDate = data.WorkerProfile.User.CitizenIdIssueDate,
@@ -275,6 +285,7 @@ namespace Infrastructure.Services
                     Status = WorkerStatus.Pending,
                     Badge = WorkerBadge.New,
                     RatingAvg = 0,
+                    TotalReviews = 0,
                     TotalOrders = 0,
                     IsOnline = false,
                 };

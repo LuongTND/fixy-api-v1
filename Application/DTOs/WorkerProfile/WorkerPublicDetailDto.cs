@@ -13,6 +13,8 @@ namespace Application.DTOs.WorkerProfile
         public int ExperienceYears { get; set; }
 
         public double RatingAvg { get; set; }
+        public int TotalReviews { get; set; }
+        public int TotalOrders { get; set; }
 
         public string? Bio { get; set; }
 

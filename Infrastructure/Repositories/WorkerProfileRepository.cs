@@ -81,6 +81,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Certificates)
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
+                .Include(s => s.Reviews)
                 .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
         }
     }
