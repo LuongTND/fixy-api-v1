@@ -22,6 +22,7 @@ namespace Infrastructure.Repositories
             return await _dbSet
                 .Include(b => b.Worker)
                 .ThenInclude(w => w!.User)
+                .Include(b => b.Customer)
                 .FirstOrDefaultAsync(b => b.Id == bookingId, cancellationToken);
         }
     }
