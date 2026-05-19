@@ -80,6 +80,17 @@ namespace Infrastructure.Services.Booking
 
         public async Task<OperationResult> AcceptAsync(Guid bookingId, CancellationToken cancellationToken = default)
         {
+            if (!Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult.Failure("User not authenticated");
+            }
+
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
             return await TransitionStatusAsync(
                 bookingId,
                 BookingStatus.Pending,
@@ -87,10 +98,10 @@ namespace Infrastructure.Services.Booking
                 "Worker accepted the booking",
                 (booking) =>
                 {
-                    // Assign the current user (worker) to the booking if not already assigned
-                    if (booking.WorkerId == null && Guid.TryParse(_currentUserService.UserId, out var workerId))
+                    // Assign the worker profile to the booking if not already assigned
+                    if (booking.WorkerId == null)
                     {
-                        booking.WorkerId = workerId;
+                        booking.WorkerId = workerProfile.Id;
                     }
                     return Task.CompletedTask;
                 },
@@ -534,6 +545,36 @@ namespace Infrastructure.Services.Booking
             );
 
             return OperationResult.Success(message);
+        }
+
+        public async Task<OperationResult<PagedResponse<BookingDetailDto>>> GetWorkerBookingsAsync(
+            WorkerBookingsQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult<PagedResponse<BookingDetailDto>>.Failure("User ID not found in token");
+            }
+
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult<PagedResponse<BookingDetailDto>>.Failure("Worker profile not found");
+            }
+
+            var (items, totalCount) = await _bookingRepository.GetWorkerBookingsAsync(workerProfile.Id, query, cancellationToken);
+
+            var dtos = _mapper.Map<List<BookingDetailDto>>(items);
+
+            var response = new PagedResponse<BookingDetailDto>
+            {
+                Items = dtos,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount
+            };
+
+            return OperationResult<PagedResponse<BookingDetailDto>>.Success(response, "Worker bookings retrieved successfully");
         }
     }
 }
