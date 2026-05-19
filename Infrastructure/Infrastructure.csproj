@@ -6,9 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Services/Email/Templates/**/*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Remove="Services\Email\Templates\ForgotPasswordOtpTemplate.cshtml" />
+    <None Remove="Services\Email\Templates\RegisterOtpTemplate.cshtml" />
   </ItemGroup>
 
   <ItemGroup>

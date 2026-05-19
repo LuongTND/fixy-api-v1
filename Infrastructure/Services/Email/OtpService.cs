@@ -15,21 +15,21 @@ namespace Infrastructure.Services.Email
         private readonly IUserRepository _userRepository;
         private readonly IUserOtpRepository _userOtpRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IEmailService _emailService;
+        private readonly IEmailQueue _emailQueue;
         private readonly ITemplateEngine _templateEngine;
 
         public OtpService(
             IUserRepository userRepository,
             IUserOtpRepository userOtpRepository,
             IUnitOfWork unitOfWork,
-            IEmailService emailService,
+            IEmailQueue emailQueue,
             ITemplateEngine templateEngine
         )
         {
             _userRepository = userRepository;
             _userOtpRepository = userOtpRepository;
             _unitOfWork = unitOfWork;
-            _emailService = emailService;
+            _emailQueue = emailQueue;
             _templateEngine = templateEngine;
         }
 
@@ -176,7 +176,14 @@ namespace Infrastructure.Services.Email
                     new OtpEmailModel { Otp = otpCode }
                 );
 
-                await _emailService.SendEmailAsync(target, "Mã OTP của bạn", html);
+                await _emailQueue.QueueEmailAsync(
+                    new EmailMessage
+                    {
+                        To = target,
+                        Subject = "Mã OTP của bạn",
+                        Body = html,
+                    }
+                );
             }
 
             if (IsPhone(target))
