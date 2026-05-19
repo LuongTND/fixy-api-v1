@@ -26,13 +26,11 @@ namespace Application.Interfaces.Services
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult<WalletTransaction>> PayAsync(
-            Guid walletId,
-            long amount,
-            string referenceId,
+        Task<OperationResult<WalletTransaction>> PayBookingAsync(
+            Guid userId,
+            Guid bookingId,
             CancellationToken cancellationToken
         );
-
         Task<OperationResult<WalletTransaction>> RefundAsync(
             Guid walletId,
             long amount,

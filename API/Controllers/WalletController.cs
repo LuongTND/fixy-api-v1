@@ -43,5 +43,20 @@ namespace API.Controllers
 
             return HandleResult(result);
         }
+
+        [HttpPost("booking/{bookingId}/wallet")]
+        public async Task<IActionResult> PayBookingByWallet(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _walletService.PayBookingAsync(
+                GetUserId(),
+                bookingId,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
     }
 }
