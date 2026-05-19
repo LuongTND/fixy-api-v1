@@ -31,6 +31,8 @@ namespace Domain.Entity
         // Statistic
         public WorkerBadge Badge { get; set; } = WorkerBadge.New;
         public double RatingAvg { get; set; }
+        public int TotalReviews { get; set; }
+
         public int TotalOrders { get; set; }
 
         //Feature

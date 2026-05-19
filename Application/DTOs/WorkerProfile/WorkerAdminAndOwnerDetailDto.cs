@@ -24,7 +24,9 @@ public class WorkerAdminAndOwnerDetailDto
     public string? Bio { get; set; }
 
     public int ExperienceYears { get; set; }
-
+    public double RatingAvg { get; set; }
+    public int TotalReviews { get; set; }
+    public int TotalOrders { get; set; }
     public double MaxDistanceKm { get; set; }
 
     public string? CitizenIdNumber { get; set; }
