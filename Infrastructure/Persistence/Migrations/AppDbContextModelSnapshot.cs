@@ -937,21 +937,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6139),
+                            CreatedDate = new DateTime(2026, 5, 19, 2, 0, 54, 73, DateTimeKind.Utc).AddTicks(6647),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6142),
+                            CreatedDate = new DateTime(2026, 5, 19, 2, 0, 54, 73, DateTimeKind.Utc).AddTicks(6650),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6145),
+                            CreatedDate = new DateTime(2026, 5, 19, 2, 0, 54, 73, DateTimeKind.Utc).AddTicks(6718),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1124,6 +1124,9 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("CitizenIdIssueDate")
                         .HasColumnType("datetime2");
@@ -1646,7 +1649,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Bio")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -1658,7 +1662,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("float");
 
                     b.Property<int>("ExperienceYears")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("FeaturedPackage")
                         .HasColumnType("nvarchar(max)");
@@ -1667,22 +1673,33 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsAcceptingJobs")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsBusy")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsOnline")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<DateTime?>("LastLocationAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("MaxDistanceKm")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(10);
 
                     b.Property<double>("RatingAvg")
-                        .HasColumnType("float");
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(4, 2)
+                        .HasColumnType("float(4)")
+                        .HasDefaultValue(0.0);
 
                     b.Property<string>("RejectReason")
                         .HasColumnType("nvarchar(max)");
@@ -1692,7 +1709,14 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("TotalOrders")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("TotalReviews")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
@@ -1710,11 +1734,11 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("Status", "IsOnline")
-                        .HasDatabaseName("idx_worker_available");
-
                     b.HasIndex("Status", "RatingAvg")
                         .HasDatabaseName("idx_worker_search");
+
+                    b.HasIndex("Status", "IsOnline", "IsAcceptingJobs")
+                        .HasDatabaseName("idx_worker_available");
 
                     b.ToTable("WorkerProfiles");
                 });

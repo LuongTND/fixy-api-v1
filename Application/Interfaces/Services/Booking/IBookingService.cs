@@ -8,6 +8,11 @@ namespace Application.Interfaces.Services.Booking
     {
         Task<OperationResult<BookingDetailDto>> GetByIdAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
+        Task<OperationResult<PagedResponse<BookingDetailDto>>> GetWorkerBookingsAsync(
+            WorkerBookingsQuery query,
+            CancellationToken cancellationToken = default
+        );
+
         // Pending --> Confirmed
         Task<OperationResult> AcceptAsync(Guid bookingId, CancellationToken cancellationToken = default);
 

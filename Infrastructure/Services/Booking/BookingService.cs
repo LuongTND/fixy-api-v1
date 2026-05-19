@@ -80,6 +80,17 @@ namespace Infrastructure.Services.Booking
 
         public async Task<OperationResult> AcceptAsync(Guid bookingId, CancellationToken cancellationToken = default)
         {
+            if (!Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult.Failure("User not authenticated");
+            }
+
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
             return await TransitionStatusAsync(
                 bookingId,
                 BookingStatus.Pending,
@@ -87,10 +98,10 @@ namespace Infrastructure.Services.Booking
                 "Worker accepted the booking",
                 (booking) =>
                 {
-                    // Assign the current user (worker) to the booking if not already assigned
-                    if (booking.WorkerId == null && Guid.TryParse(_currentUserService.UserId, out var workerId))
+                    // Assign the worker profile to the booking if not already assigned
+                    if (booking.WorkerId == null)
                     {
-                        booking.WorkerId = workerId;
+                        booking.WorkerId = workerProfile.Id;
                     }
                     return Task.CompletedTask;
                 },
@@ -286,24 +297,26 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("Booking not found");
             }
 
-            // Verify there is an active offer for this worker
-            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerId, cancellationToken);
-            if (queueEntry == null)
+            // Verify the worker is indeed authorized to propose for this booking and it is in Pending status
+            if (booking.WorkerId != workerId || booking.Status != BookingStatus.Pending)
             {
-                return OperationResult.Failure("No active offer found for this worker and booking");
+                return OperationResult.Failure("You are not authorized to propose changes for this booking or the booking is not pending");
             }
 
             // Store the worker's counter-proposal on the booking
             booking.WorkerProposedPrice = request.ProposedPrice;
             booking.WorkerProposedTime = request.ProposedTime;
             booking.WorkerProposedNote = request.ProposedNote;
-            booking.WorkerId = workerId;
             booking.UpdatedDate = DateTime.UtcNow;
             _bookingRepository.Update(booking);
 
-            // Pause the timeout by clearing ExpiresAt while customer reviews
-            queueEntry.ExpiresAt = null;
-            _matchingQueueRepository.Update(queueEntry);
+            // Pause the timeout if this was an auto-match queue entry (optional)
+            var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerId, cancellationToken);
+            if (queueEntry != null)
+            {
+                queueEntry.ExpiresAt = null;
+                _matchingQueueRepository.Update(queueEntry);
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -534,6 +547,36 @@ namespace Infrastructure.Services.Booking
             );
 
             return OperationResult.Success(message);
+        }
+
+        public async Task<OperationResult<PagedResponse<BookingDetailDto>>> GetWorkerBookingsAsync(
+            WorkerBookingsQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult<PagedResponse<BookingDetailDto>>.Failure("User ID not found in token");
+            }
+
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(w => w.UserId == userId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult<PagedResponse<BookingDetailDto>>.Failure("Worker profile not found");
+            }
+
+            var (items, totalCount) = await _bookingRepository.GetWorkerBookingsAsync(workerProfile.Id, query, cancellationToken);
+
+            var dtos = _mapper.Map<List<BookingDetailDto>>(items);
+
+            var response = new PagedResponse<BookingDetailDto>
+            {
+                Items = dtos,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount
+            };
+
+            return OperationResult<PagedResponse<BookingDetailDto>>.Success(response, "Worker bookings retrieved successfully");
         }
     }
 }

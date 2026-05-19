@@ -118,5 +118,13 @@ namespace API.Controllers
             var result = await _bookingService.ReportIssueAsync(id, request, cancellationToken);
             return HandleResult(result);
         }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpGet("worker")]
+        public async Task<IActionResult> GetWorkerBookings([FromQuery] WorkerBookingsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetWorkerBookingsAsync(query, cancellationToken);
+            return HandleResult(result);
+        }
     }
 }

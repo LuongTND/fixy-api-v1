@@ -79,6 +79,8 @@ namespace Infrastructure.Services
                     Status = i.Status.ToString(),
                     ExperienceYears = i.ExperienceYears,
                     RatingAvg = i.RatingAvg,
+                    TotalReviews = i.TotalReviews,
+                    TotalOrders = i.TotalOrders,
                     Services = i.Services.Select(MapWorkerService).ToList(),
                 })
                 .ToList();
@@ -108,6 +110,8 @@ namespace Infrastructure.Services
                     FullName = data.WorkerProfile.User!.FullName,
                     Bio = data.WorkerProfile.Bio,
                     RatingAvg = data.WorkerProfile.RatingAvg,
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+                    TotalOrders = data.WorkerProfile.TotalOrders,
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
                     Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
                     Certificates = data
@@ -138,6 +142,8 @@ namespace Infrastructure.Services
                     Email = data.WorkerProfile.User.Email!,
                     Phone = data.WorkerProfile.User.Phone!,
                     RatingAvg = data.WorkerProfile.RatingAvg,
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+                    TotalOrders = data.WorkerProfile.TotalOrders,
                     Bio = data.WorkerProfile.Bio,
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
                     Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
@@ -176,6 +182,10 @@ namespace Infrastructure.Services
                 Bio = data.WorkerProfile.Bio,
                 ExperienceYears = data.WorkerProfile.ExperienceYears,
                 MaxDistanceKm = data.WorkerProfile.MaxDistanceKm,
+
+                RatingAvg = data.WorkerProfile.RatingAvg,
+                TotalReviews = data.WorkerProfile.TotalReviews,
+                TotalOrders = data.WorkerProfile.TotalOrders,
 
                 CitizenIdNumber = data.WorkerProfile.User.CitizenIdNumber,
                 CitizenIdIssueDate = data.WorkerProfile.User.CitizenIdIssueDate,
@@ -275,6 +285,7 @@ namespace Infrastructure.Services
                     Status = WorkerStatus.Pending,
                     Badge = WorkerBadge.New,
                     RatingAvg = 0,
+                    TotalReviews = 0,
                     TotalOrders = 0,
                     IsOnline = false,
                 };
@@ -568,6 +579,59 @@ namespace Infrastructure.Services
                 BasePrice = x.BasePrice,
                 IsPrimary = x.IsPrimary,
             });
+            if (dto.Avatar != null)
+            {
+                string? newAvatarUrl = null;
+
+                try
+                {
+                    // upload new avatar
+                    newAvatarUrl = await _blobService.UploadImageAsync(dto.Avatar);
+
+                    // get old avatar media
+                    var oldAvatarMedia = await _mediaRepository.GetAvatarByUserIdAsync(
+                        user.Id,
+                        cancellationToken
+                    );
+
+                    // delete old blob
+                    if (!string.IsNullOrWhiteSpace(user.AvatarUrl))
+                    {
+                        await _blobService.DeleteImageAsync(user.AvatarUrl);
+                    }
+
+                    // remove old media
+                    if (oldAvatarMedia != null)
+                    {
+                        _mediaRepository.Remove(oldAvatarMedia);
+                    }
+
+                    // add new media
+                    await _mediaRepository.AddAsync(
+                        new Media
+                        {
+                            OwnerId = user.Id,
+                            UploadedById = user.Id,
+                            OwnerType = MediaOwnerType.User,
+                            Category = MediaCategory.Avatar,
+                            FileUrl = newAvatarUrl,
+                        },
+                        cancellationToken
+                    );
+
+                    // update user avatar
+                    user.AvatarUrl = newAvatarUrl;
+                }
+                catch
+                {
+                    if (!string.IsNullOrWhiteSpace(newAvatarUrl))
+                    {
+                        await _blobService.DeleteImageAsync(newAvatarUrl);
+                    }
+
+                    throw;
+                }
+            }
 
             await _workerServiceRepository.AddRangeAsync(newServices, cancellationToken);
 

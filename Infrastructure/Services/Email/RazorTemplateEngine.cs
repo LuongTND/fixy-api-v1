@@ -20,6 +20,7 @@ namespace Infrastructure.Services.Email
                     "Templates"
                 )
             );
+
             _engine = new RazorLightEngineBuilder()
                 .UseFileSystemProject(templatePath)
                 .UseMemoryCachingProvider()
