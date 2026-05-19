@@ -12,6 +12,7 @@ using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.ServiceCategory;
 using Application.Interfaces.Services.Worker;
+using Application.Interfaces.Services.Chat;
 using Application.Services;
 using Application.Settings;
 using Infrastructure.Common;
@@ -26,6 +27,7 @@ using Infrastructure.Services.Medias;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.ServiceCategories;
 using Infrastructure.Services.Worker;
+using Infrastructure.Services.Chat;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -125,6 +127,7 @@ namespace Infrastructure
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IWorkerLocationService, WorkerLocationService>();
             services.AddScoped<IBookingDraftService, BookingDraftService>();
+            services.AddScoped<IChatService, ChatService>();
 
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserOtpRepository, UserOtpRepository>();
@@ -147,6 +150,7 @@ namespace Infrastructure
             services.AddScoped<IWorkerServiceRepository, WorkerServiceRepository>();
             services.AddScoped<IMediaRepository, MediaRepository>();
             services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
