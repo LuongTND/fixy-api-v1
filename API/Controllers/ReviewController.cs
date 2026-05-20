@@ -17,7 +17,7 @@ namespace API.Controllers
             _reviewService = reviewService;
         }
 
-        [Authorize(Roles = "Customer")]
+        [Authorize(Roles = "CUSTOMER")]
         [HttpPost("{bookingId}")]
         public async Task<IActionResult> CreateReview(
             Guid bookingId,
@@ -35,7 +35,7 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
-        [Authorize(Roles = "Worker")]
+        [Authorize(Roles = "WORKER")]
         [HttpPost("{reviewId}/reply")]
         public async Task<IActionResult> ReplyReview(
             Guid reviewId,
