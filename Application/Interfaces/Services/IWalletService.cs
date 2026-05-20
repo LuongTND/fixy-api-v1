@@ -19,14 +19,14 @@ namespace Application.Interfaces.Services
             PagedQuery query,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<WalletTransaction>> TopUpAsync(
+        Task<OperationResult> TopUpAsync(
             Guid userId,
             long amount,
             string externalId,
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult<WalletTransaction>> PayBookingAsync(
+        Task<OperationResult<WalletTransactionDto>> PayBookingAsync(
             Guid userId,
             Guid bookingId,
             CancellationToken cancellationToken

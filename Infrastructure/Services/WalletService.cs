@@ -118,7 +118,7 @@ public class WalletService : IWalletService
         );
     }
 
-    public async Task<OperationResult<WalletTransaction>> TopUpAsync(
+    public async Task<OperationResult> TopUpAsync(
         Guid userId,
         long amount,
         string externalId,
@@ -126,7 +126,7 @@ public class WalletService : IWalletService
     )
     {
         if (await _walletTransactionRepository.ExistsExternalTransactionAsync(externalId))
-            return OperationResult<WalletTransaction>.Failure("Duplicate transaction");
+            return OperationResult.Failure("Duplicate transaction");
 
         await _unitOfWork.BeginTransactionAsync();
 
@@ -139,7 +139,7 @@ public class WalletService : IWalletService
             );
 
             if (wallet == null)
-                return OperationResult<WalletTransaction>.Failure("Wallet not found");
+                return OperationResult.Failure("Wallet not found");
 
             var before = wallet.Balance;
 
@@ -164,16 +164,16 @@ public class WalletService : IWalletService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync();
 
-            return OperationResult<WalletTransaction>.Success(tx, "Topup success");
+            return OperationResult.Success("Topup success");
         }
         catch (DbUpdateConcurrencyException)
         {
             await _unitOfWork.RollbackTransactionAsync();
-            return OperationResult<WalletTransaction>.Failure("Wallet conflict, retry again");
+            return OperationResult.Failure("Wallet conflict, retry again");
         }
     }
 
-    public async Task<OperationResult<WalletTransaction>> PayBookingAsync(
+    public async Task<OperationResult<WalletTransactionDto>> PayBookingAsync(
         Guid userId,
         Guid bookingId,
         CancellationToken cancellationToken
@@ -187,17 +187,17 @@ public class WalletService : IWalletService
 
             if (booking == null)
             {
-                return OperationResult<WalletTransaction>.Failure("Booking not found");
+                return OperationResult<WalletTransactionDto>.Failure("Booking not found");
             }
 
             if (booking.CustomerId != userId)
             {
-                return OperationResult<WalletTransaction>.Failure("Forbidden");
+                return OperationResult<WalletTransactionDto>.Failure("Forbidden");
             }
 
             if (booking.FinalPrice == null || booking.FinalPrice <= 0)
             {
-                return OperationResult<WalletTransaction>.Failure("Invalid booking price");
+                return OperationResult<WalletTransactionDto>.Failure("Invalid booking price");
             }
 
             var existedOrder = await _paymentOrderRepository.GetBookingPaymentOrderAsync(
@@ -207,7 +207,7 @@ public class WalletService : IWalletService
 
             if (existedOrder != null && existedOrder.Status == PaymentStatus.Paid)
             {
-                return OperationResult<WalletTransaction>.Failure("Booking already paid");
+                return OperationResult<WalletTransactionDto>.Failure("Booking already paid");
             }
 
             var wallet = await _walletRepository.GetByUserIdAsync(
@@ -218,14 +218,14 @@ public class WalletService : IWalletService
 
             if (wallet == null)
             {
-                return OperationResult<WalletTransaction>.Failure("Wallet not found");
+                return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
             }
 
             var amount = booking.FinalPrice.Value;
 
             if (wallet.Balance < amount)
             {
-                return OperationResult<WalletTransaction>.Failure("Insufficient balance");
+                return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
             }
 
             var before = wallet.Balance;
@@ -289,13 +289,26 @@ public class WalletService : IWalletService
 
             await _unitOfWork.CommitTransactionAsync();
 
-            return OperationResult<WalletTransaction>.Success(tx, "Booking paid successfully");
+            return OperationResult<WalletTransactionDto>.Success(
+                new WalletTransactionDto
+                {
+                    Id = tx.Id,
+                    Type = tx.Type.ToString(),
+                    Direction = tx.Direction.ToString(),
+                    Amount = tx.Amount,
+                    BalanceBefore = tx.BalanceBefore,
+                    BalanceAfter = tx.BalanceAfter,
+                    Status = tx.Status.ToString(),
+                    CreatedDate = tx.CreatedDate,
+                },
+                "Booking paid successfully"
+            );
         }
         catch (DbUpdateConcurrencyException)
         {
             await _unitOfWork.RollbackTransactionAsync();
 
-            return OperationResult<WalletTransaction>.Failure("Wallet conflict, retry again");
+            return OperationResult<WalletTransactionDto>.Failure("Wallet conflict, retry again");
         }
         catch
         {
