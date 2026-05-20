@@ -3,6 +3,7 @@ namespace Domain.Enum
     public enum BookingStatus
     {
         Pending,
+        PendingPayment,
         Matching,
         Confirmed,
         Traveling,
