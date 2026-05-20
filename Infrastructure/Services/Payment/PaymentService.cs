@@ -1,9 +1,10 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Application.Common;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.Payment;
+using Application.Interfaces.Services.Booking;
 using Domain.Entity;
 using Domain.Enum;
 
@@ -19,13 +20,15 @@ namespace Infrastructure.Services.Payment
         private readonly IWalletService _walletService;
 
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IBookingService _bookingService;
 
         public PaymentService(
             IPaymentOrderRepository paymentOrderRepository,
             IPaymentGatewayFactory paymentGatewayFactory,
             IBookingRepository bookingRepository,
             IWalletService walletService,
-            IUnitOfWork unitOfWork
+            IUnitOfWork unitOfWork,
+            IBookingService bookingService
         )
         {
             _paymentOrderRepository = paymentOrderRepository;
@@ -33,6 +36,7 @@ namespace Infrastructure.Services.Payment
             _bookingRepository = bookingRepository;
             _walletService = walletService;
             _unitOfWork = unitOfWork;
+            _bookingService = bookingService;
         }
 
         public async Task<OperationResult<string>> CreateTopUpPaymentUrlAsync(
@@ -267,8 +271,10 @@ namespace Infrastructure.Services.Payment
 
                 case PaymentOrderType.BookingPayment:
 
-                    // đã update Paid phía trên
-                    // không cần xử lý gì thêm
+                    if (order.BookingId.HasValue)
+                    {
+                        await _bookingService.ConfirmPaymentAsync(order.BookingId.Value, cancellationToken);
+                    }
 
                     break;
 

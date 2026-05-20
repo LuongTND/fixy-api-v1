@@ -43,5 +43,7 @@ namespace Application.Interfaces.Services.Booking
         Task<OperationResult> RespondProposalAsync(Guid bookingId, RespondProposalRequest request, CancellationToken cancellationToken = default);
 
         Task<OperationResult<SupportTicketDto>> ReportIssueAsync(Guid bookingId, ReportBookingIssueRequest request, CancellationToken cancellationToken = default);
+
+        Task<OperationResult> ConfirmPaymentAsync(Guid bookingId, CancellationToken cancellationToken = default);
     }
 }
