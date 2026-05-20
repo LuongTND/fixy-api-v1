@@ -580,5 +580,29 @@ namespace Infrastructure.Services.Booking
 
             return OperationResult<PagedResponse<BookingDetailDto>>.Success(response, "Worker bookings retrieved successfully");
         }
+
+        public async Task<OperationResult<PagedResponse<BookingDetailDto>>> GetCustomerBookingsAsync(
+            CustomerBookingsQuery query,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_currentUserService.UserId) || !Guid.TryParse(_currentUserService.UserId, out var userId))
+            {
+                return OperationResult<PagedResponse<BookingDetailDto>>.Failure("User ID not found in token");
+            }
+
+            var (items, totalCount) = await _bookingRepository.GetCustomerBookingsAsync(userId, query, cancellationToken);
+
+            var dtos = _mapper.Map<List<BookingDetailDto>>(items);
+
+            var response = new PagedResponse<BookingDetailDto>
+            {
+                Items = dtos,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount
+            };
+
+            return OperationResult<PagedResponse<BookingDetailDto>>.Success(response, "Customer bookings retrieved successfully");
+        }
     }
 }

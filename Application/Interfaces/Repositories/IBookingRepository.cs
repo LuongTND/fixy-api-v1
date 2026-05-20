@@ -13,5 +13,10 @@ namespace Application.Interfaces.Repositories
             WorkerBookingsQuery query,
             CancellationToken cancellationToken = default
         );
+        Task<(List<Booking> Items, int TotalCount)> GetCustomerBookingsAsync(
+            Guid customerId,
+            CustomerBookingsQuery query,
+            CancellationToken cancellationToken = default
+        );
     }
 }
