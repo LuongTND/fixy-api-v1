@@ -119,6 +119,14 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "CUSTOMER")]
+        [HttpGet]
+        public async Task<IActionResult> GetCustomerBookings([FromQuery] CustomerBookingsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetCustomerBookingsAsync(query, cancellationToken);
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "WORKER")]
         [HttpGet("worker")]
         public async Task<IActionResult> GetWorkerBookings([FromQuery] WorkerBookingsQuery query, CancellationToken cancellationToken)
