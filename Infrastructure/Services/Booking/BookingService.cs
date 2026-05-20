@@ -67,7 +67,7 @@ namespace Infrastructure.Services.Booking
 
         public async Task<OperationResult<BookingDetailDto>> GetByIdAsync(Guid bookingId, CancellationToken cancellationToken = default)
         {
-            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            var booking = await _bookingRepository.GetBookingWithWorkerAsync(bookingId, cancellationToken);
 
             if (booking == null)
             {
@@ -251,12 +251,15 @@ namespace Infrastructure.Services.Booking
             queueEntry.RespondedAt = DateTime.UtcNow;
             _matchingQueueRepository.Update(queueEntry);
 
-            // Try to offer to the next worker
-            await OfferToNextWorkerAsync(booking, cancellationToken);
+            // Đưa đơn hàng quay lại trạng thái tìm thợ (Matching) để Khách hàng chọn lại thợ khác
+            booking.WorkerId = null;
+            booking.Status = BookingStatus.Matching;
+            booking.UpdatedDate = DateTime.UtcNow;
+            _bookingRepository.Update(booking);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}",
+            _logger.LogInformation("Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}. Reverted booking to Matching status.",
                 workerId, bookingId, request.RejectReason);
 
             // Notify via SignalR
@@ -265,9 +268,9 @@ namespace Infrastructure.Services.Booking
                 new BookingStatusUpdateDto
                 {
                     BookingId = bookingId,
-                    Status = booking.Status.ToString(),
+                    Status = BookingStatus.Matching.ToString(),
                     UpdatedAt = DateTime.UtcNow,
-                    Message = "Worker declined. Finding another worker..."
+                    Message = "Worker declined the offer. Reverted to matching for customer selection."
                 },
                 cancellationToken
             );
@@ -410,11 +413,12 @@ namespace Infrastructure.Services.Booking
             }
             else
             {
-                // Customer rejects the proposal — clear proposal fields and re-route
+                // Customer rejects the proposal — clear proposal fields and revert booking to Matching state
                 booking.WorkerProposedPrice = null;
                 booking.WorkerProposedTime = null;
                 booking.WorkerProposedNote = null;
                 booking.WorkerId = null;
+                booking.Status = BookingStatus.Matching;
                 booking.UpdatedDate = DateTime.UtcNow;
                 _bookingRepository.Update(booking);
 
@@ -426,12 +430,9 @@ namespace Infrastructure.Services.Booking
                     _matchingQueueRepository.Update(queueEntry);
                 }
 
-                // Try to offer to the next worker
-                await OfferToNextWorkerAsync(booking, cancellationToken);
-
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("Customer {CustomerId} rejected proposal for booking {BookingId}. Reason: {Reason}",
+                _logger.LogInformation("Customer {CustomerId} rejected proposal for booking {BookingId}. Reason: {Reason}. Reverted booking to Matching status.",
                     customerId, bookingId, request.RejectReason);
 
                 await _bookingHubService.SendStatusUpdateAsync(
@@ -439,14 +440,14 @@ namespace Infrastructure.Services.Booking
                     new BookingStatusUpdateDto
                     {
                         BookingId = bookingId,
-                        Status = booking.Status.ToString(),
+                        Status = BookingStatus.Matching.ToString(),
                         UpdatedAt = DateTime.UtcNow,
-                        Message = "Proposal rejected. Finding another worker..."
+                        Message = "Proposal rejected. Reverted to matching for customer selection."
                     },
                     cancellationToken
                 );
 
-                return OperationResult.Success("Proposal rejected. Finding another worker.");
+                return OperationResult.Success("Proposal rejected. Reverted to matching for customer selection.");
             }
         }
 

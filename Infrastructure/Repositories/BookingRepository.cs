@@ -32,7 +32,10 @@ namespace Infrastructure.Repositories
             WorkerBookingsQuery query,
             CancellationToken cancellationToken = default)
         {
-            var dbQuery = _dbSet.AsNoTracking().Where(b => b.WorkerId == workerId);
+            var dbQuery = _dbSet.AsNoTracking()
+                .Include(b => b.Worker)
+                .ThenInclude(w => w!.User)
+                .Where(b => b.WorkerId == workerId);
 
             if (query.Status.HasValue)
             {
@@ -81,7 +84,10 @@ namespace Infrastructure.Repositories
             CustomerBookingsQuery query,
             CancellationToken cancellationToken = default)
         {
-            var dbQuery = _dbSet.AsNoTracking().Where(b => b.CustomerId == customerId);
+            var dbQuery = _dbSet.AsNoTracking()
+                .Include(b => b.Worker)
+                .ThenInclude(w => w!.User)
+                .Where(b => b.CustomerId == customerId);
 
             if (query.Status.HasValue)
             {

@@ -10,7 +10,8 @@ namespace Application.Mapping
         {
             CreateMap<Booking, BookingDetailDto>()
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-                .ForMember(dest => dest.ScheduledType, opt => opt.MapFrom(src => src.ScheduledType.ToString()));
+                .ForMember(dest => dest.ScheduledType, opt => opt.MapFrom(src => src.ScheduledType.ToString()))
+                .ForMember(dest => dest.WorkerName, opt => opt.MapFrom(src => src.Worker != null && src.Worker.User != null ? src.Worker.User.FullName : null));
         }
     }
 }
