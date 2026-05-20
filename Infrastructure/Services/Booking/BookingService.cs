@@ -451,6 +451,18 @@ namespace Infrastructure.Services.Booking
             }
         }
 
+        public async Task<OperationResult> ConfirmPaymentAsync(Guid bookingId, CancellationToken cancellationToken = default)
+        {
+            return await TransitionStatusAsync(
+                bookingId,
+                BookingStatus.PendingPayment,
+                BookingStatus.Confirmed,
+                "Payment successful. Booking confirmed.",
+                null,
+                cancellationToken
+            );
+        }
+
         /// <summary>
         /// Attempts to offer the booking to the next candidate worker in the matching queue.
         /// If no candidates remain, the booking status is set back to Matching.

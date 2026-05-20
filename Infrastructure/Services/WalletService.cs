@@ -1,8 +1,9 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Wallet;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Application.Interfaces.Services.Booking;
 using Domain.Entity;
 using Domain.Enum;
 using Microsoft.EntityFrameworkCore;
@@ -14,13 +15,15 @@ public class WalletService : IWalletService
     private readonly IBookingRepository _bookingRepository;
     private readonly IPaymentOrderRepository _paymentOrderRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IBookingService _bookingService;
 
     public WalletService(
         IWalletRepository walletRepository,
         IWalletTransactionRepository walletTransactionRepository,
         IBookingRepository bookingRepository,
         IPaymentOrderRepository paymentOrderRepository,
-        IUnitOfWork unitOfWork
+        IUnitOfWork unitOfWork,
+        IBookingService bookingService
     )
     {
         _walletRepository = walletRepository;
@@ -28,6 +31,7 @@ public class WalletService : IWalletService
         _bookingRepository = bookingRepository;
         _paymentOrderRepository = paymentOrderRepository;
         _unitOfWork = unitOfWork;
+        _bookingService = bookingService;
     }
 
     public async Task<OperationResult<WalletOverviewDto>> GetWalletOverviewAsync(
@@ -284,6 +288,9 @@ public class WalletService : IWalletService
             }
 
             _walletRepository.Update(wallet);
+
+            // Chuyển trạng thái đơn sang Confirmed thông qua BookingService
+            await _bookingService.ConfirmPaymentAsync(booking.Id, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
