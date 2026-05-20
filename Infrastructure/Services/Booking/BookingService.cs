@@ -32,11 +32,12 @@ namespace Infrastructure.Services.Booking
         /// </summary>
         private static readonly Dictionary<BookingStatus, BookingStatus> AllowedTransitions = new()
         {
-            { BookingStatus.Pending,    BookingStatus.Confirmed },
-            { BookingStatus.Confirmed,  BookingStatus.Traveling },
-            { BookingStatus.Traveling,  BookingStatus.Arrived },
-            { BookingStatus.Arrived,    BookingStatus.InProgress },
-            { BookingStatus.InProgress, BookingStatus.Completed },
+            { BookingStatus.Pending,         BookingStatus.PendingPayment },
+            { BookingStatus.PendingPayment,  BookingStatus.Confirmed },
+            { BookingStatus.Confirmed,       BookingStatus.Traveling },
+            { BookingStatus.Traveling,       BookingStatus.Arrived },
+            { BookingStatus.Arrived,         BookingStatus.InProgress },
+            { BookingStatus.InProgress,      BookingStatus.Completed },
         };
 
         public BookingService(
@@ -94,8 +95,8 @@ namespace Infrastructure.Services.Booking
             return await TransitionStatusAsync(
                 bookingId,
                 BookingStatus.Pending,
-                BookingStatus.Confirmed,
-                "Worker accepted the booking",
+                BookingStatus.PendingPayment,
+                "Worker accepted the booking. Awaiting payment.",
                 (booking) =>
                 {
                     // Assign the worker profile to the booking if not already assigned
@@ -103,6 +104,7 @@ namespace Infrastructure.Services.Booking
                     {
                         booking.WorkerId = workerProfile.Id;
                     }
+                    booking.FinalPrice = booking.EstimatedPrice;
                     return Task.CompletedTask;
                 },
                 cancellationToken
@@ -376,7 +378,7 @@ namespace Infrastructure.Services.Booking
                 // Customer accepts the proposal
                 booking.FinalPrice = booking.WorkerProposedPrice ?? booking.EstimatedPrice;
                 booking.ScheduledAt = booking.WorkerProposedTime ?? booking.ScheduledAt;
-                booking.Status = BookingStatus.Confirmed;
+                booking.Status = BookingStatus.PendingPayment;
                 booking.UpdatedDate = DateTime.UtcNow;
                 _bookingRepository.Update(booking);
 
@@ -397,14 +399,14 @@ namespace Infrastructure.Services.Booking
                     new BookingStatusUpdateDto
                     {
                         BookingId = bookingId,
-                        Status = BookingStatus.Confirmed.ToString(),
+                        Status = BookingStatus.PendingPayment.ToString(),
                         UpdatedAt = DateTime.UtcNow,
-                        Message = "Customer accepted the proposal. Booking confirmed."
+                        Message = "Customer accepted the proposal. Awaiting payment."
                     },
                     cancellationToken
                 );
 
-                return OperationResult.Success("Proposal accepted. Booking confirmed.");
+                return OperationResult.Success("Proposal accepted. Awaiting payment.");
             }
             else
             {
