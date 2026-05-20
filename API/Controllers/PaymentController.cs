@@ -55,6 +55,21 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [HttpPost("booking/{bookingId}/vnpay")]
+        public async Task<IActionResult> CreateBookingVnPayPayment(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _paymentService.CreateBookingVnPayUrlAsync(
+                bookingId,
+                GetUserId(),
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
         [HttpGet("vnpay-return")]
         public async Task<IActionResult> VnPayReturn(CancellationToken cancellationToken)
         {

@@ -12,6 +12,11 @@ namespace Application.Interfaces.Services.Payment
             PaymentMethod method,
             CancellationToken cancellationToken
         );
+        Task<OperationResult<string>> CreateBookingVnPayUrlAsync(
+            Guid bookingId,
+            Guid userId,
+            CancellationToken cancellationToken
+        );
         Task HandleMoMoReturnAsync(
             Dictionary<string, string> response,
             CancellationToken cancellationToken

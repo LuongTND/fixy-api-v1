@@ -14,6 +14,7 @@ namespace Infrastructure.Services.Payment
         private readonly IPaymentOrderRepository _paymentOrderRepository;
 
         private readonly IPaymentGatewayFactory _paymentGatewayFactory;
+        private readonly IBookingRepository _bookingRepository;
 
         private readonly IWalletService _walletService;
 
@@ -22,12 +23,14 @@ namespace Infrastructure.Services.Payment
         public PaymentService(
             IPaymentOrderRepository paymentOrderRepository,
             IPaymentGatewayFactory paymentGatewayFactory,
+            IBookingRepository bookingRepository,
             IWalletService walletService,
             IUnitOfWork unitOfWork
         )
         {
             _paymentOrderRepository = paymentOrderRepository;
             _paymentGatewayFactory = paymentGatewayFactory;
+            _bookingRepository = bookingRepository;
             _walletService = walletService;
             _unitOfWork = unitOfWork;
         }
@@ -57,6 +60,79 @@ namespace Infrastructure.Services.Payment
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var gateway = _paymentGatewayFactory.Get(method);
+
+            var paymentUrl = await gateway.CreatePaymentUrlAsync(order, cancellationToken);
+
+            return OperationResult<string>.Success(paymentUrl);
+        }
+
+        public async Task<OperationResult<string>> CreateBookingVnPayUrlAsync(
+            Guid bookingId,
+            Guid userId,
+            CancellationToken cancellationToken
+        )
+        {
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+
+            if (booking == null)
+            {
+                return OperationResult<string>.Failure("Booking not found");
+            }
+
+            if (booking.CustomerId != userId)
+            {
+                return OperationResult<string>.Failure("Forbidden");
+            }
+
+            if (booking.FinalPrice == null || booking.FinalPrice <= 0)
+            {
+                return OperationResult<string>.Failure("Invalid booking price");
+            }
+
+            var existedOrder = await _paymentOrderRepository.GetBookingPaymentOrderAsync(
+                bookingId,
+                cancellationToken
+            );
+
+            if (existedOrder != null && existedOrder.Status == PaymentStatus.Paid)
+            {
+                return OperationResult<string>.Failure("Booking already paid");
+            }
+
+            PaymentOrder order;
+
+            if (existedOrder != null)
+            {
+                order = existedOrder;
+
+                order.Method = PaymentMethod.Vnpay;
+                order.Status = PaymentStatus.Pending;
+
+                _paymentOrderRepository.Update(order);
+            }
+            else
+            {
+                order = new PaymentOrder
+                {
+                    BookingId = booking.Id,
+                    UserId = userId,
+
+                    Amount = booking.FinalPrice.Value,
+                    DiscountAmount = 0,
+                    FinalAmount = booking.FinalPrice.Value,
+
+                    Method = PaymentMethod.Vnpay,
+                    Status = PaymentStatus.Pending,
+
+                    Type = PaymentOrderType.BookingPayment,
+                };
+
+                await _paymentOrderRepository.AddAsync(order, cancellationToken);
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var gateway = _paymentGatewayFactory.Get(PaymentMethod.Vnpay);
 
             var paymentUrl = await gateway.CreatePaymentUrlAsync(order, cancellationToken);
 
@@ -191,16 +267,8 @@ namespace Infrastructure.Services.Payment
 
                 case PaymentOrderType.BookingPayment:
 
-                    // TODO:
-                    // Booking payment flow
-                    //
-                    // 1. Get booking by order.BookingId
-                    // 2. Validate booking status
-                    // 3. Mark booking as paid
-                    // 4. Create invoice
-                    // 5. Create worker earning
-                    // 6. Push notification
-                    // 7. Create transaction history
+                    // đã update Paid phía trên
+                    // không cần xử lý gì thêm
 
                     break;
 
