@@ -81,5 +81,35 @@ namespace Infrastructure.Repositories
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
+
+        public async Task<List<Media>> GetBookingCompletionImagesAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    x.OwnerId == bookingId
+                    && x.OwnerType == MediaOwnerType.Booking
+                    && x.Category == MediaCategory.Completion
+                )
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<Media>> GetBookingRequestImagesAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Where(x =>
+                    x.OwnerId == bookingId
+                    && x.OwnerType == MediaOwnerType.Booking
+                    && x.Category == MediaCategory.Request
+                )
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
     }
 }

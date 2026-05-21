@@ -10,21 +10,35 @@ namespace Infrastructure.Repositories
         public AddressRepository(AppDbContext context)
             : base(context) { }
 
-        public async Task<List<Address>> GetByUserIdAsync(
-            Guid userId,
+        public async Task<List<Address>> GetByCustomerProfileIdAsync(
+            Guid customerProfileId,
             CancellationToken ct = default
         )
         {
-            return await _dbSet.Where(x => x.UserId == userId && !x.IsDeleted).ToListAsync(ct);
+            return await _dbSet
+                .Where(x => x.CustomerProfileId == customerProfileId && !x.IsDeleted)
+                .OrderByDescending(x => x.IsDefault)
+                .ToListAsync(ct);
         }
 
-        public async Task<Address?> GetDefaultByUserIdAsync(
-            Guid userId,
+        public async Task<Address?> GetWorkerAddressAsync(
+            Guid workerProfileId,
             CancellationToken ct = default
         )
         {
             return await _dbSet.FirstOrDefaultAsync(
-                x => x.UserId == userId && x.IsDefault && !x.IsDeleted,
+                x => x.WorkerProfileId == workerProfileId && !x.IsDeleted,
+                ct
+            );
+        }
+
+        public async Task<Address?> GetDefaultByCustomerProfileIdAsync(
+            Guid customerProfileId,
+            CancellationToken ct = default
+        )
+        {
+            return await _dbSet.FirstOrDefaultAsync(
+                x => x.CustomerProfileId == customerProfileId && x.IsDefault && !x.IsDeleted,
                 ct
             );
         }

@@ -3,16 +3,18 @@ using Application.Common;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.Booking;
+using Application.Interfaces.Services.Payment;
 using Domain.Entity;
 using Domain.Enum;
+using Infrastructure.Repositories;
 
 namespace Infrastructure.Services.Payment
 {
     public class PaymentService : IPaymentService
     {
         private readonly IPaymentOrderRepository _paymentOrderRepository;
+        private readonly ICustomerProfileRepository _customerProfileRepository;
 
         private readonly IPaymentGatewayFactory _paymentGatewayFactory;
         private readonly IBookingRepository _bookingRepository;
@@ -24,6 +26,7 @@ namespace Infrastructure.Services.Payment
 
         public PaymentService(
             IPaymentOrderRepository paymentOrderRepository,
+            ICustomerProfileRepository customerProfileRepository,
             IPaymentGatewayFactory paymentGatewayFactory,
             IBookingRepository bookingRepository,
             IWalletService walletService,
@@ -32,6 +35,7 @@ namespace Infrastructure.Services.Payment
         )
         {
             _paymentOrderRepository = paymentOrderRepository;
+            _customerProfileRepository = customerProfileRepository;
             _paymentGatewayFactory = paymentGatewayFactory;
             _bookingRepository = bookingRepository;
             _walletService = walletService;
@@ -82,8 +86,17 @@ namespace Infrastructure.Services.Payment
             {
                 return OperationResult<string>.Failure("Booking not found");
             }
+            var customerProfile = await _customerProfileRepository.GetByUserIdAsync(
+                userId,
+                cancellationToken
+            );
 
-            if (booking.CustomerId != userId)
+            if (customerProfile == null)
+            {
+                return OperationResult<string>.Failure("Customer profile not found");
+            }
+
+            if (booking.CustomerProfileId != customerProfile.Id)
             {
                 return OperationResult<string>.Failure("Forbidden");
             }
@@ -273,7 +286,10 @@ namespace Infrastructure.Services.Payment
 
                     if (order.BookingId.HasValue)
                     {
-                        await _bookingService.ConfirmPaymentAsync(order.BookingId.Value, cancellationToken);
+                        await _bookingService.ConfirmPaymentAsync(
+                            order.BookingId.Value,
+                            cancellationToken
+                        );
                     }
 
                     break;

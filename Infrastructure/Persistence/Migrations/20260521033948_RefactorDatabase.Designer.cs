@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260521033948_RefactorDatabase")]
+    partial class RefactorDatabase
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -965,21 +968,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 21, 4, 53, 25, 752, DateTimeKind.Utc).AddTicks(6578),
+                            CreatedDate = new DateTime(2026, 5, 21, 3, 39, 46, 789, DateTimeKind.Utc).AddTicks(4338),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-                            CreatedDate = new DateTime(2026, 5, 21, 4, 53, 25, 752, DateTimeKind.Utc).AddTicks(6580),
+                            CreatedDate = new DateTime(2026, 5, 21, 3, 39, 46, 789, DateTimeKind.Utc).AddTicks(4341),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-                            CreatedDate = new DateTime(2026, 5, 21, 4, 53, 25, 752, DateTimeKind.Utc).AddTicks(6581),
+                            CreatedDate = new DateTime(2026, 5, 21, 3, 39, 46, 789, DateTimeKind.Utc).AddTicks(4342),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1601,7 +1604,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerProfileId")
+                    b.Property<Guid>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -1612,7 +1615,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("BookingId", "Status")
                         .HasDatabaseName("idx_mq_booking");
 
-                    b.HasIndex("WorkerProfileId", "Status", "OfferedAt")
+                    b.HasIndex("WorkerId", "Status", "OfferedAt")
                         .HasDatabaseName("idx_mq_worker");
 
                     b.ToTable("WorkerMatchingQueues");
@@ -2461,7 +2464,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany()
-                        .HasForeignKey("WorkerProfileId")
+                        .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

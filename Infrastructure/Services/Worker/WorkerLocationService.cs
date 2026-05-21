@@ -20,7 +20,6 @@ namespace Infrastructure.Services.Worker
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly ILogger<WorkerLocationService> _logger;
 
-        // Redis key TTL: location data expires after 2 hours of inactivity
         private static readonly TimeSpan LocationTtl = TimeSpan.FromHours(2);
 
         public WorkerLocationService(
@@ -33,67 +32,94 @@ namespace Infrastructure.Services.Worker
         )
         {
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-            _bookingRepository = bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
-            _bookingHubService = bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
-            _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
-            _workerProfileRepository = workerProfileRepository ?? throw new ArgumentNullException(nameof(workerProfileRepository));
+
+            _bookingRepository =
+                bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
+
+            _bookingHubService =
+                bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
+
+            _currentUserService =
+                currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+
+            _workerProfileRepository =
+                workerProfileRepository
+                ?? throw new ArgumentNullException(nameof(workerProfileRepository));
+
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        /// <inheritdoc />
         public async Task<OperationResult> UpdateLocationAsync(
             Guid userId,
             UpdateWorkerLocationRequest request,
             CancellationToken cancellationToken = default
         )
         {
-            // 0. Resolve WorkerProfileId from UserId
-            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(wp => wp.UserId == userId, cancellationToken);
+            // FIX:
+            // userId = User.Id
+            // cần resolve sang WorkerProfile.Id
+
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                userId,
+                cancellationToken
+            );
+
             if (workerProfile == null)
             {
                 return OperationResult.Failure("Worker profile not found");
             }
 
-            var workerId = workerProfile.Id;
+            var workerProfileId = workerProfile.Id;
 
-            // 1. Persist latest location to Redis
             var locationData = new WorkerLocationUpdateDto
             {
-                WorkerId = workerId,
+                WorkerId = workerProfileId,
                 Lat = request.Lat,
                 Lng = request.Lng,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
             };
 
-            await SaveToRedisAsync(workerId, locationData, cancellationToken);
+            await SaveToRedisAsync(workerProfileId, locationData, cancellationToken);
 
-            // 2. Find the active booking for this worker (Traveling or InProgress)
-            var activeBooking = await _bookingRepository.GetActiveBookingByWorkerIdAsync(workerId, cancellationToken);
+            var activeBooking = await _bookingRepository.GetActiveBookingByWorkerProfileIdAsync(
+                workerProfileId,
+                cancellationToken
+            );
 
             if (activeBooking == null)
             {
-                // Worker sent a location update but is not on an active booking — still saved to Redis but not broadcast
-                _logger.LogDebug("Worker {WorkerId} sent location update but has no active booking to broadcast to.", workerId);
-                return OperationResult.Success("Location saved");
+                _logger.LogDebug(
+                    "WorkerProfile {WorkerProfileId} updated location but has no active booking.",
+                    workerProfileId
+                );
+
+                return OperationResult.Success("Location updated successfully");
             }
 
-            // 3. Broadcast to all clients watching this booking
             locationData.BookingId = activeBooking.Id;
 
-            await _bookingHubService.SendLocationUpdateAsync(activeBooking.Id, locationData, cancellationToken);
-
-            _logger.LogDebug(
-                "Worker {WorkerId} location broadcast to booking {BookingId}: ({Lat}, {Lng})",
-                workerId, activeBooking.Id, request.Lat, request.Lng
+            await _bookingHubService.SendLocationUpdateAsync(
+                activeBooking.Id,
+                locationData,
+                cancellationToken
             );
 
-            return OperationResult.Success("Location updated and broadcast");
+            _logger.LogInformation(
+                "WorkerProfile {WorkerProfileId} broadcasted location to Booking {BookingId}",
+                workerProfileId,
+                activeBooking.Id
+            );
+
+            return OperationResult.Success("Location updated and broadcast successfully");
         }
 
-        /// <inheritdoc />
-        public async Task<WorkerLocationUpdateDto?> GetLastLocationAsync(Guid workerId, CancellationToken cancellationToken = default)
+        public async Task<WorkerLocationUpdateDto?> GetLastLocationAsync(
+            Guid workerProfileId,
+            CancellationToken cancellationToken = default
+        )
         {
-            var key = BuildLocationKey(workerId);
+            var key = BuildLocationKey(workerProfileId);
+
             var payload = await _cache.GetStringAsync(key, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(payload))
@@ -104,13 +130,15 @@ namespace Infrastructure.Services.Worker
             return JsonSerializer.Deserialize<WorkerLocationUpdateDto>(payload);
         }
 
-        /// <inheritdoc />
         public async Task<OperationResult<BookingTrackingDto>> GetBookingTrackingAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default
         )
         {
-            var booking = await _bookingRepository.GetBookingWithWorkerAsync(bookingId, cancellationToken);
+            var booking = await _bookingRepository.GetBookingWithWorkerAsync(
+                bookingId,
+                cancellationToken
+            );
 
             if (booking == null)
             {
@@ -119,57 +147,80 @@ namespace Infrastructure.Services.Worker
 
             var trackingDto = new BookingTrackingDto
             {
-                BookingId = bookingId,
-                Status = booking.Status.ToString()
+                BookingId = booking.Id,
+                Status = booking.Status.ToString(),
             };
 
-            // Populate worker info if assigned
-            if (booking.Worker != null && booking.Worker.User != null)
+            // FIX:
+            // booking.WorkerProfile
+            // KHÔNG dùng booking.Worker
+
+            if (booking.WorkerProfile != null && booking.WorkerProfile.User != null)
             {
                 trackingDto.WorkerInfo = new WorkerTrackingInfoDto
                 {
-                    WorkerId = booking.WorkerId ?? Guid.Empty,
-                    FullName = booking.Worker.User.FullName,
-                    Phone = booking.Worker.User.Phone,
-                    RatingAvg = booking.Worker.RatingAvg,
-                    // AvatarUrl could be fetched from media repository or a profile field, 
-                    // assuming for now it's not directly in User entity or handled elsewhere
+                    WorkerId = booking.WorkerProfile.Id,
+
+                    FullName = booking.WorkerProfile.User.FullName,
+
+                    Phone = booking.WorkerProfile.User.Phone,
+
+                    RatingAvg = booking.WorkerProfile.RatingAvg,
                 };
             }
 
-            // Try to load the worker's last known location from Redis
-            if (booking.WorkerId.HasValue)
+            // FIX:
+            // Booking.WorkerProfileId
+
+            if (booking.WorkerProfileId.HasValue)
             {
-                var lastLocation = await GetLastLocationAsync(booking.WorkerId.Value, cancellationToken);
+                var lastLocation = await GetLastLocationAsync(
+                    booking.WorkerProfileId.Value,
+                    cancellationToken
+                );
+
                 if (lastLocation != null)
                 {
                     trackingDto.WorkerLat = lastLocation.Lat;
+
                     trackingDto.WorkerLng = lastLocation.Lng;
+
                     trackingDto.LocationUpdatedAt = lastLocation.UpdatedAt;
                 }
             }
 
-            return OperationResult<BookingTrackingDto>.Success(trackingDto, "Tracking info retrieved");
+            return OperationResult<BookingTrackingDto>.Success(
+                trackingDto,
+                "Tracking information retrieved successfully"
+            );
         }
 
-        // -------------------------
-        // Private helpers
-        // -------------------------
+        // =========================
+        // Private Helpers
+        // =========================
 
-        private async Task SaveToRedisAsync(Guid workerId, WorkerLocationUpdateDto data, CancellationToken cancellationToken)
+        private async Task SaveToRedisAsync(
+            Guid workerProfileId,
+            WorkerLocationUpdateDto data,
+            CancellationToken cancellationToken
+        )
         {
-            var key = BuildLocationKey(workerId);
+            var key = BuildLocationKey(workerProfileId);
+
             var payload = JsonSerializer.Serialize(data);
 
             var options = new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = LocationTtl
+                AbsoluteExpirationRelativeToNow = LocationTtl,
             };
 
             await _cache.SetStringAsync(key, payload, options, cancellationToken);
         }
 
-        /// <summary>Redis key pattern: worker:{workerId}:location</summary>
-        private static string BuildLocationKey(Guid workerId) => $"worker:{workerId}:location";
+        // worker:{workerProfileId}:location
+        private static string BuildLocationKey(Guid workerProfileId)
+        {
+            return $"worker:{workerProfileId}:location";
+        }
     }
 }

@@ -21,5 +21,13 @@ namespace Application.Interfaces.Repositories
             List<Guid> reviewIds,
             CancellationToken cancellationToken = default
         );
+        Task<List<Media>> GetBookingRequestImagesAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        );
+        Task<List<Media>> GetBookingCompletionImagesAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        );
     }
 }
