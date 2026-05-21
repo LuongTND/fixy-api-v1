@@ -5,8 +5,8 @@ namespace Domain.Entity
     public class Review : BaseAuditableEntity
     {
         public Guid BookingId { get; set; }
-        public Guid CustomerId { get; set; }
-        public Guid WorkerId { get; set; }
+        public Guid CustomerProfileId { get; set; }
+        public Guid WorkerProfileId { get; set; }
         public int Rating { get; set; }
         public string? Comment { get; set; }
         public string? WorkerReply { get; set; }

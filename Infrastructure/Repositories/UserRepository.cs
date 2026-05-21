@@ -40,5 +40,25 @@ namespace Infrastructure.Repositories
                     .ThenInclude(x => x.Role)
                 .FirstOrDefaultAsync(x => x.Email == target || x.Phone == target, ct);
         }
+
+        public async Task<User?> GetWithCustomerProfileByIdAsync(
+            Guid id,
+            CancellationToken ct = default
+        )
+        {
+            return await _dbSet
+                .Include(x => x.CustomerProfile)
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
+        }
+
+        public async Task<User?> GetWithWorkerProfileByIdAsync(
+            Guid id,
+            CancellationToken ct = default
+        )
+        {
+            return await _dbSet
+                .Include(x => x.WorkerProfile)
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
+        }
     }
 }

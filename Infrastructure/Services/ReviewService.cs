@@ -7,13 +7,13 @@ using Application.Interfaces.Services;
 using Application.Interfaces.Services.Media;
 using Domain.Entity;
 using Domain.Enum;
-using Infrastructure.Repositories;
 
 namespace Infrastructure.Services
 {
     public class ReviewService : IReviewService
     {
         private readonly IReviewRepository _reviewRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IBookingRepository _bookingRepository;
         private readonly IWorkerProfileRepository _workerRepository;
         private readonly IMediaRepository _mediaRepository;
@@ -22,6 +22,7 @@ namespace Infrastructure.Services
 
         public ReviewService(
             IReviewRepository reviewRepository,
+            IUserRepository userRepository,
             IBookingRepository bookingRepository,
             IWorkerProfileRepository workerRepository,
             IMediaRepository mediaRepository,
@@ -31,6 +32,7 @@ namespace Infrastructure.Services
         {
             _reviewRepository = reviewRepository;
             _bookingRepository = bookingRepository;
+            _userRepository = userRepository;
             _workerRepository = workerRepository;
             _mediaRepository = mediaRepository;
             _blobService = blobService;
@@ -73,7 +75,18 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure("This booking does not have an assigned worker.");
             }
-
+            var customerProifle = await _userRepository.GetWithCustomerProfileByIdAsync(customerId);
+            if (customerProifle == null)
+            {
+                return OperationResult.Failure("Customer not found.");
+            }
+            var workerProfile = await _userRepository.GetWithWorkerProfileByIdAsync(
+                booking.WorkerId.Value
+            );
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker not found.");
+            }
             var alreadyReviewed = await _reviewRepository.ExistsByBookingIdAsync(
                 bookingId,
                 cancellationToken
@@ -91,8 +104,8 @@ namespace Infrastructure.Services
                 var review = new Review
                 {
                     BookingId = booking.Id,
-                    CustomerId = booking.CustomerId,
-                    WorkerId = booking.WorkerId.Value,
+                    CustomerProfileId = customerProifle.Id,
+                    WorkerProfileId = workerProfile.Id,
                     Rating = dto.Rating,
                     Comment = dto.Comment,
                 };
@@ -165,7 +178,7 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure("Review not found.");
             }
-            if (review.WorkerId != workerId)
+            if (review.WorkerProfileId != workerId)
             {
                 return OperationResult.Failure("Forbidden.");
             }
@@ -214,7 +227,7 @@ namespace Infrastructure.Services
                     RepliedAt = x.RepliedAt,
                     Customer = new CustomerReviewInfoDto
                     {
-                        Id = x.CustomerId,
+                        Id = x.CustomerProfileId,
 
                         FullName = x.Customer!.User!.FullName,
 
