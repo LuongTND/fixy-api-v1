@@ -338,6 +338,85 @@ public class WalletService : IWalletService
         }
     }
 
+    public async Task<OperationResult<WalletTransaction>> AddWorkerIncomeAsync(
+        Guid workerId,
+        long amount,
+        string referenceId,
+        CancellationToken cancellationToken
+    )
+    {
+        if (amount <= 0)
+            return OperationResult<WalletTransaction>.Failure("Invalid amount");
+
+        var exists = await _walletTransactionRepository.ExistsAsync(
+            x => x.ReferenceId == referenceId && x.Type == WalletTransactionType.BookingIncome,
+            cancellationToken
+        );
+
+        if (exists)
+            return OperationResult<WalletTransaction>.Failure("Income already added");
+
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                workerId,
+                WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null)
+                return OperationResult<WalletTransaction>.Failure("Worker wallet not found");
+
+            var before = wallet.Balance;
+
+            var commission = amount * 10 / 100;
+            var workerAmount = amount - commission;
+
+            wallet.Balance += workerAmount;
+
+            var tx = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Type = WalletTransactionType.BookingIncome,
+                Direction = WalletDirection.Credit,
+
+                Amount = workerAmount,
+                PlatformFee = commission,
+
+                BalanceBefore = before,
+                BalanceAfter = wallet.Balance,
+                ReferenceId = referenceId,
+                Status = TransactionStatus.Success,
+            };
+
+            await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+
+            _walletRepository.Update(wallet);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _unitOfWork.CommitTransactionAsync();
+
+            return OperationResult<WalletTransaction>.Success(
+                tx,
+                "Worker income added successfully"
+            );
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+
+            return OperationResult<WalletTransaction>.Failure("Wallet conflict, retry again");
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
     public async Task<OperationResult<WalletTransaction>> RefundAsync(
         Guid userId,
         long amount,
@@ -345,6 +424,13 @@ public class WalletService : IWalletService
         CancellationToken cancellationToken
     )
     {
+        var exists = await _walletTransactionRepository.ExistsAsync(
+            x => x.ReferenceId == referenceId && x.Type == WalletTransactionType.Refund,
+            cancellationToken
+        );
+
+        if (exists)
+            return OperationResult<WalletTransaction>.Failure("Already refunded");
         await _unitOfWork.BeginTransactionAsync();
 
         try

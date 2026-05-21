@@ -15,7 +15,7 @@ public class WalletTransaction : BaseEntity
     public long BalanceBefore { get; set; }
 
     public long BalanceAfter { get; set; }
-
+    public long? PlatformFee { get; set; }
     public string? ExternalTransactionId { get; set; }
     public string? ReferenceId { get; set; }
 

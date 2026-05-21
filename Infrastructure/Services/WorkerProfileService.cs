@@ -305,7 +305,10 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure("User already registered as worker");
             }
-
+            user.CitizenIdNumber = dto.CitizenIdNumber;
+            user.CitizenIdIssueDate = dto.CitizenIdIssueDate;
+            user.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
+            user.IsCitizenIdVerified = true;
             var uploadedUrls = new List<string>();
 
             try
