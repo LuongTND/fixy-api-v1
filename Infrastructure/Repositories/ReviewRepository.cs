@@ -29,7 +29,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Customer)
                     .ThenInclude(x => x!.User)
                 .AsNoTracking()
-                .Where(x => x.WorkerId == workerId && x.IsVisible);
+                .Where(x => x.WorkerProfileId == workerId && x.IsVisible);
 
             // Sort
             queryDb = query.SortBy?.ToLower() switch
@@ -72,7 +72,7 @@ namespace Infrastructure.Repositories
         )
         {
             return await _dbSet
-                    .Where(x => x.WorkerId == workerId && x.IsVisible)
+                    .Where(x => x.WorkerProfileId == workerId && x.IsVisible)
                     .Select(x => (double?)x.Rating)
                     .AverageAsync(cancellationToken)
                 ?? 0;
@@ -84,7 +84,7 @@ namespace Infrastructure.Repositories
         )
         {
             return await _dbSet.CountAsync(
-                x => x.WorkerId == workerId && x.IsVisible,
+                x => x.WorkerProfileId == workerId && x.IsVisible,
                 cancellationToken
             );
         }
