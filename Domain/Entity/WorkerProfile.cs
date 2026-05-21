@@ -7,64 +7,112 @@ namespace Domain.Entity
     {
         public Guid UserId { get; set; }
 
-        //Profile
+        // =========================
+        // Profile
+        // =========================
+
         public string? Bio { get; set; }
+
         public int ExperienceYears { get; set; }
 
-        //Working Area
+        // =========================
+        // Working Area
+        // =========================
+
         public int MaxDistanceKm { get; set; }
 
-        //Realtime status
+        // =========================
+        // Realtime Status
+        // =========================
+
         public bool IsOnline { get; set; }
+
         public bool IsBusy { get; set; }
+
         public bool IsAcceptingJobs { get; set; }
 
-        //Real time location
+        // =========================
+        // Realtime Location
+        // =========================
+
         public double? CurrentLat { get; set; }
+
         public double? CurrentLng { get; set; }
+
         public DateTime? LastLocationAt { get; set; }
 
-        // Bussiness
+        // =========================
+        // Business
+        // =========================
+
         public WorkerStatus Status { get; set; } = WorkerStatus.Pending;
+
         public string? RejectReason { get; set; }
 
-        // Statistic
+        // =========================
+        // Statistics
+        // =========================
+
         public WorkerBadge Badge { get; set; } = WorkerBadge.New;
+
         public double RatingAvg { get; set; }
+
         public int TotalReviews { get; set; }
 
         public int TotalOrders { get; set; }
 
-        //Feature
+        // =========================
+        // Feature
+        // =========================
+
         public DateTime? FeaturedUntil { get; set; }
+
         public FeaturedPackage? FeaturedPackage { get; set; }
 
+        // =========================
         // Approval
+        // =========================
+
         public DateTime? ApprovedAt { get; set; }
+
         public Guid? ApprovedById { get; set; }
 
+        // =========================
+        // Navigation
+        // =========================
+
         public User? User { get; set; }
+
         public User? ApprovedBy { get; set; }
+
+        // =========================
+        // Worker Domain
+        // =========================
+
+        // Worker chỉ có 1 address
+        public Address? Address { get; set; }
 
         public ICollection<WorkerCertificate> Certificates { get; set; } =
             new List<WorkerCertificate>();
+
         public ICollection<WorkerService> Services { get; set; } = new List<WorkerService>();
+
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
-        //Worker Schdule
         public ICollection<WorkerWeeklySchedule> WeeklySchedules { get; set; } =
             new List<WorkerWeeklySchedule>();
+
         public ICollection<WorkerScheduleException> ScheduleExceptions { get; set; } =
             new List<WorkerScheduleException>();
 
-        /// <summary>
-        /// Chua dung den
-        /// </summary>
         public ICollection<WorkerPayoutAccount> PayoutAccounts { get; set; } =
             new List<WorkerPayoutAccount>();
+
         public ICollection<WorkerFeaturedOrder> FeaturedOrders { get; set; } =
             new List<WorkerFeaturedOrder>();
+
         public ICollection<WorkerEarning> Earnings { get; set; } = new List<WorkerEarning>();
+
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
     }
 }

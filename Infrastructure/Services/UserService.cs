@@ -48,7 +48,7 @@ namespace Infrastructure.Services
                     Phone = user.Phone,
                     Email = user.Email,
                     DateOfBirth = user.DateOfBirth,
-                    Gender = user.Gender,
+                    Gender = user.Gender.ToString(),
                     AvatarUrl = user.AvatarUrl,
                 }
             );
@@ -66,7 +66,7 @@ namespace Infrastructure.Services
             {
                 return OperationResult<ProfileDto>.Failure("User not found");
             }
-            if (dto.Phone != null)
+            if (!string.IsNullOrWhiteSpace(dto.Phone))
             {
                 var existUser = await _userRepository.GetByTargetAsync(
                     dto.Phone,
@@ -85,7 +85,7 @@ namespace Infrastructure.Services
             user.FullName = dto.FullName;
             user.Phone = dto.Phone;
             user.DateOfBirth = dto.DateOfBirth;
-            user.Gender = dto.Gender.ToString();
+            user.Gender = dto.Gender;
 
             if (dto.Avatar != null)
             {
@@ -151,7 +151,7 @@ namespace Infrastructure.Services
                     Phone = user.Phone,
                     Email = user.Email,
                     DateOfBirth = user.DateOfBirth,
-                    Gender = user.Gender,
+                    Gender = user.Gender.ToString(),
                     AvatarUrl = user.AvatarUrl,
                 }
             );

@@ -68,5 +68,16 @@ namespace API.Controllers
 
             return HandleResult(result);
         }
+
+        [HttpGet("booking/{bookingId:guid}")]
+        public async Task<IActionResult> GetByBookingId(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _reviewService.GetByBookingIdAsync(bookingId, cancellationToken);
+
+            return HandleResult(result);
+        }
     }
 }

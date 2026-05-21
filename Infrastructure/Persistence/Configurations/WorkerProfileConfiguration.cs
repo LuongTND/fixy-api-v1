@@ -90,6 +90,25 @@ namespace Infrastructure.Persistence.Configurations
                 .WithMany()
                 .HasForeignKey(x => x.ApprovedById)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Worker chỉ có 1 address
+            builder
+                .HasOne(x => x.Address)
+                .WithOne(x => x.WorkerProfile)
+                .HasForeignKey<Address>(x => x.WorkerProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder
+                .HasMany(x => x.Bookings)
+                .WithOne(x => x.WorkerProfile)
+                .HasForeignKey(x => x.WorkerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder
+                .HasMany(x => x.Reviews)
+                .WithOne(x => x.WorkerProfile)
+                .HasForeignKey(x => x.WorkerProfileId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -10,13 +10,19 @@ namespace Infrastructure.Repositories
         public UserRepository(AppDbContext context)
             : base(context) { }
 
-        public async Task<User?> GetByIdWithRoleAndAddressAsync(
-            Guid id,
-            CancellationToken ct = default
-        )
+        public async Task<User?> GetByIdWithRolesAsync(Guid id, CancellationToken ct = default)
         {
             return await _dbSet
-                .Include(x => x.Addresses)
+                .Include(x => x.UserRoles)
+                    .ThenInclude(x => x.Role)
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
+        }
+
+        public async Task<User?> GetByIdWithProfilesAsync(Guid id, CancellationToken ct = default)
+        {
+            return await _dbSet
+                .Include(x => x.CustomerProfile)
+                .Include(x => x.WorkerProfile)
                 .Include(x => x.UserRoles)
                     .ThenInclude(x => x.Role)
                 .FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -42,23 +48,23 @@ namespace Infrastructure.Repositories
         }
 
         public async Task<User?> GetWithCustomerProfileByIdAsync(
-            Guid id,
+            Guid userId,
             CancellationToken ct = default
         )
         {
             return await _dbSet
                 .Include(x => x.CustomerProfile)
-                .FirstOrDefaultAsync(x => x.Id == id, ct);
+                .FirstOrDefaultAsync(x => x.Id == userId, ct);
         }
 
         public async Task<User?> GetWithWorkerProfileByIdAsync(
-            Guid id,
+            Guid userId,
             CancellationToken ct = default
         )
         {
             return await _dbSet
                 .Include(x => x.WorkerProfile)
-                .FirstOrDefaultAsync(x => x.Id == id, ct);
+                .FirstOrDefaultAsync(x => x.Id == userId, ct);
         }
     }
 }

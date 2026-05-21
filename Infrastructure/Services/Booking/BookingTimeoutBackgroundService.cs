@@ -58,19 +58,25 @@ namespace Infrastructure.Services.Booking
         {
             using var scope = _scopeFactory.CreateScope();
 
-            var matchingQueueRepository = scope.ServiceProvider.GetRequiredService<IWorkerMatchingQueueRepository>();
+            var matchingQueueRepository =
+                scope.ServiceProvider.GetRequiredService<IWorkerMatchingQueueRepository>();
             var bookingRepository = scope.ServiceProvider.GetRequiredService<IBookingRepository>();
             var bookingHubService = scope.ServiceProvider.GetRequiredService<IBookingHubService>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-            var expiredEntries = await matchingQueueRepository.GetExpiredEntriesAsync(cancellationToken);
+            var expiredEntries = await matchingQueueRepository.GetExpiredEntriesAsync(
+                cancellationToken
+            );
 
             if (expiredEntries.Count == 0)
             {
                 return;
             }
 
-            _logger.LogInformation("Found {Count} expired booking offer(s). Processing...", expiredEntries.Count);
+            _logger.LogInformation(
+                "Found {Count} expired booking offer(s). Processing...",
+                expiredEntries.Count
+            );
 
             foreach (var entry in expiredEntries)
             {
@@ -82,7 +88,10 @@ namespace Infrastructure.Services.Booking
                     matchingQueueRepository.Update(entry);
 
                     // Try to offer to the next candidate
-                    var nextCandidate = await matchingQueueRepository.GetNextCandidateAsync(entry.BookingId, cancellationToken);
+                    var nextCandidate = await matchingQueueRepository.GetNextCandidateAsync(
+                        entry.BookingId,
+                        cancellationToken
+                    );
 
                     if (nextCandidate != null)
                     {
@@ -93,7 +102,10 @@ namespace Infrastructure.Services.Booking
 
                         _logger.LogInformation(
                             "Booking {BookingId}: Worker {OldWorkerId} timed out. Offered to next worker {NewWorkerId}.",
-                            entry.BookingId, entry.WorkerId, nextCandidate.WorkerId);
+                            entry.BookingId,
+                            entry.WorkerId,
+                            nextCandidate.WorkerId
+                        );
                     }
                     else
                     {
@@ -101,14 +113,16 @@ namespace Infrastructure.Services.Booking
                         if (entry.Booking != null)
                         {
                             entry.Booking.Status = BookingStatus.Matching;
-                            entry.Booking.WorkerId = null;
+                            entry.Booking.WorkerProfileId = null;
                             entry.Booking.UpdatedDate = DateTime.UtcNow;
                             bookingRepository.Update(entry.Booking);
                         }
 
                         _logger.LogWarning(
                             "Booking {BookingId}: Worker {WorkerId} timed out. No more candidates available.",
-                            entry.BookingId, entry.WorkerId);
+                            entry.BookingId,
+                            entry.WorkerId
+                        );
                     }
 
                     await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -121,18 +135,22 @@ namespace Infrastructure.Services.Booking
                             BookingId = entry.BookingId,
                             Status = nextCandidate != null ? "Matching" : "Matching",
                             UpdatedAt = DateTime.UtcNow,
-                            Message = nextCandidate != null
-                                ? "Previous worker did not respond in time. Finding another worker..."
-                                : "No workers available. The system is searching for new candidates."
+                            Message =
+                                nextCandidate != null
+                                    ? "Previous worker did not respond in time. Finding another worker..."
+                                    : "No workers available. The system is searching for new candidates.",
                         },
                         cancellationToken
                     );
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex,
+                    _logger.LogError(
+                        ex,
                         "Error processing expired offer for booking {BookingId}, worker {WorkerId}.",
-                        entry.BookingId, entry.WorkerId);
+                        entry.BookingId,
+                        entry.WorkerId
+                    );
                 }
             }
         }

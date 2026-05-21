@@ -9,20 +9,20 @@ namespace Application.Interfaces.Repositories
             Guid bookingId,
             CancellationToken cancellationToken = default
         );
-
+        Task<Review?> GetByBookingIdAsync(Guid bookingId, CancellationToken cancellationToken);
         Task<(List<Review>, int)> GetWorkerReviewsPagedAsync(
-            Guid workerId,
+            Guid workerProfileId,
             PagedQuery query,
             CancellationToken cancellationToken
         );
 
-        Task<Review?> GetDetailAsync(Guid reviewId, CancellationToken cancellationToken = default);
         Task<double> RecalculateAverageRatingAsync(
-            Guid workerId,
+            Guid workerProfileId,
             CancellationToken cancellationToken = default
         );
+
         Task<int> RecalculateTotalReviewsAsync(
-            Guid workerId,
+            Guid workerProfileId,
             CancellationToken cancellationToken = default
         );
     }

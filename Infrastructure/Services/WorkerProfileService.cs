@@ -64,35 +64,39 @@ namespace Infrastructure.Services
             {
                 query.Status = WorkerStatus.Approved;
             }
+
             var (items, totalCount) = await _workerProfileRepository.GetWorkerProfilesAsync(
                 query,
                 cancellationToken
             );
+
             var dtoItems = items
                 .Select(i => new WorkerProfileDto
                 {
                     Id = i.Id,
                     UserId = i.UserId,
-                    DateOfBirth = i.User?.DateOfBirth,
                     FullName = i.User!.FullName,
-                    Gender = i.User?.Gender,
+                    DateOfBirth = i.User.DateOfBirth,
+                    Gender = i.User.Gender.ToString(),
                     Status = i.Status.ToString(),
                     ExperienceYears = i.ExperienceYears,
                     RatingAvg = i.RatingAvg,
                     TotalReviews = i.TotalReviews,
                     TotalOrders = i.TotalOrders,
+
                     Services = i.Services.Select(MapWorkerService).ToList(),
                 })
                 .ToList();
+
             return OperationResult<PagedResponse<WorkerProfileDto>>.Success(
                 new PagedResponse<WorkerProfileDto>
                 {
+                    Items = dtoItems,
                     PageNumber = query.PageNumber,
                     PageSize = query.PageSize,
                     TotalCount = totalCount,
-                    Items = dtoItems,
                 },
-                "Get worker profile paged successfully"
+                "Get worker profiles successfully"
             );
         }
 
@@ -102,27 +106,36 @@ namespace Infrastructure.Services
         )
         {
             var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
+
             return OperationResult<WorkerPublicDetailDto>.Success(
                 new WorkerPublicDetailDto
                 {
                     Id = data.WorkerProfile.Id,
-                    UserId = workerId,
+                    UserId = data.WorkerProfile.UserId,
+
                     FullName = data.WorkerProfile.User!.FullName,
+
                     Bio = data.WorkerProfile.Bio,
-                    RatingAvg = data.WorkerProfile.RatingAvg,
-                    TotalReviews = data.WorkerProfile.TotalReviews,
-                    TotalOrders = data.WorkerProfile.TotalOrders,
+
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
+
+                    RatingAvg = data.WorkerProfile.RatingAvg,
+
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+
+                    TotalOrders = data.WorkerProfile.TotalOrders,
+
                     Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
+
                     Certificates = data
-                        .WorkerProfile.Certificates.Select(c =>
-                            MapCertificate(c, data.CertificateImageLookup)
+                        .WorkerProfile.Certificates.Select(x =>
+                            MapCertificate(x, data.CertificateImageLookup)
                         )
                         .ToList(),
 
                     PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
                 },
-                "Get worker profile by Id successfully"
+                "Get worker public detail successfully"
             );
         }
 
@@ -137,25 +150,35 @@ namespace Infrastructure.Services
                 new WorkerPrivateDetailDto
                 {
                     Id = data.WorkerProfile.Id,
-                    UserId = workerId,
+                    UserId = data.WorkerProfile.UserId,
+
                     FullName = data.WorkerProfile.User!.FullName,
+
                     Email = data.WorkerProfile.User.Email!,
+
                     Phone = data.WorkerProfile.User.Phone!,
-                    RatingAvg = data.WorkerProfile.RatingAvg,
-                    TotalReviews = data.WorkerProfile.TotalReviews,
-                    TotalOrders = data.WorkerProfile.TotalOrders,
+
                     Bio = data.WorkerProfile.Bio,
+
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
+
+                    RatingAvg = data.WorkerProfile.RatingAvg,
+
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+
+                    TotalOrders = data.WorkerProfile.TotalOrders,
+
                     Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
+
                     Certificates = data
-                        .WorkerProfile.Certificates.Select(c =>
-                            MapCertificate(c, data.CertificateImageLookup)
+                        .WorkerProfile.Certificates.Select(x =>
+                            MapCertificate(x, data.CertificateImageLookup)
                         )
                         .ToList(),
 
                     PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
                 },
-                "Get worker profile by Id successfully"
+                "Get worker private detail successfully"
             );
         }
 
@@ -165,60 +188,73 @@ namespace Infrastructure.Services
         {
             var data = await GetWorkerProfileDataAsync(workerId, cancellationToken);
 
-            var address = data.WorkerProfile.User!.Addresses.FirstOrDefault();
-            var dto = new WorkerAdminAndOwnerDetailDto
-            {
-                Id = data.WorkerProfile.Id,
-                UserId = workerId,
-                FullName = data.WorkerProfile.User!.FullName,
-                Email = data.WorkerProfile.User.Email!,
-                Phone = data.WorkerProfile.User.Phone!,
-
-                Gender = data.WorkerProfile.User.Gender,
-                DateOfBirth = data.WorkerProfile.User.DateOfBirth,
-
-                Status = data.WorkerProfile.Status,
-
-                Bio = data.WorkerProfile.Bio,
-                ExperienceYears = data.WorkerProfile.ExperienceYears,
-                MaxDistanceKm = data.WorkerProfile.MaxDistanceKm,
-
-                RatingAvg = data.WorkerProfile.RatingAvg,
-                TotalReviews = data.WorkerProfile.TotalReviews,
-                TotalOrders = data.WorkerProfile.TotalOrders,
-
-                CitizenIdNumber = data.WorkerProfile.User.CitizenIdNumber,
-                CitizenIdIssueDate = data.WorkerProfile.User.CitizenIdIssueDate,
-                CitizenIdIssuePlace = data.WorkerProfile.User.CitizenIdIssuePlace,
-
-                RejectReason = data.WorkerProfile.RejectReason,
-
-                Address =
-                    address != null
-                        ? new AddressDto
-                        {
-                            Id = address.Id,
-                            City = address.City,
-                            District = address.District,
-                            Ward = address.Ward,
-                            Detail = address.Detail,
-                        }
-                        : null,
-                Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
-                Certificates = data
-                    .WorkerProfile.Certificates.Select(c =>
-                        MapCertificate(c, data.CertificateImageLookup)
-                    )
-                    .ToList(),
-
-                PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
-
-                IdentificationImages = data.IdentificationImages.Select(MapMedia).ToList(),
-            };
+            var address = data.WorkerProfile.Address;
 
             return OperationResult<WorkerAdminAndOwnerDetailDto>.Success(
-                dto,
-                "Get admin worker detail successfully"
+                new WorkerAdminAndOwnerDetailDto
+                {
+                    Id = data.WorkerProfile.Id,
+                    UserId = data.WorkerProfile.UserId,
+
+                    FullName = data.WorkerProfile.User!.FullName,
+
+                    Email = data.WorkerProfile.User.Email!,
+
+                    Phone = data.WorkerProfile.User.Phone!,
+
+                    Gender = data.WorkerProfile.User.Gender.ToString(),
+
+                    DateOfBirth = data.WorkerProfile.User.DateOfBirth,
+
+                    Status = data.WorkerProfile.Status,
+
+                    Bio = data.WorkerProfile.Bio,
+
+                    ExperienceYears = data.WorkerProfile.ExperienceYears,
+
+                    MaxDistanceKm = data.WorkerProfile.MaxDistanceKm,
+
+                    RatingAvg = data.WorkerProfile.RatingAvg,
+
+                    TotalReviews = data.WorkerProfile.TotalReviews,
+
+                    TotalOrders = data.WorkerProfile.TotalOrders,
+
+                    CitizenIdNumber = data.WorkerProfile.User.CitizenIdNumber,
+
+                    CitizenIdIssueDate = data.WorkerProfile.User.CitizenIdIssueDate,
+
+                    CitizenIdIssuePlace = data.WorkerProfile.User.CitizenIdIssuePlace,
+
+                    RejectReason = data.WorkerProfile.RejectReason,
+
+                    Address =
+                        address == null
+                            ? null
+                            : new AddressDto
+                            {
+                                Id = address.Id,
+                                City = address.City,
+                                District = address.District,
+                                Ward = address.Ward,
+                                Detail = address.Detail,
+                                Lat = address.Lat,
+                                Lng = address.Lng,
+                            },
+
+                    Services = data.WorkerProfile.Services.Select(MapWorkerService).ToList(),
+
+                    Certificates = data
+                        .WorkerProfile.Certificates.Select(x =>
+                            MapCertificate(x, data.CertificateImageLookup)
+                        )
+                        .ToList(),
+
+                    PortfolioImages = data.PortfolioImages.Select(MapMedia).ToList(),
+
+                    IdentificationImages = data.IdentificationImages.Select(MapMedia).ToList(),
+                },
+                "Get worker detail successfully"
             );
         }
 
@@ -299,7 +335,7 @@ namespace Infrastructure.Services
                 // Create Worker Address
                 var workerAddress = new Address
                 {
-                    UserId = user.Id,
+                    WorkerProfileId = workerProfile.Id,
                     City = dto.CreateAddressRequestDto.City,
                     District = dto.CreateAddressRequestDto.District,
                     Ward = dto.CreateAddressRequestDto.Ward,
@@ -547,8 +583,8 @@ namespace Infrastructure.Services
             // Update Address
             // =========================
 
-            var address = await _addressRepository.GetDefaultByUserIdAsync(
-                user.Id,
+            var address = await _addressRepository.GetWorkerAddressAsync(
+                workerProfile.Id,
                 cancellationToken
             );
 

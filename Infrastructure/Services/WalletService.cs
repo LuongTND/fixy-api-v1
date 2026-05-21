@@ -6,10 +6,12 @@ using Application.Interfaces.Services;
 using Application.Interfaces.Services.Booking;
 using Domain.Entity;
 using Domain.Enum;
+using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 public class WalletService : IWalletService
 {
+    private readonly IUserRepository _userRepository;
     private readonly IWalletRepository _walletRepository;
     private readonly IWalletTransactionRepository _walletTransactionRepository;
     private readonly IBookingRepository _bookingRepository;
@@ -18,6 +20,7 @@ public class WalletService : IWalletService
     private readonly IBookingService _bookingService;
 
     public WalletService(
+        IUserRepository userRepository,
         IWalletRepository walletRepository,
         IWalletTransactionRepository walletTransactionRepository,
         IBookingRepository bookingRepository,
@@ -26,6 +29,7 @@ public class WalletService : IWalletService
         IBookingService bookingService
     )
     {
+        _userRepository = userRepository;
         _walletRepository = walletRepository;
         _walletTransactionRepository = walletTransactionRepository;
         _bookingRepository = bookingRepository;
@@ -194,7 +198,17 @@ public class WalletService : IWalletService
                 return OperationResult<WalletTransactionDto>.Failure("Booking not found");
             }
 
-            if (booking.CustomerId != userId)
+            var customer = await _userRepository.GetWithCustomerProfileByIdAsync(
+                userId,
+                cancellationToken
+            );
+
+            if (customer?.CustomerProfile == null)
+            {
+                return OperationResult<WalletTransactionDto>.Failure("Customer profile not found");
+            }
+
+            if (booking.CustomerProfileId != customer.CustomerProfile.Id)
             {
                 return OperationResult<WalletTransactionDto>.Failure("Forbidden");
             }

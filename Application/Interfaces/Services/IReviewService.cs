@@ -23,5 +23,9 @@ namespace Application.Interfaces.Services
             PagedQuery query,
             CancellationToken cancellationToken
         );
+        Task<OperationResult<ReviewDto>> GetByBookingIdAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        );
     }
 }

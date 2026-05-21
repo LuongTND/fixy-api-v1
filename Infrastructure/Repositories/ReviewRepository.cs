@@ -19,19 +19,35 @@ namespace Infrastructure.Repositories
             return await _dbSet.AnyAsync(x => x.BookingId == bookingId, cancellationToken);
         }
 
+        public async Task<Review?> GetByBookingIdAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Include(x => x.CustomerProfile)
+                    .ThenInclude(x => x.User)
+                .Include(x => x.WorkerProfile)
+                    .ThenInclude(x => x.User)
+                .FirstOrDefaultAsync(x => x.BookingId == bookingId, cancellationToken);
+        }
+
         public async Task<(List<Review>, int)> GetWorkerReviewsPagedAsync(
-            Guid workerId,
+            Guid workerProfileId,
             PagedQuery query,
             CancellationToken cancellationToken
         )
         {
             var queryDb = _dbSet
-                .Include(x => x.Customer)
+                .Include(x => x.CustomerProfile)
                     .ThenInclude(x => x!.User)
                 .AsNoTracking()
-                .Where(x => x.WorkerProfileId == workerId && x.IsVisible);
+                .Where(x => x.WorkerProfileId == workerProfileId && x.IsVisible);
 
+            // =========================
             // Sort
+            // =========================
+
             queryDb = query.SortBy?.ToLower() switch
             {
                 "rating" => query.SortDescending
@@ -61,30 +77,32 @@ namespace Infrastructure.Repositories
         )
         {
             return await _dbSet
-                .Include(x => x.Customer)
+                .Include(x => x.CustomerProfile)
+                    .ThenInclude(x => x!.User)
+                .Include(x => x.WorkerProfile)
                     .ThenInclude(x => x!.User)
                 .FirstOrDefaultAsync(x => x.Id == reviewId, cancellationToken);
         }
 
         public async Task<double> RecalculateAverageRatingAsync(
-            Guid workerId,
+            Guid workerProfileId,
             CancellationToken cancellationToken = default
         )
         {
             return await _dbSet
-                    .Where(x => x.WorkerProfileId == workerId && x.IsVisible)
+                    .Where(x => x.WorkerProfileId == workerProfileId && x.IsVisible)
                     .Select(x => (double?)x.Rating)
                     .AverageAsync(cancellationToken)
                 ?? 0;
         }
 
         public async Task<int> RecalculateTotalReviewsAsync(
-            Guid workerId,
+            Guid workerProfileId,
             CancellationToken cancellationToken = default
         )
         {
             return await _dbSet.CountAsync(
-                x => x.WorkerProfileId == workerId && x.IsVisible,
+                x => x.WorkerProfileId == workerProfileId && x.IsVisible,
                 cancellationToken
             );
         }
