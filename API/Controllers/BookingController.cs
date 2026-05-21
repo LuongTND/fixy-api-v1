@@ -84,6 +84,14 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "CUSTOMER, ADMIN")]
+        [HttpGet("{id:guid}/matching-queue")]
+        public async Task<IActionResult> GetMatchingQueue(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetMatchingQueueAsync(id, cancellationToken);
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "WORKER")]
         // Worker declines the booking with a reason. Triggers re-routing to next worker.
         [HttpPost("{id:guid}/decline")]
