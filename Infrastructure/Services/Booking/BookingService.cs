@@ -633,7 +633,7 @@ namespace Infrastructure.Services.Booking
             var dtos = matchingQueue
                 .Select(q => new BookingMatchingQueueDto
                 {
-                    WorkerId = q.WorkerId,
+                    WorkerId = q.WorkerProfileId,
                     FullName = q.Worker?.User?.FullName ?? string.Empty,
                     Phone = q.Worker?.User?.Phone ?? string.Empty,
                     AvatarUrl = q.Worker?.User?.AvatarUrl,
@@ -677,7 +677,7 @@ namespace Infrastructure.Services.Booking
                 _logger.LogInformation(
                     "Offered booking {BookingId} to next worker {WorkerId}",
                     booking.Id,
-                    nextCandidate.WorkerId
+                    nextCandidate.WorkerProfileId
                 );
             }
             else

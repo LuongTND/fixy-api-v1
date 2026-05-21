@@ -11,17 +11,26 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Status).HasConversion<string>();
             builder.HasIndex(x => new { x.BookingId, x.Status }).HasDatabaseName("idx_mq_booking");
-            builder.HasIndex(x => new { x.WorkerId, x.Status, x.OfferedAt }).HasDatabaseName("idx_mq_worker");
+            builder
+                .HasIndex(x => new
+                {
+                    x.WorkerProfileId,
+                    x.Status,
+                    x.OfferedAt,
+                })
+                .HasDatabaseName("idx_mq_worker");
             builder.HasIndex(x => x.ExpiresAt).HasDatabaseName("idx_mq_expires");
 
-            builder.HasOne(x => x.Booking)
+            builder
+                .HasOne(x => x.Booking)
                 .WithMany(x => x.MatchingQueue)
                 .HasForeignKey(x => x.BookingId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne(x => x.Worker)
+            builder
+                .HasOne(x => x.Worker)
                 .WithMany()
-                .HasForeignKey(x => x.WorkerId)
+                .HasForeignKey(x => x.WorkerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

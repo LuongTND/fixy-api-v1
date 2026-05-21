@@ -77,6 +77,9 @@ namespace Infrastructure.Services
             _workerMatchingService =
                 workerMatchingService
                 ?? throw new ArgumentNullException(nameof(workerMatchingService));
+            _customerProfileRepository =
+                customerProfileRepository
+                ?? throw new ArgumentNullException(nameof(customerProfileRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 

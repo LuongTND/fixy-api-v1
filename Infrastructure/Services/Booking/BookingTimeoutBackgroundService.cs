@@ -34,7 +34,8 @@ namespace Infrastructure.Services.Booking
         )
         {
             _scopeFactory = scopeFactory;
-            _matchingSettings = matchingOptions?.Value ?? throw new ArgumentNullException(nameof(matchingOptions));
+            _matchingSettings =
+                matchingOptions?.Value ?? throw new ArgumentNullException(nameof(matchingOptions));
             _logger = logger;
         }
 
@@ -102,13 +103,15 @@ namespace Infrastructure.Services.Booking
                     {
                         nextCandidate.Status = MatchingStatus.Offered;
                         nextCandidate.OfferedAt = DateTime.UtcNow;
-                        nextCandidate.ExpiresAt = DateTime.UtcNow.AddMinutes(_matchingSettings.OfferTimeoutMinutes); // Configured timeout
+                        nextCandidate.ExpiresAt = DateTime.UtcNow.AddMinutes(
+                            _matchingSettings.OfferTimeoutMinutes
+                        ); // Configured timeout
                         matchingQueueRepository.Update(nextCandidate);
 
                         // Update the booking to point to the new worker
                         if (entry.Booking != null)
                         {
-                            entry.Booking.WorkerId = nextCandidate.WorkerId;
+                            entry.Booking.WorkerProfileId = nextCandidate.WorkerProfileId;
                             entry.Booking.Status = BookingStatus.Pending;
                             entry.Booking.UpdatedDate = DateTime.UtcNow;
                             bookingRepository.Update(entry.Booking);
@@ -117,8 +120,8 @@ namespace Infrastructure.Services.Booking
                         _logger.LogInformation(
                             "Booking {BookingId}: Worker {OldWorkerId} timed out. Offered to next worker {NewWorkerId}.",
                             entry.BookingId,
-                            entry.WorkerId,
-                            nextCandidate.WorkerId
+                            entry.WorkerProfileId,
+                            nextCandidate.WorkerProfileId
                         );
                     }
                     else
@@ -135,7 +138,7 @@ namespace Infrastructure.Services.Booking
                         _logger.LogWarning(
                             "Booking {BookingId}: Worker {WorkerId} timed out. No more candidates available.",
                             entry.BookingId,
-                            entry.WorkerId
+                            entry.WorkerProfileId
                         );
                     }
 
@@ -163,7 +166,7 @@ namespace Infrastructure.Services.Booking
                         ex,
                         "Error processing expired offer for booking {BookingId}, worker {WorkerId}.",
                         entry.BookingId,
-                        entry.WorkerId
+                        entry.WorkerProfileId
                     );
                 }
             }
