@@ -95,10 +95,10 @@ namespace Infrastructure.Services.Booking
             var activeWorkers = await _workerProfileRepository.FindAsync(
                 wp =>
                     eligibleWorkerProfileIds.Contains(wp.Id)
-                    && wp.Status == WorkerStatus.Approved
-                    && wp.IsOnline
-                    && !wp.IsBusy
-                    && wp.IsAcceptingJobs,
+                    && wp.Status == WorkerStatus.Approved,
+                    //&& wp.IsOnline
+                    //&& !wp.IsBusy
+                    //&& wp.IsAcceptingJobs
                 cancellationToken
             );
 
