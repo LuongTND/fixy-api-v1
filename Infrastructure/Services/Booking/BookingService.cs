@@ -25,6 +25,7 @@ namespace Infrastructure.Services.Booking
         private readonly ISupportTicketRepository _supportTicketRepository;
         private readonly IWorkerMatchingQueueRepository _matchingQueueRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
+        private readonly IWorkerMatchingService _workerMatchingService;
         private readonly ILogger<BookingService> _logger;
 
         /// <summary>
@@ -49,6 +50,7 @@ namespace Infrastructure.Services.Booking
             ISupportTicketRepository supportTicketRepository,
             IWorkerMatchingQueueRepository matchingQueueRepository,
             IWorkerProfileRepository workerProfileRepository,
+            IWorkerMatchingService workerMatchingService,
             IMapper mapper,
             ILogger<BookingService> logger
         )
@@ -61,6 +63,7 @@ namespace Infrastructure.Services.Booking
             _mediaRepository = mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _supportTicketRepository = supportTicketRepository ?? throw new ArgumentNullException(nameof(supportTicketRepository));
             _matchingQueueRepository = matchingQueueRepository ?? throw new ArgumentNullException(nameof(matchingQueueRepository));
+            _workerMatchingService = workerMatchingService ?? throw new ArgumentNullException(nameof(workerMatchingService));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -97,7 +100,7 @@ namespace Infrastructure.Services.Booking
                 BookingStatus.Pending,
                 BookingStatus.PendingPayment,
                 "Worker accepted the booking. Awaiting payment.",
-                (booking) =>
+                async (booking) =>
                 {
                     // Assign the worker profile to the booking if not already assigned
                     if (booking.WorkerId == null)
@@ -105,7 +108,15 @@ namespace Infrastructure.Services.Booking
                         booking.WorkerId = workerProfile.Id;
                     }
                     booking.FinalPrice = booking.EstimatedPrice;
-                    return Task.CompletedTask;
+
+                    // Update matching queue entry to Accepted to prevent timeout false-positive
+                    var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(bookingId, workerProfile.Id, cancellationToken);
+                    if (queueEntry != null)
+                    {
+                        queueEntry.Status = MatchingStatus.Accepted;
+                        queueEntry.RespondedAt = DateTime.UtcNow;
+                        _matchingQueueRepository.Update(queueEntry);
+                    }
                 },
                 cancellationToken
             );
@@ -251,29 +262,13 @@ namespace Infrastructure.Services.Booking
             queueEntry.RespondedAt = DateTime.UtcNow;
             _matchingQueueRepository.Update(queueEntry);
 
-            // Đưa đơn hàng quay lại trạng thái tìm thợ (Matching) để Khách hàng chọn lại thợ khác
-            booking.WorkerId = null;
-            booking.Status = BookingStatus.Matching;
-            booking.UpdatedDate = DateTime.UtcNow;
-            _bookingRepository.Update(booking);
-
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}. Reverted booking to Matching status.",
+            _logger.LogInformation("Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}. Auto-forwarding to next worker.",
                 workerId, bookingId, request.RejectReason);
 
-            // Notify via SignalR
-            await _bookingHubService.SendStatusUpdateAsync(
-                bookingId,
-                new BookingStatusUpdateDto
-                {
-                    BookingId = bookingId,
-                    Status = BookingStatus.Matching.ToString(),
-                    UpdatedAt = DateTime.UtcNow,
-                    Message = "Worker declined the offer. Reverted to matching for customer selection."
-                },
-                cancellationToken
-            );
+            // Auto-forward to next worker in the matching queue
+            await _workerMatchingService.OfferToNextWorkerAsync(bookingId, cancellationToken);
 
             return OperationResult.Success("Booking declined successfully");
         }
@@ -461,6 +456,28 @@ namespace Infrastructure.Services.Booking
                 null,
                 cancellationToken
             );
+        }
+
+        public async Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(Guid bookingId, CancellationToken cancellationToken = default)
+        {
+            var matchingQueue = await _matchingQueueRepository.GetQueueForBookingAsync(bookingId, cancellationToken);
+
+            var dtos = matchingQueue.Select(q => new BookingMatchingQueueDto
+            {
+                WorkerId = q.WorkerId,
+                FullName = q.Worker?.User?.FullName ?? string.Empty,
+                Phone = q.Worker?.User?.Phone ?? string.Empty,
+                AvatarUrl = q.Worker?.User?.AvatarUrl,
+                RatingAvg = q.Worker?.RatingAvg ?? 0,
+                DistanceKm = q.DistanceKm,
+                Score = q.Score,
+                Status = q.Status.ToString(),
+                OfferedAt = q.OfferedAt,
+                ExpiresAt = q.ExpiresAt,
+                RejectReason = q.RejectReason
+            }).ToList();
+
+            return OperationResult<List<BookingMatchingQueueDto>>.Success(dtos, "Matching queue retrieved successfully");
         }
 
         /// <summary>

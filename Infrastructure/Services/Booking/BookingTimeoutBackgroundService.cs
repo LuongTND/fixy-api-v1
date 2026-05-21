@@ -2,10 +2,12 @@ using Application.DTOs.Booking;
 using Application.Interfaces;
 using Application.Interfaces.Hubs;
 using Application.Interfaces.Repositories;
+using Application.Settings;
 using Domain.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Booking
 {
@@ -17,6 +19,7 @@ namespace Infrastructure.Services.Booking
     public class BookingTimeoutBackgroundService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly WorkerMatchingSettings _matchingSettings;
         private readonly ILogger<BookingTimeoutBackgroundService> _logger;
 
         /// <summary>
@@ -26,10 +29,12 @@ namespace Infrastructure.Services.Booking
 
         public BookingTimeoutBackgroundService(
             IServiceScopeFactory scopeFactory,
+            IOptions<WorkerMatchingSettings> matchingOptions,
             ILogger<BookingTimeoutBackgroundService> logger
         )
         {
             _scopeFactory = scopeFactory;
+            _matchingSettings = matchingOptions?.Value ?? throw new ArgumentNullException(nameof(matchingOptions));
             _logger = logger;
         }
 
@@ -88,8 +93,17 @@ namespace Infrastructure.Services.Booking
                     {
                         nextCandidate.Status = MatchingStatus.Offered;
                         nextCandidate.OfferedAt = DateTime.UtcNow;
-                        nextCandidate.ExpiresAt = DateTime.UtcNow.AddMinutes(15); // Default timeout
+                        nextCandidate.ExpiresAt = DateTime.UtcNow.AddMinutes(_matchingSettings.OfferTimeoutMinutes); // Configured timeout
                         matchingQueueRepository.Update(nextCandidate);
+
+                        // Update the booking to point to the new worker
+                        if (entry.Booking != null)
+                        {
+                            entry.Booking.WorkerId = nextCandidate.WorkerId;
+                            entry.Booking.Status = BookingStatus.Pending;
+                            entry.Booking.UpdatedDate = DateTime.UtcNow;
+                            bookingRepository.Update(entry.Booking);
+                        }
 
                         _logger.LogInformation(
                             "Booking {BookingId}: Worker {OldWorkerId} timed out. Offered to next worker {NewWorkerId}.",

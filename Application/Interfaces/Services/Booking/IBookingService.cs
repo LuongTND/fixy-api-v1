@@ -45,5 +45,7 @@ namespace Application.Interfaces.Services.Booking
         Task<OperationResult<SupportTicketDto>> ReportIssueAsync(Guid bookingId, ReportBookingIssueRequest request, CancellationToken cancellationToken = default);
 
         Task<OperationResult> ConfirmPaymentAsync(Guid bookingId, CancellationToken cancellationToken = default);
+
+        Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(Guid bookingId, CancellationToken cancellationToken = default);
     }
 }

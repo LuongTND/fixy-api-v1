@@ -65,6 +65,8 @@ namespace Infrastructure
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
+            // WorkerMatching Settings
+            services.Configure<WorkerMatchingSettings>(configuration.GetSection("WorkerMatchingSettings"));
             // Blob Settings
             services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
             // VNPay Settings
@@ -155,6 +157,7 @@ namespace Infrastructure
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IWorkerLocationService, WorkerLocationService>();
             services.AddScoped<IBookingDraftService, BookingDraftService>();
+            services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
