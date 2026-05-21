@@ -6,7 +6,7 @@ namespace Application.DTOs.Booking
     {
         public Guid Id { get; set; }
         public Guid CustomerId { get; set; }
-        public Guid? WorkerId { get; set; }
+        public Guid? WorkerProfileId { get; set; }
         public string? WorkerName { get; set; }
         public string? WorkerPhone { get; set; }
         public Guid CategoryId { get; set; }
