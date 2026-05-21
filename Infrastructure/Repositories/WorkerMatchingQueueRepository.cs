@@ -42,5 +42,16 @@ namespace Infrastructure.Repositories
                 .ThenBy(q => q.DistanceKm)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        public async Task<List<WorkerMatchingQueue>> GetQueueForBookingAsync(Guid bookingId, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .Include(q => q.Worker)
+                    .ThenInclude(w => w!.User)
+                .Where(q => q.BookingId == bookingId)
+                .OrderByDescending(q => q.Score)
+                .ThenBy(q => q.DistanceKm)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

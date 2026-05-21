@@ -31,6 +31,7 @@ namespace Infrastructure.Services
         private readonly IMediaRepository _mediaRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
+        private readonly IWorkerMatchingService _workerMatchingService;
         private readonly IUnitOfWork _unitOfWork;
 
         public BookingDraftService(
@@ -46,23 +47,37 @@ namespace Infrastructure.Services
             IMediaRepository mediaRepository,
             IWorkerProfileRepository workerProfileRepository,
             IWorkerServiceRepository workerServiceRepository,
+            IWorkerMatchingService workerMatchingService,
             IUnitOfWork unitOfWork
         )
         {
-            _cache = cache;
-            _dateTimeProvider = dateTimeProvider;
-            _currentUserService = currentUserService;
-            _logger = logger;
-            _draftSettings = draftOptions.Value;
-
-            _customerProfileRepository = customerProfileRepository;
-            _bookingRepository = bookingRepository;
-            _addressRepository = addressRepository;
-            _serviceCategoryRepository = serviceCategoryRepository;
-            _mediaRepository = mediaRepository;
-            _workerProfileRepository = workerProfileRepository;
-            _workerServiceRepository = workerServiceRepository;
-            _unitOfWork = unitOfWork;
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _dateTimeProvider =
+                dateTimeProvider ?? throw new ArgumentNullException(nameof(dateTimeProvider));
+            _currentUserService =
+                currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _draftSettings =
+                draftOptions?.Value ?? throw new ArgumentNullException(nameof(draftOptions));
+            _bookingRepository =
+                bookingRepository ?? throw new ArgumentNullException(nameof(bookingRepository));
+            _addressRepository =
+                addressRepository ?? throw new ArgumentNullException(nameof(addressRepository));
+            _serviceCategoryRepository =
+                serviceCategoryRepository
+                ?? throw new ArgumentNullException(nameof(serviceCategoryRepository));
+            _mediaRepository =
+                mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
+            _workerProfileRepository =
+                workerProfileRepository
+                ?? throw new ArgumentNullException(nameof(workerProfileRepository));
+            _workerServiceRepository =
+                workerServiceRepository
+                ?? throw new ArgumentNullException(nameof(workerServiceRepository));
+            _workerMatchingService =
+                workerMatchingService
+                ?? throw new ArgumentNullException(nameof(workerMatchingService));
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         }
 
         public async Task<OperationResult<BookingDraftCreatedDto>> CreateAsync(
@@ -424,11 +439,8 @@ namespace Infrastructure.Services
                 ScheduledType = draft.ScheduledType,
                 ScheduledAt = draft.ScheduledAt,
 
-                Status = workerProfileId.HasValue ? BookingStatus.Pending : BookingStatus.Matching,
-
+                Status = draft.AutoMatch ? BookingStatus.Matching : BookingStatus.Pending,
                 EstimatedPrice = estimatedPrice,
-
-                CreatedDate = _dateTimeProvider.UtcNow,
             };
 
             await _bookingRepository.AddAsync(booking, cancellationToken);
@@ -438,6 +450,12 @@ namespace Infrastructure.Services
             await AttachMediaAsync(booking.Id, userId, draft.MediaIds, cancellationToken);
 
             await RemoveDraftAsync(userId, draftId, cancellationToken);
+
+            // Trigger auto-matching if customer chose automatic worker assignment
+            if (draft.AutoMatch)
+            {
+                await _workerMatchingService.ProcessAutoMatchAsync(booking.Id, cancellationToken);
+            }
 
             return OperationResult<BookingDraftConfirmedDto>.Success(
                 new BookingDraftConfirmedDto { BookingId = booking.Id },
