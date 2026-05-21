@@ -120,12 +120,23 @@ namespace Infrastructure.Services.Booking
             }
 
             var dto = _mapper.Map<BookingDetailDto>(booking);
-            var medias = await _mediaRepository.GetBookingCompletionImagesAsync(
+            var requestImages = await _mediaRepository.GetBookingRequestImagesAsync(
                 bookingId,
                 cancellationToken
             );
-
-            dto.CompleteImages = medias
+            var completeImages = await _mediaRepository.GetBookingCompletionImagesAsync(
+                bookingId,
+                cancellationToken
+            );
+            dto.RequestImages = requestImages
+                .Select(x => new MediaDto
+                {
+                    Id = x.Id,
+                    OwnerId = x.OwnerId,
+                    FileUrl = x.FileUrl,
+                })
+                .ToList();
+            dto.CompleteImages = completeImages
                 .Select(x => new MediaDto
                 {
                     Id = x.Id,

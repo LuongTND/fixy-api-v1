@@ -13,6 +13,7 @@ namespace Infrastructure.Services
     public class ReviewService : IReviewService
     {
         private readonly IReviewRepository _reviewRepository;
+        private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IUserRepository _userRepository;
         private readonly IBookingRepository _bookingRepository;
         private readonly IWorkerProfileRepository _workerRepository;
@@ -22,6 +23,7 @@ namespace Infrastructure.Services
 
         public ReviewService(
             IReviewRepository reviewRepository,
+            IWorkerProfileRepository workerProfileRepository,
             IUserRepository userRepository,
             IBookingRepository bookingRepository,
             IWorkerProfileRepository workerRepository,
@@ -32,6 +34,7 @@ namespace Infrastructure.Services
         {
             _reviewRepository = reviewRepository;
             _bookingRepository = bookingRepository;
+            _workerProfileRepository = workerProfileRepository;
             _userRepository = userRepository;
             _workerRepository = workerRepository;
             _mediaRepository = mediaRepository;
@@ -214,7 +217,7 @@ namespace Infrastructure.Services
         }
 
         public async Task<OperationResult> ReplyReviewAsync(
-            Guid workerProfileId,
+            Guid workerId,
             Guid reviewId,
             ReplyReviewRequestDto dto,
             CancellationToken cancellationToken
@@ -226,8 +229,14 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure("Review not found.");
             }
-
-            if (review.WorkerProfileId != workerProfileId)
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                workerId
+            );
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found.");
+            }
+            if (review.WorkerProfileId != workerProfile.Id)
             {
                 return OperationResult.Failure("Forbidden.");
             }

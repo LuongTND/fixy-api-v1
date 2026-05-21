@@ -28,6 +28,8 @@ namespace Application.DTOs.Booking
         public string? WorkerProposedNote { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
+        public List<MediaDto> RequestImages { get; set; } = new List<MediaDto>();
+
         public List<MediaDto> CompleteImages { get; set; } = new List<MediaDto>();
     }
 }
