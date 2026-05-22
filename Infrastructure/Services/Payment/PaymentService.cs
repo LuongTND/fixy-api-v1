@@ -7,7 +7,6 @@ using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Payment;
 using Domain.Entity;
 using Domain.Enum;
-using Infrastructure.Repositories;
 
 namespace Infrastructure.Services.Payment
 {

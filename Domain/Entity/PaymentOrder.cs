@@ -38,5 +38,7 @@ namespace Domain.Entity
         public Invoice? Invoice { get; set; }
 
         public WorkerEarning? WorkerEarning { get; set; }
+        public ICollection<WalletTransaction> WalletTransactions { get; set; } =
+            new List<WalletTransaction>();
     }
 }

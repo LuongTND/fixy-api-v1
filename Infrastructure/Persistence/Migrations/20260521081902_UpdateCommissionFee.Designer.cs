@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260521081902_UpdateCommissionFee")]
+    partial class UpdateCommissionFee
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -965,21 +968,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 22, 3, 0, 16, 99, DateTimeKind.Utc).AddTicks(9908),
+                            CreatedDate = new DateTime(2026, 5, 21, 8, 19, 2, 155, DateTimeKind.Utc).AddTicks(5166),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-                            CreatedDate = new DateTime(2026, 5, 22, 3, 0, 16, 99, DateTimeKind.Utc).AddTicks(9911),
+                            CreatedDate = new DateTime(2026, 5, 21, 8, 19, 2, 155, DateTimeKind.Utc).AddTicks(5170),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-                            CreatedDate = new DateTime(2026, 5, 22, 3, 0, 16, 99, DateTimeKind.Utc).AddTicks(9915),
+                            CreatedDate = new DateTime(2026, 5, 21, 8, 19, 2, 155, DateTimeKind.Utc).AddTicks(5172),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1975,9 +1978,6 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<string>("ExternalTransactionId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("PaymentOrderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<long?>("PlatformFee")
                         .HasColumnType("bigint");
 
@@ -1998,11 +1998,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalTransactionId")
-                        .IsUnique()
-                        .HasFilter("[ExternalTransactionId] IS NOT NULL");
-
-                    b.HasIndex("PaymentOrderId");
+                    b.HasIndex("ExternalTransactionId");
 
                     b.HasIndex("ReferenceId");
 
@@ -2563,18 +2559,11 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("WalletTransaction", b =>
                 {
-                    b.HasOne("Domain.Entity.PaymentOrder", "PaymentOrder")
-                        .WithMany("WalletTransactions")
-                        .HasForeignKey("PaymentOrderId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Wallet", "Wallet")
                         .WithMany("Transactions")
                         .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("PaymentOrder");
 
                     b.Navigation("Wallet");
                 });
@@ -2612,8 +2601,6 @@ namespace Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Domain.Entity.PaymentOrder", b =>
                 {
                     b.Navigation("Invoice");
-
-                    b.Navigation("WalletTransactions");
 
                     b.Navigation("WorkerEarning");
                 });

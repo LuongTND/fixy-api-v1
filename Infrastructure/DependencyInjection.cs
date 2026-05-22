@@ -66,7 +66,9 @@ namespace Infrastructure
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
             // WorkerMatching Settings
-            services.Configure<WorkerMatchingSettings>(configuration.GetSection("WorkerMatchingSettings"));
+            services.Configure<WorkerMatchingSettings>(
+                configuration.GetSection("WorkerMatchingSettings")
+            );
             // Blob Settings
             services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
             // VNPay Settings
@@ -126,6 +128,7 @@ namespace Infrastructure
                 IWorkerScheduleExceptionRepository,
                 WorkerScheduleExceptionRepository
             >();
+            services.AddScoped<IWorkerPayoutAccountRepository, WorkerPayoutAccountRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
@@ -135,6 +138,8 @@ namespace Infrastructure
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
+            services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
+
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
             ;
@@ -158,6 +163,8 @@ namespace Infrastructure
             services.AddScoped<IWorkerLocationService, WorkerLocationService>();
             services.AddScoped<IBookingDraftService, BookingDraftService>();
             services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
+            services.AddScoped<IWorkerPayoutAccountService, WorkerPayoutAccountService>();
+            services.AddScoped<IPayoutService, PayoutService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();

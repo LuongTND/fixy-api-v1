@@ -68,6 +68,11 @@ namespace Infrastructure.Persistence.Configurations
                 .WithOne(x => x.PaymentOrder)
                 .HasForeignKey<WorkerEarning>(x => x.PaymentOrderId)
                 .OnDelete(DeleteBehavior.Restrict);
+            builder
+                .HasMany(x => x.WalletTransactions)
+                .WithOne(x => x.PaymentOrder)
+                .HasForeignKey(x => x.PaymentOrderId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

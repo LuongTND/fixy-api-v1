@@ -6,7 +6,6 @@ using Application.Interfaces.Services;
 using Application.Interfaces.Services.Booking;
 using Domain.Entity;
 using Domain.Enum;
-using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 public class WalletService : IWalletService
@@ -246,24 +245,9 @@ public class WalletService : IWalletService
                 return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
             }
 
-            var before = wallet.Balance;
-
-            wallet.Balance -= amount;
-            wallet.LifetimeSpent += amount;
-
-            var tx = new WalletTransaction
-            {
-                WalletId = wallet.Id,
-                Type = WalletTransactionType.Payment,
-                Direction = WalletDirection.Debit,
-                Amount = amount,
-                BalanceBefore = before,
-                BalanceAfter = wallet.Balance,
-                ReferenceId = booking.Id.ToString(),
-                Status = TransactionStatus.Success,
-            };
-
-            await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+            // =========================
+            // CREATE PAYMENT ORDER FIRST
+            // =========================
 
             PaymentOrder order;
 
@@ -274,7 +258,6 @@ public class WalletService : IWalletService
                 order.Method = PaymentMethod.Wallet;
                 order.Status = PaymentStatus.Paid;
                 order.PaidAt = DateTime.UtcNow;
-                order.ExternalTransactionId = tx.Id.ToString();
 
                 _paymentOrderRepository.Update(order);
             }
@@ -294,16 +277,55 @@ public class WalletService : IWalletService
 
                     Status = PaymentStatus.Paid,
                     PaidAt = DateTime.UtcNow,
-
-                    ExternalTransactionId = tx.Id.ToString(),
                 };
 
                 await _paymentOrderRepository.AddAsync(order, cancellationToken);
             }
 
+            // SAVE TO GET ORDER ID
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // =========================
+            // UPDATE WALLET
+            // =========================
+
+            var before = wallet.Balance;
+
+            wallet.Balance -= amount;
+
+            wallet.LifetimeSpent += amount;
+
+            // =========================
+            // CREATE WALLET TRANSACTION
+            // =========================
+
+            var tx = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+
+                PaymentOrderId = order.Id,
+
+                Type = WalletTransactionType.Payment,
+                Direction = WalletDirection.Debit,
+
+                Amount = amount,
+
+                BalanceBefore = before,
+                BalanceAfter = wallet.Balance,
+
+                ReferenceId = booking.Id.ToString(),
+
+                Status = TransactionStatus.Success,
+            };
+
+            await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+
             _walletRepository.Update(wallet);
 
-            // Chuyển trạng thái đơn sang Confirmed thông qua BookingService
+            // =========================
+            // CONFIRM BOOKING PAYMENT
+            // =========================
+
             await _bookingService.ConfirmPaymentAsync(booking.Id, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -338,6 +360,113 @@ public class WalletService : IWalletService
         }
     }
 
+    public async Task<OperationResult<WalletTransaction>> AddWorkerIncomeAsync(
+        Guid workerId,
+        Guid paymentOrderId,
+        long amount,
+        CancellationToken cancellationToken
+    )
+    {
+        if (amount <= 0)
+        {
+            return OperationResult<WalletTransaction>.Failure("Invalid amount");
+        }
+
+        var paymentOrder = await _paymentOrderRepository.GetByIdAsync(
+            paymentOrderId,
+            cancellationToken
+        );
+
+        if (paymentOrder == null)
+        {
+            return OperationResult<WalletTransaction>.Failure("Payment order not found");
+        }
+
+        var exists = await _walletTransactionRepository.ExistsAsync(
+            x =>
+                x.PaymentOrderId == paymentOrderId && x.Type == WalletTransactionType.BookingIncome,
+            cancellationToken
+        );
+
+        if (exists)
+        {
+            return OperationResult<WalletTransaction>.Failure("Income already added");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                workerId,
+                WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null)
+            {
+                return OperationResult<WalletTransaction>.Failure("Worker wallet not found");
+            }
+
+            var before = wallet.Balance;
+
+            // PLATFORM COMMISSION
+            var commission = amount * 10 / 100;
+
+            // WORKER RECEIVES
+            var workerAmount = amount - commission;
+
+            // UPDATE WALLET
+            wallet.Balance += workerAmount;
+
+            wallet.LifetimeEarned += workerAmount;
+
+            // CREATE WALLET TRANSACTION
+            var tx = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+
+                PaymentOrderId = paymentOrderId,
+
+                Type = WalletTransactionType.BookingIncome,
+                Direction = WalletDirection.Credit,
+
+                Amount = workerAmount,
+
+                PlatformFee = commission,
+
+                BalanceBefore = before,
+                BalanceAfter = wallet.Balance,
+
+                Status = TransactionStatus.Success,
+            };
+
+            await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+
+            _walletRepository.Update(wallet);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _unitOfWork.CommitTransactionAsync();
+
+            return OperationResult<WalletTransaction>.Success(
+                tx,
+                "Worker income added successfully"
+            );
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+
+            return OperationResult<WalletTransaction>.Failure("Wallet conflict, retry again");
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
+    }
+
     public async Task<OperationResult<WalletTransaction>> RefundAsync(
         Guid userId,
         long amount,
@@ -345,6 +474,13 @@ public class WalletService : IWalletService
         CancellationToken cancellationToken
     )
     {
+        var exists = await _walletTransactionRepository.ExistsAsync(
+            x => x.ReferenceId == referenceId && x.Type == WalletTransactionType.Refund,
+            cancellationToken
+        );
+
+        if (exists)
+            return OperationResult<WalletTransaction>.Failure("Already refunded");
         await _unitOfWork.BeginTransactionAsync();
 
         try
