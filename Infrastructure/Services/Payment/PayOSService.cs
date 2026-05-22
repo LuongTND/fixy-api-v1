@@ -26,7 +26,7 @@ public class PayOSService : IPaymentGateway
     )
     {
         long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
+        order.GatewayOrderCode = orderCode;
         var items = new List<ItemData>
         {
             new ItemData(name: order.Type.ToString(), quantity: 1, price: (int)order.FinalAmount),
@@ -35,7 +35,7 @@ public class PayOSService : IPaymentGateway
         var paymentData = new PaymentData(
             orderCode: orderCode,
             amount: (int)order.FinalAmount,
-            description: $"Order {order.Id}",
+            description: $"Order_{order.Id.ToString().Split('-')[0]}",
             items: items,
             cancelUrl: _options.CancelUrl,
             returnUrl: _options.ReturnUrl

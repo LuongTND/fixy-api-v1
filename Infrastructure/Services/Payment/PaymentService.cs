@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Common;
+using Application.DTOs.Payment;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -226,27 +227,6 @@ namespace Infrastructure.Services.Payment
                     break;
                 }
 
-                case PaymentMethod.PayOS:
-                {
-                    if (!response.TryGetValue("orderCode", out var orderCodeString))
-                    {
-                        return OperationResult<bool>.Failure("Order code not found");
-                    }
-
-                    var orderCode = long.Parse(orderCodeString);
-
-                    order = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
-                        orderCode,
-                        cancellationToken
-                    );
-
-                    transactionId = orderCodeString;
-
-                    paymentSuccess = true;
-
-                    break;
-                }
-
                 default:
 
                     return OperationResult<bool>.Failure("Unsupported payment method");
@@ -324,6 +304,54 @@ namespace Infrastructure.Services.Payment
 
                     throw new Exception($"Unsupported payment type: {order.Type}");
             }
+        }
+
+        public async Task<OperationResult<bool>> HandlePayOSCallbackAsync(
+            PayOSCallbackDto callback,
+            CancellationToken cancellationToken
+        )
+        {
+            var data = callback.Data;
+
+            if (data == null || data.OrderCode <= 0)
+                return OperationResult<bool>.Failure("Invalid callback");
+
+            var order = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
+                data.OrderCode,
+                cancellationToken
+            );
+
+            if (order == null)
+                return OperationResult<bool>.Failure("Payment order not found");
+
+            if (order.Status == PaymentStatus.Paid)
+                return OperationResult<bool>.Success(true, "Already processed");
+
+            var isSuccess = data.Code == "00";
+
+            order.GatewayResponse = JsonSerializer.Serialize(callback);
+
+            if (!isSuccess)
+            {
+                order.Status = PaymentStatus.Failed;
+                _paymentOrderRepository.Update(order);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult<bool>.Failure("Payment failed");
+            }
+
+            order.Status = PaymentStatus.Paid;
+            order.PaidAt = DateTime.UtcNow;
+            order.ExternalTransactionId = data.OrderCode.ToString();
+
+            _paymentOrderRepository.Update(order);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await ProcessSuccessfulPaymentAsync(order, CancellationToken.None);
+
+            return OperationResult<bool>.Success(true, "Payment success");
         }
     }
 }
