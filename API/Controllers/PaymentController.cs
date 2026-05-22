@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Payment;
+﻿using System.Text.Json;
+using Application.DTOs.Payment;
 using Application.Interfaces.Services.Payment;
 using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
@@ -82,20 +83,12 @@ namespace API.Controllers
 
         [HttpPost("callback/payos")]
         public async Task<IActionResult> HandlePayOSCallback(
-            [FromBody] Dictionary<string, object> body,
+            [FromBody] PayOSCallbackDto callback,
             CancellationToken cancellationToken
         )
         {
-            var response = new Dictionary<string, string>();
-
-            foreach (var item in body)
-            {
-                response[item.Key] = item.Value?.ToString() ?? string.Empty;
-            }
-
-            var result = await _paymentService.HandleCallbackAsync(
-                PaymentMethod.PayOS,
-                response,
+            var result = await _paymentService.HandlePayOSCallbackAsync(
+                callback,
                 cancellationToken
             );
 

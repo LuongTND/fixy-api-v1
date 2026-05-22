@@ -170,6 +170,8 @@ namespace Infrastructure
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
+            services.AddScoped<PayOSService>();
+
             services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IReviewService, ReviewService>();
