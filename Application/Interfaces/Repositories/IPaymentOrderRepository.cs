@@ -8,5 +8,9 @@ namespace Application.Interfaces.Repositories
             Guid bookingId,
             CancellationToken cancellationToken = default
         );
+        Task<PaymentOrder?> GetByGatewayOrderCodeAsync(
+            long gatewayOrderCode,
+            CancellationToken cancellationToken
+        );
     }
 }

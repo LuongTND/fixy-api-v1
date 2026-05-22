@@ -74,6 +74,8 @@ namespace Infrastructure
             // VNPay Settings
             services.Configure<VNPaySettings>(configuration.GetSection("VnPaySettings"));
             services.Configure<MoMoSettings>(configuration.GetSection("MoMoSettings"));
+            services.Configure<PayOSSettings>(configuration.GetSection("PayOSSetings"));
+
             // Cloudinary Settings
             services.Configure<CloudinarySettings>(configuration.GetSection("CloudinarySettings"));
 

@@ -1,27 +1,25 @@
 ﻿using Application.Common;
+using Domain.Entity;
 using Domain.Enum;
 
 namespace Application.Interfaces.Services.Payment
 {
     public interface IPaymentService
     {
-        //Topup VNPAY
         Task<OperationResult<string>> CreateTopUpPaymentUrlAsync(
             Guid userId,
             long amount,
             PaymentMethod method,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<string>> CreateBookingVnPayUrlAsync(
+        Task<OperationResult<string>> CreateBookingPaymentUrlAsync(
             Guid bookingId,
             Guid userId,
+            PaymentMethod method,
             CancellationToken cancellationToken
         );
-        Task HandleMoMoReturnAsync(
-            Dictionary<string, string> response,
-            CancellationToken cancellationToken
-        );
-        Task<OperationResult<bool>> HandleVnPayCallbackAsync(
+        Task<OperationResult<bool>> HandleCallbackAsync(
+            PaymentMethod method,
             Dictionary<string, string> response,
             CancellationToken cancellationToken
         );
