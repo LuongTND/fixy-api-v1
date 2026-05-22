@@ -128,6 +128,7 @@ namespace Infrastructure
                 IWorkerScheduleExceptionRepository,
                 WorkerScheduleExceptionRepository
             >();
+            services.AddScoped<IWorkerPayoutAccountRepository, WorkerPayoutAccountRepository>();
             services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
             services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
@@ -162,6 +163,8 @@ namespace Infrastructure
             services.AddScoped<IWorkerLocationService, WorkerLocationService>();
             services.AddScoped<IBookingDraftService, BookingDraftService>();
             services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
+            services.AddScoped<IWorkerPayoutAccountService, WorkerPayoutAccountService>();
+            services.AddScoped<IPayoutService, PayoutService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();
             services.AddScoped<VnPayService>();
