@@ -13,14 +13,17 @@ namespace Infrastructure.Services.Payment
     public class PaymentService : IPaymentService
     {
         private readonly IPaymentOrderRepository _paymentOrderRepository;
+
         private readonly ICustomerProfileRepository _customerProfileRepository;
 
         private readonly IPaymentGatewayFactory _paymentGatewayFactory;
+
         private readonly IBookingRepository _bookingRepository;
 
         private readonly IWalletService _walletService;
 
         private readonly IUnitOfWork _unitOfWork;
+
         private readonly IBookingService _bookingService;
 
         public PaymentService(
@@ -34,11 +37,17 @@ namespace Infrastructure.Services.Payment
         )
         {
             _paymentOrderRepository = paymentOrderRepository;
+
             _customerProfileRepository = customerProfileRepository;
+
             _paymentGatewayFactory = paymentGatewayFactory;
+
             _bookingRepository = bookingRepository;
+
             _walletService = walletService;
+
             _unitOfWork = unitOfWork;
+
             _bookingService = bookingService;
         }
 
@@ -49,9 +58,15 @@ namespace Infrastructure.Services.Payment
             CancellationToken cancellationToken
         )
         {
+            if (amount <= 0)
+            {
+                return OperationResult<string>.Failure("Invalid amount");
+            }
+
             var order = new PaymentOrder
             {
                 UserId = userId,
+
                 Amount = amount,
                 DiscountAmount = 0,
                 FinalAmount = amount,
@@ -64,18 +79,19 @@ namespace Infrastructure.Services.Payment
 
             await _paymentOrderRepository.AddAsync(order, cancellationToken);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             var gateway = _paymentGatewayFactory.Get(method);
 
             var paymentUrl = await gateway.CreatePaymentUrlAsync(order, cancellationToken);
 
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
             return OperationResult<string>.Success(paymentUrl);
         }
 
-        public async Task<OperationResult<string>> CreateBookingVnPayUrlAsync(
+        public async Task<OperationResult<string>> CreateBookingPaymentUrlAsync(
             Guid bookingId,
             Guid userId,
+            PaymentMethod method,
             CancellationToken cancellationToken
         )
         {
@@ -85,6 +101,7 @@ namespace Infrastructure.Services.Payment
             {
                 return OperationResult<string>.Failure("Booking not found");
             }
+
             var customerProfile = await _customerProfileRepository.GetByUserIdAsync(
                 userId,
                 cancellationToken
@@ -121,7 +138,8 @@ namespace Infrastructure.Services.Payment
             {
                 order = existedOrder;
 
-                order.Method = PaymentMethod.Vnpay;
+                order.Method = method;
+
                 order.Status = PaymentStatus.Pending;
 
                 _paymentOrderRepository.Update(order);
@@ -131,13 +149,17 @@ namespace Infrastructure.Services.Payment
                 order = new PaymentOrder
                 {
                     BookingId = booking.Id,
+
                     UserId = userId,
 
                     Amount = booking.FinalPrice.Value,
+
                     DiscountAmount = 0,
+
                     FinalAmount = booking.FinalPrice.Value,
 
-                    Method = PaymentMethod.Vnpay,
+                    Method = method,
+
                     Status = PaymentStatus.Pending,
 
                     Type = PaymentOrderType.BookingPayment,
@@ -146,71 +168,22 @@ namespace Infrastructure.Services.Payment
                 await _paymentOrderRepository.AddAsync(order, cancellationToken);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            var gateway = _paymentGatewayFactory.Get(PaymentMethod.Vnpay);
+            var gateway = _paymentGatewayFactory.Get(method);
 
             var paymentUrl = await gateway.CreatePaymentUrlAsync(order, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return OperationResult<string>.Success(paymentUrl);
         }
 
-        public async Task HandleMoMoReturnAsync(
+        public async Task<OperationResult<bool>> HandleCallbackAsync(
+            PaymentMethod method,
             Dictionary<string, string> response,
             CancellationToken cancellationToken
         )
         {
-            var gateway = _paymentGatewayFactory.Get(PaymentMethod.Momo);
-
-            var isValid = gateway.VerifySignature(response);
-
-            if (!isValid)
-            {
-                throw new Exception("Invalid MoMo signature");
-            }
-
-            var resultCode = response["resultCode"];
-
-            if (resultCode != "0")
-            {
-                throw new Exception("Payment failed");
-            }
-
-            var orderId = Guid.Parse(response["orderId"]);
-
-            var order = await _paymentOrderRepository.GetByIdAsync(orderId, cancellationToken);
-
-            if (order == null)
-            {
-                throw new Exception("Payment order not found");
-            }
-
-            if (order.Status == PaymentStatus.Paid)
-            {
-                return;
-            }
-
-            order.Status = PaymentStatus.Paid;
-
-            order.PaidAt = DateTime.UtcNow;
-
-            order.ExternalTransactionId = response["transId"];
-
-            order.GatewayResponse = JsonSerializer.Serialize(response);
-
-            _paymentOrderRepository.Update(order);
-
-            await ProcessSuccessfulPaymentAsync(order, cancellationToken);
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-
-        public async Task<OperationResult<bool>> HandleVnPayCallbackAsync(
-            Dictionary<string, string> response,
-            CancellationToken cancellationToken
-        )
-        {
-            var gateway = _paymentGatewayFactory.Get(PaymentMethod.Vnpay);
+            var gateway = _paymentGatewayFactory.Get(method);
 
             var valid = gateway.VerifySignature(response);
 
@@ -219,9 +192,65 @@ namespace Infrastructure.Services.Payment
                 return OperationResult<bool>.Failure("Invalid signature");
             }
 
-            var orderId = Guid.Parse(response["vnp_TxnRef"]);
+            PaymentOrder? order = null;
 
-            var order = await _paymentOrderRepository.GetByIdAsync(orderId, cancellationToken);
+            string? transactionId = null;
+
+            bool paymentSuccess = false;
+
+            switch (method)
+            {
+                case PaymentMethod.Vnpay:
+                {
+                    var orderId = Guid.Parse(response["vnp_TxnRef"]);
+
+                    order = await _paymentOrderRepository.GetByIdAsync(orderId, cancellationToken);
+
+                    transactionId = response["vnp_TransactionNo"];
+
+                    paymentSuccess = response["vnp_ResponseCode"] == "00";
+
+                    break;
+                }
+
+                case PaymentMethod.Momo:
+                {
+                    var orderId = Guid.Parse(response["orderId"]);
+
+                    order = await _paymentOrderRepository.GetByIdAsync(orderId, cancellationToken);
+
+                    transactionId = response["transId"];
+
+                    paymentSuccess = response["resultCode"] == "0";
+
+                    break;
+                }
+
+                case PaymentMethod.PayOS:
+                {
+                    if (!response.TryGetValue("orderCode", out var orderCodeString))
+                    {
+                        return OperationResult<bool>.Failure("Order code not found");
+                    }
+
+                    var orderCode = long.Parse(orderCodeString);
+
+                    order = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
+                        orderCode,
+                        cancellationToken
+                    );
+
+                    transactionId = orderCodeString;
+
+                    paymentSuccess = true;
+
+                    break;
+                }
+
+                default:
+
+                    return OperationResult<bool>.Failure("Unsupported payment method");
+            }
 
             if (order == null)
             {
@@ -233,9 +262,7 @@ namespace Infrastructure.Services.Payment
                 return OperationResult<bool>.Success(true, "Payment already processed");
             }
 
-            var responseCode = response["vnp_ResponseCode"];
-
-            if (responseCode != "00")
+            if (!paymentSuccess)
             {
                 order.Status = PaymentStatus.Failed;
 
@@ -250,7 +277,7 @@ namespace Infrastructure.Services.Payment
 
             order.PaidAt = DateTime.UtcNow;
 
-            order.ExternalTransactionId = response["vnp_TransactionNo"];
+            order.ExternalTransactionId = transactionId;
 
             order.GatewayResponse = JsonSerializer.Serialize(response);
 

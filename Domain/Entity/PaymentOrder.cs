@@ -20,7 +20,7 @@ namespace Domain.Entity
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
         public PaymentOrderType Type { get; set; }
-
+        public long? GatewayOrderCode { get; set; }
         public string? GatewayRef { get; set; }
 
         public string? GatewayResponse { get; set; }

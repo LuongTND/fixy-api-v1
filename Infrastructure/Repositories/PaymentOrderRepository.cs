@@ -21,5 +21,16 @@ namespace Infrastructure.Repositories
                 cancellationToken
             );
         }
+
+        public async Task<PaymentOrder?> GetByGatewayOrderCodeAsync(
+            long gatewayOrderCode,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet.FirstOrDefaultAsync(
+                x => x.GatewayOrderCode == gatewayOrderCode,
+                cancellationToken
+            );
+        }
     }
 }

@@ -5,7 +5,8 @@ namespace Domain.Enum
         Wallet,
         Vnpay,
         Momo,
+        PayOS,
         Card,
-        Cash
+        Cash,
     }
 }
