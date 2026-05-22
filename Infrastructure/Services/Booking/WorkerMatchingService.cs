@@ -148,11 +148,8 @@ namespace Infrastructure.Services.Booking
                     workerLng.Value
                 );
 
-                // Only include workers within their own max service radius
-                if (distanceKm <= worker.MaxDistanceKm)
-                {
-                    candidates.Add((worker, distanceKm));
-                }
+                // Distance filter is intentionally disabled for now.
+                candidates.Add((worker, distanceKm));
             }
 
             if (candidates.Count == 0)
