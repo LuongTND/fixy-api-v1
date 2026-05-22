@@ -27,5 +27,16 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
         builder.HasIndex(x => x.ReferenceId);
 
         builder.HasOne(x => x.Wallet).WithMany(x => x.Transactions).HasForeignKey(x => x.WalletId);
+        builder
+            .HasOne(x => x.PaymentOrder)
+            .WithMany(x => x.WalletTransactions)
+            .HasForeignKey(x => x.PaymentOrderId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder
+            .HasOne(x => x.PayoutRequest)
+            .WithMany(x => x.WalletTransactions)
+            .HasForeignKey(x => x.PayoutRequestId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

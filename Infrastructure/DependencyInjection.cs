@@ -66,7 +66,9 @@ namespace Infrastructure
             // SMTP Settings
             services.Configure<SmtpSettings>(configuration.GetSection("SmtpSettings"));
             // WorkerMatching Settings
-            services.Configure<WorkerMatchingSettings>(configuration.GetSection("WorkerMatchingSettings"));
+            services.Configure<WorkerMatchingSettings>(
+                configuration.GetSection("WorkerMatchingSettings")
+            );
             // Blob Settings
             services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
             // VNPay Settings
@@ -135,6 +137,8 @@ namespace Infrastructure
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
+            services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
+
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
             ;

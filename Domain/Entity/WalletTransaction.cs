@@ -6,6 +6,7 @@ public class WalletTransaction : BaseEntity
 {
     public Guid WalletId { get; set; }
     public Guid? PaymentOrderId { get; set; }
+    public Guid? PayoutRequestId { get; set; }
 
     public WalletTransactionType Type { get; set; }
 
@@ -20,7 +21,7 @@ public class WalletTransaction : BaseEntity
     public string? ExternalTransactionId { get; set; }
     public string? ReferenceId { get; set; }
     public TransactionStatus Status { get; set; }
-
+    public PayoutRequest? PayoutRequest { get; set; }
     public PaymentOrder? PaymentOrder { get; set; }
     public Wallet? Wallet { get; set; }
 }

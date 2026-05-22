@@ -17,5 +17,7 @@ namespace Domain.Entity
         public WorkerPayoutAccount? PayoutAccount { get; set; }
         public User? ReviewedBy { get; set; }
         public ICollection<WorkerEarning> WorkerEarnings { get; set; } = new List<WorkerEarning>();
+        public ICollection<WalletTransaction> WalletTransactions { get; set; } =
+            new List<WalletTransaction>();
     }
 }
