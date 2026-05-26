@@ -15,5 +15,10 @@ namespace Application.Interfaces.Services.Booking
         /// Called when the previous worker declines or the response time expires.
         /// </summary>
         Task<OperationResult> OfferToNextWorkerAsync(Guid bookingId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Create a matching queue entry for a manually assigned worker and set booking status to Pending.
+        /// </summary>
+        Task<OperationResult> ProcessDirectAssignAsync(Guid bookingId, Guid workerProfileId, CancellationToken cancellationToken = default);
     }
 }

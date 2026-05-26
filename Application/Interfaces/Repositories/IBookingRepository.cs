@@ -25,5 +25,10 @@ namespace Application.Interfaces.Repositories
             CustomerBookingsQuery query,
             CancellationToken cancellationToken = default
         );
+
+        Task LoadWorkerAndPaymentOrderAsync(
+            Booking booking,
+            CancellationToken cancellationToken = default
+        );
     }
 }

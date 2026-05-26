@@ -442,7 +442,7 @@ namespace Infrastructure.Services
                 ScheduledType = draft.ScheduledType,
                 ScheduledAt = draft.ScheduledAt,
 
-                Status = draft.AutoMatch ? BookingStatus.Matching : BookingStatus.Pending,
+                Status = workerProfileId.HasValue ? BookingStatus.Pending : (draft.AutoMatch ? BookingStatus.Matching : BookingStatus.Pending),
                 EstimatedPrice = estimatedPrice,
             };
 
@@ -454,8 +454,12 @@ namespace Infrastructure.Services
 
             await RemoveDraftAsync(userId, draftId, cancellationToken);
 
-            // Trigger auto-matching if customer chose automatic worker assignment
-            if (draft.AutoMatch)
+            // Trigger auto-matching or direct assignment
+            if (workerProfileId.HasValue)
+            {
+                await _workerMatchingService.ProcessDirectAssignAsync(booking.Id, workerProfileId.Value, cancellationToken);
+            }
+            else if (draft.AutoMatch)
             {
                 await _workerMatchingService.ProcessAutoMatchAsync(booking.Id, cancellationToken);
             }

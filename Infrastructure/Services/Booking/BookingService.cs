@@ -11,6 +11,8 @@ using AutoMapper;
 using Domain.Entity;
 using Domain.Enum;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Application.Interfaces.Services;
 using BookingEntity = Domain.Entity.Booking;
 
 namespace Infrastructure.Services.Booking
@@ -29,6 +31,7 @@ namespace Infrastructure.Services.Booking
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerMatchingService _workerMatchingService;
         private readonly ILogger<BookingService> _logger;
+        private readonly IServiceProvider _serviceProvider;
 
         private static readonly Dictionary<BookingStatus, BookingStatus> AllowedTransitions = new()
         {
@@ -52,7 +55,8 @@ namespace Infrastructure.Services.Booking
             IWorkerProfileRepository workerProfileRepository,
             IWorkerMatchingService workerMatchingService,
             IMapper mapper,
-            ILogger<BookingService> logger
+            ILogger<BookingService> logger,
+            IServiceProvider serviceProvider
         )
         {
             _bookingRepository =
@@ -80,6 +84,7 @@ namespace Infrastructure.Services.Booking
             _workerProfileRepository = workerProfileRepository;
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         // =========================================================
@@ -316,6 +321,56 @@ namespace Infrastructure.Services.Booking
 
                             _mediaRepository.Update(media);
                         }
+                    }
+
+                    // Add to wallet worker income after booking completed and paid
+                    try
+                    {
+                        _logger.LogInformation("Starting wallet credit logic for Booking {BookingId}", bookingId);
+                        await _bookingRepository.LoadWorkerAndPaymentOrderAsync(booking, cancellationToken);
+                        
+                        if (booking.WorkerProfile == null)
+                        {
+                            _logger.LogWarning("WorkerProfile is null for Booking {BookingId}", bookingId);
+                        }
+                        else if (booking.PaymentOrder == null)
+                        {
+                            _logger.LogWarning("PaymentOrder is null for Booking {BookingId}", bookingId);
+                        }
+                        else
+                        {
+                            if (booking.PaymentOrder.Status == PaymentStatus.Paid)
+                            {
+                                var workerUserId = booking.WorkerProfile.UserId;
+                                var paymentOrderId = booking.PaymentOrder.Id;
+                                var amount = booking.PaymentOrder.FinalAmount;
+
+                                var walletService = _serviceProvider.GetRequiredService<IWalletService>();
+                                var result = await walletService.AddWorkerIncomeAsync(
+                                    workerUserId,
+                                    paymentOrderId,
+                                    amount,
+                                    cancellationToken
+                                );
+
+                                if (result.IsSuccess)
+                                {
+                                    _logger.LogInformation("Successfully added income to worker wallet for Booking {BookingId}", bookingId);
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("Failed to add income to worker wallet for Booking {BookingId}: {Message}", bookingId, result.Message);
+                                }
+                            }
+                            else
+                            {
+                                _logger.LogWarning("PaymentOrder Status is not Paid (Status: {Status}) for Booking {BookingId}", booking.PaymentOrder.Status, bookingId);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error occurred while adding income to worker wallet for Booking {BookingId}", bookingId);
                     }
                 },
                 cancellationToken
@@ -682,7 +737,7 @@ namespace Infrastructure.Services.Booking
             }
             else
             {
-                // No more candidates — set booking back to Matching so the system can re-search
+                // No more candidates ï¿½ set booking back to Matching so the system can re-search
                 booking.Status = BookingStatus.Matching;
                 booking.UpdatedDate = DateTime.UtcNow;
                 _bookingRepository.Update(booking);
