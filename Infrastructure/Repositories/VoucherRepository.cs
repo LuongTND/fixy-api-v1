@@ -62,7 +62,7 @@ namespace Infrastructure.Repositories
 
         public async Task<List<Voucher>> GetActiveVouchersAsync(CancellationToken cancellationToken = default)
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.UtcNow.AddHours(7); // Vietnamese Time (GMT+7)
             return await _dbSet
                 .Where(v => v.Status == Domain.Enum.VoucherStatus.Active && v.IsDeleted == false && v.StartsAt <= now && v.ExpiresAt >= now)
                 .Include(v => v.Quota)

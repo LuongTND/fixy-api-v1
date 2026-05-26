@@ -60,6 +60,8 @@ namespace Infrastructure.Services.Vouchers
             voucher.Id = voucherId;
             voucher.Code = dto.Code.Trim().ToUpper();
             voucher.Status = VoucherStatus.Draft;
+            voucher.StartsAt = dto.StartsAt;
+            voucher.ExpiresAt = dto.ExpiresAt;
 
             // Set CreatedById using ICurrentUserService
             if (_currentUserService.UserId != null && Guid.TryParse(_currentUserService.UserId, out var parsedUserId))
@@ -508,12 +510,14 @@ namespace Infrastructure.Services.Vouchers
             if (voucher.Status != VoucherStatus.Active)
                 return "Voucher is not active";
 
+            var now = DateTime.UtcNow.AddHours(7); // Vietnamese Time (GMT+7)
+
             // Step 2: Check start date
-            if (DateTime.UtcNow < voucher.StartsAt)
+            if (now < voucher.StartsAt)
                 return "Voucher has not started yet";
 
             // Step 3: Check expiry
-            if (DateTime.UtcNow > voucher.ExpiresAt)
+            if (now > voucher.ExpiresAt)
                 return "Voucher has expired";
 
             // Step 4: Check system-wide usage limit
