@@ -23,7 +23,7 @@ namespace Infrastructure.Persistence.Configurations
                 .HasDatabaseName("idx_payout_status");
 
             builder
-                .HasOne(x => x.Worker)
+                .HasOne(x => x.WorkerProfile)
                 .WithMany()
                 .HasForeignKey(x => x.WorkerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
