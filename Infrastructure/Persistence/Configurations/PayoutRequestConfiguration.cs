@@ -13,7 +13,7 @@ namespace Infrastructure.Persistence.Configurations
             builder
                 .HasIndex(x => new
                 {
-                    x.WorkerId,
+                    x.WorkerProfileId,
                     x.Status,
                     x.CreatedDate,
                 })
@@ -25,7 +25,7 @@ namespace Infrastructure.Persistence.Configurations
             builder
                 .HasOne(x => x.Worker)
                 .WithMany()
-                .HasForeignKey(x => x.WorkerId)
+                .HasForeignKey(x => x.WorkerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder

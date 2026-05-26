@@ -5,7 +5,7 @@ namespace Domain.Entity
 {
     public class PayoutRequest : BaseAuditableEntity
     {
-        public Guid WorkerId { get; set; }
+        public Guid WorkerProfileId { get; set; }
         public Guid PayoutAccountId { get; set; }
         public long Amount { get; set; }
         public PayoutRequestStatus Status { get; set; } = PayoutRequestStatus.Pending;
