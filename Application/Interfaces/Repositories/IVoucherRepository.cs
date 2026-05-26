@@ -12,5 +12,6 @@ namespace Application.Interfaces.Repositories
             int pageSize,
             CancellationToken cancellationToken = default
         );
+        Task<List<Voucher>> GetActiveVouchersAsync(CancellationToken cancellationToken = default);
     }
 }

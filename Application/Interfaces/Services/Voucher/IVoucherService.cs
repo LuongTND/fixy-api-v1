@@ -16,5 +16,6 @@ namespace Application.Interfaces.Services.Voucher
         // Customer
         Task<OperationResult<ApplyVoucherResponse>> ApplyVoucherAsync(ApplyVoucherRequest request, Guid userId, CancellationToken cancellationToken = default);
         Task<OperationResult> ReleaseVoucherAsync(Guid bookingId, CancellationToken cancellationToken = default);
+        Task<OperationResult<List<EligibleVoucherDto>>> GetEligibleVouchersAsync(GetEligibleVouchersRequest request, Guid userId, CancellationToken cancellationToken = default);
     }
 }

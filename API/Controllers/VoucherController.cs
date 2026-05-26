@@ -80,5 +80,14 @@ namespace API.Controllers
             var result = await _voucherService.ApplyVoucherAsync(request, userId, cancellationToken);
             return HandleResult(result);
         }
+
+        [Authorize(Roles = "CUSTOMER")]
+        [HttpPost("eligible")]
+        public async Task<IActionResult> GetEligibleVouchers([FromBody] GetEligibleVouchersRequest request, CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+            var result = await _voucherService.GetEligibleVouchersAsync(request, userId, cancellationToken);
+            return HandleResult(result);
+        }
     }
 }

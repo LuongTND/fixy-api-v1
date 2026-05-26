@@ -441,6 +441,58 @@ namespace Infrastructure.Services.Vouchers
             return OperationResult.Success("Voucher released successfully");
         }
 
+        public async Task<OperationResult<List<EligibleVoucherDto>>> GetEligibleVouchersAsync(
+            GetEligibleVouchersRequest request,
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            // 1. Find booking
+            var booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult<List<EligibleVoucherDto>>.Failure("Booking not found");
+            }
+
+            var orderValue = booking.FinalPrice ?? booking.EstimatedPrice ?? 0;
+
+            // 2. Fetch all active vouchers
+            var activeVouchers = await _voucherRepository.GetActiveVouchersAsync(cancellationToken);
+
+            var resultList = new List<EligibleVoucherDto>();
+
+            // 3. Evaluate each voucher
+            foreach (var voucher in activeVouchers)
+            {
+                var validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking, cancellationToken);
+                var isEligible = validationError == null;
+                long calculatedDiscount = isEligible ? CalculateDiscount(voucher, orderValue) : 0;
+
+                resultList.Add(new EligibleVoucherDto
+                {
+                    Id = voucher.Id,
+                    Code = voucher.Code,
+                    Type = voucher.Type,
+                    Value = voucher.Value,
+                    MinOrderValue = voucher.MinOrderValue,
+                    MaxDiscount = voucher.MaxDiscount,
+                    ExpiresAt = voucher.ExpiresAt,
+                    Description = voucher.Description ?? string.Empty,
+                    IsEligible = isEligible,
+                    IneligibleReason = validationError ?? string.Empty,
+                    CalculatedDiscount = calculatedDiscount
+                });
+            }
+
+            // 4. Sort: Eligible first, then highest discount first, then by code
+            var sortedResult = resultList
+                .OrderByDescending(v => v.IsEligible)
+                .ThenByDescending(v => v.CalculatedDiscount)
+                .ThenBy(v => v.Code)
+                .ToList();
+
+            return OperationResult<List<EligibleVoucherDto>>.Success(sortedResult, "Eligible vouchers retrieved successfully");
+        }
+
         // =============================================
         // Private Helpers
         // =============================================
