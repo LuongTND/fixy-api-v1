@@ -284,6 +284,72 @@ namespace Infrastructure.Services.Booking
             }
         }
 
+        /// <inheritdoc />
+        public async Task<OperationResult> ProcessDirectAssignAsync(
+            Guid bookingId,
+            Guid workerProfileId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult.Failure("Booking not found");
+            }
+
+            var workerProfile = await _workerProfileRepository.GetByIdAsync(workerProfileId, cancellationToken);
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
+
+            // 1. Create a matching queue entry for this specific worker offered directly
+            var queueEntry = new WorkerMatchingQueue
+            {
+                BookingId = bookingId,
+                WorkerProfileId = workerProfileId,
+                AttemptNo = 1,
+                Status = MatchingStatus.Offered,
+                OfferedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(_matchingSettings.OfferTimeoutMinutes),
+                DistanceKm = 0,
+                Score = workerProfile.RatingAvg
+            };
+
+            await _matchingQueueRepository.AddAsync(queueEntry, cancellationToken);
+
+            // 2. Set the booking's worker and status to Pending
+            booking.WorkerProfileId = workerProfileId;
+            booking.Status = BookingStatus.Pending;
+            booking.UpdatedDate = DateTime.UtcNow;
+
+            _bookingRepository.Update(booking);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Booking {BookingId}: Direct assignment to worker {WorkerId} (Rating: {Rating})",
+                bookingId,
+                workerProfileId,
+                workerProfile.RatingAvg
+            );
+
+            // 3. Notify via SignalR
+            await _bookingHubService.SendStatusUpdateAsync(
+                bookingId,
+                new BookingStatusUpdateDto
+                {
+                    BookingId = bookingId,
+                    Status = BookingStatus.Pending.ToString(),
+                    UpdatedAt = DateTime.UtcNow,
+                    Message = "Worker has been manually selected. Waiting for response.",
+                },
+                cancellationToken
+            );
+
+            return OperationResult.Success("Worker assigned and notified");
+        }
+
         /// <summary>
         /// Calculates the great-circle distance between two GPS coordinates using the Haversine formula.
         /// </summary>

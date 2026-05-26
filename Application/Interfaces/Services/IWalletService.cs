@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Wallet;
 using Domain.Entity;
 using Domain.Enum;
@@ -35,6 +35,13 @@ namespace Application.Interfaces.Services
             Guid walletId,
             long amount,
             string referenceId,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult<WalletTransactionDto>> AddWorkerIncomeAsync(
+            Guid workerId,
+            Guid paymentOrderId,
+            long amount,
             CancellationToken cancellationToken
         );
 

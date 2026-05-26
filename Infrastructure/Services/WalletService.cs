@@ -139,14 +139,14 @@ public class WalletService : IWalletService
 
         try
         {
-            var wallet = await _walletRepository.GetByUserIdAsync(
-                userId,
-                WalletOwnerType.Customer,
-                cancellationToken
-            );
+        var wallet = await _walletRepository.GetByUserIdAsync(
+            userId,
+            WalletOwnerType.Customer,
+            cancellationToken
+        );
 
-            if (wallet == null)
-                return OperationResult.Failure("Wallet not found");
+        if (wallet == null)
+            return OperationResult.Failure("Wallet not found");
 
             var before = wallet.Balance;
 
@@ -190,60 +190,60 @@ public class WalletService : IWalletService
 
         try
         {
-            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+        var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
 
-            if (booking == null)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Booking not found");
-            }
+        if (booking == null)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Booking not found");
+        }
 
-            var customer = await _userRepository.GetWithCustomerProfileByIdAsync(
-                userId,
-                cancellationToken
-            );
+        var customer = await _userRepository.GetWithCustomerProfileByIdAsync(
+            userId,
+            cancellationToken
+        );
 
-            if (customer?.CustomerProfile == null)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Customer profile not found");
-            }
+        if (customer?.CustomerProfile == null)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Customer profile not found");
+        }
 
-            if (booking.CustomerProfileId != customer.CustomerProfile.Id)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Forbidden");
-            }
+        if (booking.CustomerProfileId != customer.CustomerProfile.Id)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Forbidden");
+        }
 
-            if (booking.FinalPrice == null || booking.FinalPrice <= 0)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Invalid booking price");
-            }
+        if (booking.FinalPrice == null || booking.FinalPrice <= 0)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Invalid booking price");
+        }
 
-            var existedOrder = await _paymentOrderRepository.GetBookingPaymentOrderAsync(
-                bookingId,
-                cancellationToken
-            );
+        var existedOrder = await _paymentOrderRepository.GetBookingPaymentOrderAsync(
+            bookingId,
+            cancellationToken
+        );
 
-            if (existedOrder != null && existedOrder.Status == PaymentStatus.Paid)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Booking already paid");
-            }
+        if (existedOrder != null && existedOrder.Status == PaymentStatus.Paid)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Booking already paid");
+        }
 
-            var wallet = await _walletRepository.GetByUserIdAsync(
-                userId,
-                WalletOwnerType.Customer,
-                cancellationToken
-            );
+        var wallet = await _walletRepository.GetByUserIdAsync(
+            userId,
+            WalletOwnerType.Customer,
+            cancellationToken
+        );
 
-            if (wallet == null)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
-            }
+        if (wallet == null)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
+        }
 
-            var amount = booking.FinalPrice.Value;
+        var amount = booking.FinalPrice.Value;
 
-            if (wallet.Balance < amount)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
-            }
+        if (wallet.Balance < amount)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
+        }
 
             // =========================
             // CREATE PAYMENT ORDER FIRST
@@ -393,21 +393,21 @@ public class WalletService : IWalletService
             return OperationResult<WalletTransactionDto>.Failure("Income already added");
         }
 
+        var wallet = await _walletRepository.GetByUserIdAsync(
+            workerId,
+            WalletOwnerType.Worker,
+            cancellationToken
+        );
+
+        if (wallet == null)
+        {
+            return OperationResult<WalletTransactionDto>.Failure("Worker wallet not found");
+        }
+
         await _unitOfWork.BeginTransactionAsync();
 
         try
         {
-            var wallet = await _walletRepository.GetByUserIdAsync(
-                workerId,
-                WalletOwnerType.Worker,
-                cancellationToken
-            );
-
-            if (wallet == null)
-            {
-                return OperationResult<WalletTransactionDto>.Failure("Worker wallet not found");
-            }
-
             var before = wallet.Balance;
 
             // PLATFORM COMMISSION
@@ -495,14 +495,14 @@ public class WalletService : IWalletService
 
         try
         {
-            var wallet = await _walletRepository.GetByUserIdAsync(
-                userId,
-                WalletOwnerType.Customer,
-                cancellationToken
-            );
+        var wallet = await _walletRepository.GetByUserIdAsync(
+            userId,
+            WalletOwnerType.Customer,
+            cancellationToken
+        );
 
-            if (wallet == null)
-                return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
+        if (wallet == null)
+            return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
 
             var before = wallet.Balance;
 
@@ -559,17 +559,17 @@ public class WalletService : IWalletService
 
         try
         {
-            var wallet = await _walletRepository.GetByUserIdAsync(
-                userId,
-                WalletOwnerType.Worker,
-                cancellationToken
-            );
+        var wallet = await _walletRepository.GetByUserIdAsync(
+            userId,
+            WalletOwnerType.Worker,
+            cancellationToken
+        );
 
-            if (wallet == null)
-                return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
+        if (wallet == null)
+            return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
 
-            if (wallet.Balance < amount)
-                return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
+        if (wallet.Balance < amount)
+            return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
 
             var before = wallet.Balance;
 

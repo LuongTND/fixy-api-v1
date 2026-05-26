@@ -132,5 +132,14 @@ namespace Infrastructure.Repositories
 
             return (items, totalCount);
         }
+
+        public async Task LoadWorkerAndPaymentOrderAsync(
+            Booking booking,
+            CancellationToken cancellationToken = default
+        )
+        {
+            await _context.Entry(booking).Reference(b => b.WorkerProfile).LoadAsync(cancellationToken);
+            await _context.Entry(booking).Reference(b => b.PaymentOrder).LoadAsync(cancellationToken);
+        }
     }
 }
