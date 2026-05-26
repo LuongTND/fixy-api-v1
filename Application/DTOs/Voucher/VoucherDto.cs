@@ -12,6 +12,8 @@ namespace Application.DTOs.Voucher
         public long? MaxDiscount { get; set; }
         public Guid? CategoryId { get; set; }
         public string? CategoryName { get; set; }
+        public string? City { get; set; }
+        public bool FirstOrderOnly { get; set; }
         public int? MaxUsage { get; set; }
         public int UsedCount { get; set; }
         public int? MaxUsagePerUser { get; set; }
