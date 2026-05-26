@@ -19,7 +19,7 @@ namespace Infrastructure.Repositories
         {
             return await _dbSet
                 .Include(x => x.PayoutAccount)
-                .Include(x => x.Worker)
+                .Include(x => x.WorkerProfile)
                 .Include(x => x.ReviewedBy)
                 .Include(x => x.WalletTransactions)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -30,7 +30,7 @@ namespace Infrastructure.Repositories
         )
         {
             return await _dbSet
-                .Include(x => x.Worker)
+                .Include(x => x.WorkerProfile)
                 .Include(x => x.PayoutAccount)
                 .Where(x => x.Status == PayoutRequestStatus.Pending)
                 .OrderBy(x => x.CreatedDate)
@@ -65,7 +65,10 @@ namespace Infrastructure.Repositories
             CancellationToken cancellationToken
         )
         {
-            var data = _dbSet.Include(x => x.Worker).Include(x => x.PayoutAccount).AsQueryable();
+            var data = _dbSet
+                .Include(x => x.WorkerProfile)
+                .Include(x => x.PayoutAccount)
+                .AsQueryable();
 
             var total = await data.CountAsync(cancellationToken);
 
@@ -85,7 +88,8 @@ namespace Infrastructure.Repositories
         {
             var data = _dbSet
                 .Include(x => x.PayoutAccount)
-                .Where(x => x.WorkerProfileId == workerId)
+                    .ThenInclude(x => x!.WorkerProfile)
+                .Where(x => x.WorkerProfile!.UserId == workerId)
                 .AsQueryable();
 
             var total = await data.CountAsync(cancellationToken);
