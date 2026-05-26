@@ -37,6 +37,10 @@ namespace Infrastructure.Persistence
         public DbSet<WorkerMatchingQueue> WorkerMatchingQueues { get; set; }
         public DbSet<Voucher> Vouchers { get; set; }
         public DbSet<BookingVoucher> BookingVouchers { get; set; }
+        public DbSet<VoucherUsageHistory> VoucherUsageHistories { get; set; }
+        public DbSet<VoucherQuota> VoucherQuotas { get; set; }
+        public DbSet<VoucherRestriction> VoucherRestrictions { get; set; }
+
 
         public DbSet<ChatMessage> ChatMessages { get; set; }
 

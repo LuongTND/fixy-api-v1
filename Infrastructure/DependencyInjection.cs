@@ -12,6 +12,7 @@ using Application.Interfaces.Services.Email;
 using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.ServiceCategory;
+using Application.Interfaces.Services.Voucher;
 using Application.Interfaces.Services.Worker;
 using Application.Services;
 using Application.Settings;
@@ -27,6 +28,7 @@ using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.ServiceCategories;
+using Infrastructure.Services.Vouchers;
 using Infrastructure.Services.Worker;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -141,10 +143,13 @@ namespace Infrastructure
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
             services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
+            services.AddScoped<IDashboardRepository, DashboardRepository>();
 
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
-            ;
+            services.AddScoped<IVoucherRepository, VoucherRepository>();
+            services.AddScoped<IVoucherUsageHistoryRepository, VoucherUsageHistoryRepository>();
+            services.AddScoped<IBookingVoucherRepository, BookingVoucherRepository>();
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IJwtService, JwtService>();
@@ -166,6 +171,7 @@ namespace Infrastructure
             services.AddScoped<IBookingDraftService, BookingDraftService>();
             services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
             services.AddScoped<IWorkerPayoutAccountService, WorkerPayoutAccountService>();
+            services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<IPayoutService, PayoutService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();
@@ -175,6 +181,7 @@ namespace Infrastructure
             services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<IVoucherService, VoucherService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

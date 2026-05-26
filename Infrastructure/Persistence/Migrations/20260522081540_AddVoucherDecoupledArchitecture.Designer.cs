@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260522081540_AddVoucherDecoupledArchitecture")]
+    partial class AddVoucherDecoupledArchitecture
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -968,23 +971,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 22, 8, 54, 40, 220, DateTimeKind.Utc).AddTicks(9213),
+                            CreatedDate = new DateTime(2026, 5, 22, 8, 15, 38, 943, DateTimeKind.Utc).AddTicks(2693),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-
-                            CreatedDate = new DateTime(2026, 5, 22, 8, 54, 40, 220, DateTimeKind.Utc).AddTicks(9217),
+                            CreatedDate = new DateTime(2026, 5, 22, 8, 15, 38, 943, DateTimeKind.Utc).AddTicks(2696),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-
-                            CreatedDate = new DateTime(2026, 5, 22, 8, 54, 40, 220, DateTimeKind.Utc).AddTicks(9219),
+                            CreatedDate = new DateTime(2026, 5, 22, 8, 15, 38, 943, DateTimeKind.Utc).AddTicks(2697),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1377,21 +1378,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
 
                     b.Property<long?>("MaxDiscount")
                         .HasColumnType("bigint");
@@ -1779,12 +1771,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerProfileId")
+                    b.Property<Guid>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerProfileId", "IsDefault")
+                    b.HasIndex("WorkerId", "IsDefault")
                         .HasDatabaseName("idx_payout_acct_worker");
 
                     b.ToTable("WorkerPayoutAccounts");
@@ -2657,13 +2649,13 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.WorkerPayoutAccount", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany("PayoutAccounts")
-                        .HasForeignKey("WorkerProfileId")
+                        .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("WorkerProfile");
+                    b.Navigation("Worker");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerProfile", b =>
