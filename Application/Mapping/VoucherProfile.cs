@@ -20,10 +20,24 @@ namespace Application.Mapping
                     opt => opt.MapFrom(src => GetCategoryId(src)))
                 .ForMember(dest => dest.CategoryName,
                     opt => opt.MapFrom(src => GetCategoryName(src)))
+                .ForMember(dest => dest.City,
+                    opt => opt.MapFrom(src => GetCity(src)))
+                .ForMember(dest => dest.FirstOrderOnly,
+                    opt => opt.MapFrom(src => GetFirstOrderOnly(src)))
                 .ForMember(dest => dest.DisplayStatus,
                     opt => opt.MapFrom(src => GetDisplayStatus(src)));
 
             CreateMap<CreateVoucherDto, Voucher>();
+        }
+
+        private static string? GetCity(Voucher src)
+        {
+            return src.Restrictions?.FirstOrDefault(r => r.Type == RestrictionType.City)?.Value;
+        }
+
+        private static bool GetFirstOrderOnly(Voucher src)
+        {
+            return src.Restrictions?.Any(r => r.Type == RestrictionType.IsFirstOrder) ?? false;
         }
 
         private static Guid? GetCategoryId(Voucher src)
