@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [ApiController]
-    [Authorize("WORKER")]
+    [Authorize(Roles = "WORKER")]
     [Route("api/payout-accounts")]
     public class WorkerPayoutAccountController : ApiController
     {
@@ -37,7 +37,7 @@ namespace API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
         {
-            var workerId = Guid.Parse(User.FindFirst("uid")!.Value);
+            var workerId = GetUserId();
 
             var result = await _workerPayoutAccountService.GetMyAccountsAsync(
                 workerId,
@@ -50,7 +50,7 @@ namespace API.Controllers
         [HttpPut("{id}/default")]
         public async Task<IActionResult> SetDefault(Guid id, CancellationToken cancellationToken)
         {
-            var workerId = Guid.Parse(User.FindFirst("uid")!.Value);
+            var workerId = GetUserId();
 
             var result = await _workerPayoutAccountService.SetDefaultAsync(
                 workerId,
@@ -64,7 +64,7 @@ namespace API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
         {
-            var workerId = Guid.Parse(User.FindFirst("uid")!.Value);
+            var workerId = GetUserId();
 
             var result = await _workerPayoutAccountService.DeleteAsync(
                 workerId,

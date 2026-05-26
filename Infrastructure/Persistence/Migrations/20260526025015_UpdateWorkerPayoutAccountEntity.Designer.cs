@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260526025015_UpdateWorkerPayoutAccountEntity")]
+    partial class UpdateWorkerPayoutAccountEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -968,23 +971,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 22, 8, 54, 40, 220, DateTimeKind.Utc).AddTicks(9213),
+                            CreatedDate = new DateTime(2026, 5, 26, 2, 50, 12, 838, DateTimeKind.Utc).AddTicks(3742),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-
-                            CreatedDate = new DateTime(2026, 5, 22, 8, 54, 40, 220, DateTimeKind.Utc).AddTicks(9217),
+                            CreatedDate = new DateTime(2026, 5, 26, 2, 50, 12, 838, DateTimeKind.Utc).AddTicks(3746),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-
-                            CreatedDate = new DateTime(2026, 5, 22, 8, 54, 40, 220, DateTimeKind.Utc).AddTicks(9219),
+                            CreatedDate = new DateTime(2026, 5, 26, 2, 50, 12, 838, DateTimeKind.Utc).AddTicks(3748),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1366,10 +1367,12 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uniqueidentifier");
@@ -1377,77 +1380,27 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsDeleted")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<long?>("MaxDiscount")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("MaxUsage")
+                        .HasColumnType("int");
+
                     b.Property<long>("MinOrderValue")
                         .HasColumnType("bigint");
-
-                    b.Property<Guid?>("ServiceCategoryId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("Value")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.HasIndex("CreatedById");
-
-                    b.HasIndex("ServiceCategoryId");
-
-                    b.HasIndex("Status", "ExpiresAt")
-                        .HasDatabaseName("idx_voucher_status");
-
-                    b.ToTable("Vouchers");
-                });
-
-            modelBuilder.Entity("Domain.Entity.VoucherQuota", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("MaxUsage")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MaxUsagePerUser")
-                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
@@ -1455,94 +1408,22 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<int>("UsedCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("VoucherId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VoucherId")
-                        .IsUnique();
-
-                    b.ToTable("VoucherQuotas");
-                });
-
-            modelBuilder.Entity("Domain.Entity.VoucherRestriction", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<Guid>("VoucherId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VoucherId", "Type")
-                        .HasDatabaseName("idx_restriction_voucher_type");
-
-                    b.ToTable("VoucherRestrictions");
-                });
-
-            modelBuilder.Entity("Domain.Entity.VoucherUsageHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AppliedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("BookingId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("DiscountAmount")
+                    b.Property<long>("Value")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("FailReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsSuccess")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("VoucherId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId")
-                        .HasDatabaseName("idx_usage_booking");
+                    b.HasIndex("CategoryId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("Code")
+                        .IsUnique();
 
-                    b.HasIndex("VoucherId", "UserId")
-                        .HasDatabaseName("idx_usage_voucher_user");
+                    b.HasIndex("CreatedById");
 
-                    b.ToTable("VoucherUsageHistories");
+                    b.HasIndex("IsActive", "ExpiresAt")
+                        .HasDatabaseName("idx_voucher_active");
+
+                    b.ToTable("Vouchers");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerCertificate", b =>
@@ -2519,65 +2400,20 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
                 {
+                    b.HasOne("Domain.Entity.ServiceCategory", "Category")
+                        .WithMany("Vouchers")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entity.User", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entity.ServiceCategory", null)
-                        .WithMany("Vouchers")
-                        .HasForeignKey("ServiceCategoryId");
+                    b.Navigation("Category");
 
                     b.Navigation("CreatedBy");
-                });
-
-            modelBuilder.Entity("Domain.Entity.VoucherQuota", b =>
-                {
-                    b.HasOne("Domain.Entity.Voucher", "Voucher")
-                        .WithOne("Quota")
-                        .HasForeignKey("Domain.Entity.VoucherQuota", "VoucherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Voucher");
-                });
-
-            modelBuilder.Entity("Domain.Entity.VoucherRestriction", b =>
-                {
-                    b.HasOne("Domain.Entity.Voucher", "Voucher")
-                        .WithMany("Restrictions")
-                        .HasForeignKey("VoucherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Voucher");
-                });
-
-            modelBuilder.Entity("Domain.Entity.VoucherUsageHistory", b =>
-                {
-                    b.HasOne("Domain.Entity.Booking", "Booking")
-                        .WithMany()
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Domain.Entity.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entity.Voucher", "Voucher")
-                        .WithMany("UsageHistories")
-                        .HasForeignKey("VoucherId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Booking");
-
-                    b.Navigation("User");
-
-                    b.Navigation("Voucher");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerCertificate", b =>
@@ -2857,12 +2693,6 @@ namespace Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
                 {
                     b.Navigation("BookingVouchers");
-
-                    b.Navigation("Quota");
-
-                    b.Navigation("Restrictions");
-
-                    b.Navigation("UsageHistories");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerPayoutAccount", b =>

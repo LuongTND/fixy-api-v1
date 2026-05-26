@@ -5,12 +5,14 @@ using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entity;
 using Domain.Enum;
+using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
 {
     public class PayoutService : IPayoutService
     {
+        private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWalletRepository _walletRepository;
         private readonly IPayoutRequestRepository _payoutRequestRepository;
         private readonly IWorkerPayoutAccountRepository _workerPayoutAccountRepository;
@@ -18,6 +20,7 @@ namespace Infrastructure.Services
         private readonly IUnitOfWork _unitOfWork;
 
         public PayoutService(
+            IWorkerProfileRepository workerProfileRepository,
             IWalletRepository walletRepository,
             IPayoutRequestRepository payoutRequestRepository,
             IWorkerPayoutAccountRepository workerPayoutAccountRepository,
@@ -25,6 +28,7 @@ namespace Infrastructure.Services
             IUnitOfWork unitOfWork
         )
         {
+            _workerProfileRepository = workerProfileRepository;
             _walletRepository = walletRepository;
             _payoutRequestRepository = payoutRequestRepository;
             _workerPayoutAccountRepository = workerPayoutAccountRepository;
@@ -32,7 +36,7 @@ namespace Infrastructure.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<OperationResult<PayoutRequest>> CreateRequestAsync(
+        public async Task<OperationResult<PayoutRequestDto>> CreateRequestAsync(
             Guid workerId,
             Guid payoutAccountId,
             long amount,
@@ -41,7 +45,7 @@ namespace Infrastructure.Services
         {
             if (amount <= 0)
             {
-                return OperationResult<PayoutRequest>.Failure("Invalid amount");
+                return OperationResult<PayoutRequestDto>.Failure("Invalid amount");
             }
 
             var existsPending = await _payoutRequestRepository.ExistsPendingRequestAsync(
@@ -51,7 +55,7 @@ namespace Infrastructure.Services
 
             if (existsPending)
             {
-                return OperationResult<PayoutRequest>.Failure(
+                return OperationResult<PayoutRequestDto>.Failure(
                     "You already have a pending payout request"
                 );
             }
@@ -60,10 +64,17 @@ namespace Infrastructure.Services
                 payoutAccountId,
                 cancellationToken
             );
-
-            if (payoutAccount == null || payoutAccount.WorkerId != workerId)
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+            if (workerProfile == null)
             {
-                return OperationResult<PayoutRequest>.Failure("Payout account not found");
+                return OperationResult<PayoutRequestDto>.Failure("Worker profile not found");
+            }
+            if (payoutAccount == null || workerProfile.UserId != workerId)
+            {
+                return OperationResult<PayoutRequestDto>.Failure("Payout account not found");
             }
 
             var wallet = await _walletRepository.GetByUserIdAsync(
@@ -74,12 +85,12 @@ namespace Infrastructure.Services
 
             if (wallet == null)
             {
-                return OperationResult<PayoutRequest>.Failure("Wallet not found");
+                return OperationResult<PayoutRequestDto>.Failure("Wallet not found");
             }
 
             if (wallet.Balance < amount)
             {
-                return OperationResult<PayoutRequest>.Failure("Insufficient balance");
+                return OperationResult<PayoutRequestDto>.Failure("Insufficient balance");
             }
 
             await _unitOfWork.BeginTransactionAsync();
@@ -130,8 +141,19 @@ namespace Infrastructure.Services
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                return OperationResult<PayoutRequest>.Success(
-                    request,
+                return OperationResult<PayoutRequestDto>.Success(
+                    new PayoutRequestDto
+                    {
+                        Id = request.Id,
+                        AccountName = payoutAccount.AccountName,
+                        AccountNumber = payoutAccount.AccountNumber,
+                        BankName = payoutAccount.BankName,
+                        Amount = request.Amount,
+                        CreatedDate = request.CreatedDate,
+                        RejectReason = request.RejectReason,
+                        Status = request.Status.ToString(),
+                        TransferredAt = request.TransferredAt,
+                    },
                     "Payout request created successfully"
                 );
             }
@@ -139,7 +161,7 @@ namespace Infrastructure.Services
             {
                 await _unitOfWork.RollbackTransactionAsync();
 
-                return OperationResult<PayoutRequest>.Failure("Wallet conflict, retry again");
+                return OperationResult<PayoutRequestDto>.Failure("Wallet conflict, retry again");
             }
             catch
             {
