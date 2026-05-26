@@ -10,30 +10,44 @@ namespace Infrastructure.Services
 {
     public class WorkerPayoutAccountService : IWorkerPayoutAccountService
     {
-        private readonly IWorkerPayoutAccountRepository _repository;
+        private readonly IWorkerPayoutAccountRepository _worrkerPayoutAccountRepository;
+        private readonly IWorkerProfileRepository _workerProfileRepository;
 
         private readonly IUnitOfWork _unitOfWork;
 
         public WorkerPayoutAccountService(
-            IWorkerPayoutAccountRepository repository,
+            IWorkerPayoutAccountRepository workerPayoutAccountRepository,
+            IWorkerProfileRepository workerProfileRepository,
             IUnitOfWork unitOfWork
         )
         {
-            _repository = repository;
+            _worrkerPayoutAccountRepository = workerPayoutAccountRepository;
+            _workerProfileRepository = workerProfileRepository;
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<OperationResult<WorkerPayoutAccount>> CreateAsync(
+        public async Task<OperationResult<WorkerPayoutAccountDto>> CreateAsync(
             Guid workerId,
             CreateWorkerPayoutAccountDto dto,
             CancellationToken cancellationToken
         )
         {
-            var hasDefault = await _repository.GetDefaultAsync(workerId, cancellationToken);
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+            if (workerProfile == null)
+            {
+                return OperationResult<WorkerPayoutAccountDto>.Failure("Worker profile not found");
+            }
+            var hasDefault = await _worrkerPayoutAccountRepository.GetDefaultAsync(
+                workerId,
+                cancellationToken
+            );
 
             var entity = new WorkerPayoutAccount
             {
-                WorkerId = workerId,
+                WorkerProfileId = workerProfile.Id,
 
                 Method = WorkerPayoutMethod.Bank,
 
@@ -48,11 +62,29 @@ namespace Infrastructure.Services
                 IsDefault = hasDefault == null,
             };
 
-            await _repository.AddAsync(entity, cancellationToken);
+            await _worrkerPayoutAccountRepository.AddAsync(entity, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return OperationResult<WorkerPayoutAccount>.Success(entity);
+            return OperationResult<WorkerPayoutAccountDto>.Success(
+                new WorkerPayoutAccountDto
+                {
+                    Id = entity.Id,
+
+                    AccountNumber = entity.AccountNumber,
+
+                    AccountName = entity.AccountName,
+
+                    BankName = entity.BankName,
+
+                    BankCode = entity.BankCode,
+
+                    IsDefault = entity.IsDefault,
+
+                    IsVerified = entity.IsVerified,
+                },
+                "Create payout account successfully"
+            );
         }
 
         public async Task<OperationResult<List<WorkerPayoutAccountDto>>> GetMyAccountsAsync(
@@ -60,7 +92,10 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var accounts = await _repository.GetByWorkerIdAsync(workerId, cancellationToken);
+            var accounts = await _worrkerPayoutAccountRepository.GetByWorkerIdAsync(
+                workerId,
+                cancellationToken
+            );
 
             return OperationResult<List<WorkerPayoutAccountDto>>.Success(
                 accounts
@@ -80,7 +115,8 @@ namespace Infrastructure.Services
 
                         IsVerified = x.IsVerified,
                     })
-                    .ToList()
+                    .ToList(),
+                "Get payout account list successfully"
             );
         }
 
@@ -90,7 +126,10 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var accounts = await _repository.GetByWorkerIdAsync(workerId, cancellationToken);
+            var accounts = await _worrkerPayoutAccountRepository.GetByWorkerIdAsync(
+                workerId,
+                cancellationToken
+            );
 
             var target = accounts.FirstOrDefault(x => x.Id == payoutAccountId);
 
@@ -117,14 +156,25 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var entity = await _repository.GetByIdAsync(payoutAccountId, cancellationToken);
+            var entity = await _worrkerPayoutAccountRepository.GetByIdAsync(
+                payoutAccountId,
+                cancellationToken
+            );
+            var workerProfile = await _workerProfileRepository.GetWorkerProfileByUserIdAsync(
+                workerId,
+                cancellationToken
+            );
+            if (workerProfile == null)
+            {
+                return OperationResult.Failure("Worker profile not found");
+            }
 
-            if (entity == null || entity.WorkerId != workerId)
+            if (entity == null || entity.WorkerProfileId != workerProfile.Id)
             {
                 return OperationResult.Failure("Payout account not found");
             }
 
-            _repository.Remove(entity);
+            _worrkerPayoutAccountRepository.Remove(entity);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

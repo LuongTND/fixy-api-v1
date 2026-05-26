@@ -16,7 +16,7 @@ namespace API.Controllers
             _payoutService = payoutService;
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "ADMIN")]
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] PagedQuery query,
@@ -28,7 +28,7 @@ namespace API.Controllers
             return Ok(result);
         }
 
-        [Authorize("WORKER")]
+        [Authorize(Roles = "WORKER")]
         [HttpGet("me")]
         public async Task<IActionResult> GetMyRequests(
             [FromQuery] PagedQuery query,
@@ -46,7 +46,7 @@ namespace API.Controllers
             return Ok(result);
         }
 
-        [Authorize("WORKER")]
+        [Authorize(Roles = "WORKER")]
         [HttpPost]
         public async Task<IActionResult> Create(
             Guid payoutAccountId,
