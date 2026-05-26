@@ -59,5 +59,15 @@ namespace Infrastructure.Repositories
 
             return (items, totalCount);
         }
+
+        public async Task<List<Voucher>> GetActiveVouchersAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            return await _dbSet
+                .Where(v => v.Status == Domain.Enum.VoucherStatus.Active && v.IsDeleted == false && v.StartsAt <= now && v.ExpiresAt >= now)
+                .Include(v => v.Quota)
+                .Include(v => v.Restrictions)
+                .ToListAsync(cancellationToken);
+        }
     }
 }
