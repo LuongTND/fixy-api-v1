@@ -13,5 +13,7 @@ namespace Application.DTOs.Voucher
         public DateTime? StartsAt { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public string? Description { get; set; }
+        public string? City { get; set; }
+        public bool? FirstOrderOnly { get; set; }
     }
 }

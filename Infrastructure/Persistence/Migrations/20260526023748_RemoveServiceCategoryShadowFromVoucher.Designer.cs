@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260526023748_RemoveServiceCategoryShadowFromVoucher")]
+    partial class RemoveServiceCategoryShadowFromVoucher
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -718,7 +721,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerProfileId")
+                    b.Property<Guid>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -730,7 +733,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("Status", "CreatedDate")
                         .HasDatabaseName("idx_payout_status");
 
-                    b.HasIndex("WorkerProfileId", "Status", "CreatedDate")
+                    b.HasIndex("WorkerId", "Status", "CreatedDate")
                         .HasDatabaseName("idx_payout_worker");
 
                     b.ToTable("PayoutRequests");
@@ -1772,12 +1775,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerProfileId")
+                    b.Property<Guid>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerProfileId", "IsDefault")
+                    b.HasIndex("WorkerId", "IsDefault")
                         .HasDatabaseName("idx_payout_acct_worker");
 
                     b.ToTable("WorkerPayoutAccounts");
@@ -2338,7 +2341,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany()
-                        .HasForeignKey("WorkerProfileId")
+                        .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2646,13 +2649,13 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.WorkerPayoutAccount", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany("PayoutAccounts")
-                        .HasForeignKey("WorkerProfileId")
+                        .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("WorkerProfile");
+                    b.Navigation("Worker");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerProfile", b =>

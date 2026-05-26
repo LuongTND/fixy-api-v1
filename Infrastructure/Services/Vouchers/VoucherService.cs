@@ -89,6 +89,30 @@ namespace Infrastructure.Services.Vouchers
                 });
             }
 
+            // Initialize City Restriction if provided
+            if (!string.IsNullOrWhiteSpace(dto.City))
+            {
+                voucher.Restrictions.Add(new VoucherRestriction
+                {
+                    Id = Guid.NewGuid(),
+                    VoucherId = voucherId,
+                    Type = RestrictionType.City,
+                    Value = dto.City.Trim()
+                });
+            }
+
+            // Initialize First Order Restriction if provided
+            if (dto.FirstOrderOnly == true)
+            {
+                voucher.Restrictions.Add(new VoucherRestriction
+                {
+                    Id = Guid.NewGuid(),
+                    VoucherId = voucherId,
+                    Type = RestrictionType.IsFirstOrder,
+                    Value = "true"
+                });
+            }
+
             await _voucherRepository.AddAsync(voucher, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -146,7 +170,12 @@ namespace Infrastructure.Services.Vouchers
             // Update Quota if provided
             if (voucher.Quota == null)
             {
-                voucher.Quota = new VoucherQuota { UsedCount = 0 };
+                voucher.Quota = new VoucherQuota
+                {
+                    Id = Guid.NewGuid(),
+                    VoucherId = voucher.Id,
+                    UsedCount = 0
+                };
             }
             if (dto.MaxUsage.HasValue) voucher.Quota.MaxUsage = dto.MaxUsage.Value;
             if (dto.MaxUsagePerUser.HasValue) voucher.Quota.MaxUsagePerUser = dto.MaxUsagePerUser.Value;
@@ -163,14 +192,71 @@ namespace Infrastructure.Services.Vouchers
                 {
                     voucher.Restrictions.Add(new VoucherRestriction
                     {
+                        Id = Guid.NewGuid(),
+                        VoucherId = voucher.Id,
                         Type = RestrictionType.Category,
                         Value = dto.CategoryId.Value.ToString()
                     });
                 }
             }
 
+            // Update City Restriction if provided
+            if (dto.City != null)
+            {
+                var cityRestriction = voucher.Restrictions.FirstOrDefault(r => r.Type == RestrictionType.City);
+                if (!string.IsNullOrWhiteSpace(dto.City))
+                {
+                    if (cityRestriction != null)
+                    {
+                        cityRestriction.Value = dto.City.Trim();
+                    }
+                    else
+                    {
+                        voucher.Restrictions.Add(new VoucherRestriction
+                        {
+                            Id = Guid.NewGuid(),
+                            VoucherId = voucher.Id,
+                            Type = RestrictionType.City,
+                            Value = dto.City.Trim()
+                        });
+                    }
+                }
+                else
+                {
+                    if (cityRestriction != null)
+                    {
+                        voucher.Restrictions.Remove(cityRestriction);
+                    }
+                }
+            }
+
+            // Update First Order Restriction if provided
+            if (dto.FirstOrderOnly.HasValue)
+            {
+                var firstOrderRestriction = voucher.Restrictions.FirstOrDefault(r => r.Type == RestrictionType.IsFirstOrder);
+                if (dto.FirstOrderOnly.Value)
+                {
+                    if (firstOrderRestriction == null)
+                    {
+                        voucher.Restrictions.Add(new VoucherRestriction
+                        {
+                            Id = Guid.NewGuid(),
+                            VoucherId = voucher.Id,
+                            Type = RestrictionType.IsFirstOrder,
+                            Value = "true"
+                        });
+                    }
+                }
+                else
+                {
+                    if (firstOrderRestriction != null)
+                    {
+                        voucher.Restrictions.Remove(firstOrderRestriction);
+                    }
+                }
+            }
+
             voucher.UpdatedDate = DateTime.UtcNow;
-            _voucherRepository.Update(voucher);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Voucher updated. Id: {VoucherId}", voucher.Id);
@@ -188,7 +274,6 @@ namespace Infrastructure.Services.Vouchers
 
             voucher.Status = dto.Status;
             voucher.UpdatedDate = DateTime.UtcNow;
-            _voucherRepository.Update(voucher);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Voucher status updated. Id: {VoucherId}, Status: {Status}", voucher.Id, dto.Status);
@@ -250,7 +335,7 @@ namespace Infrastructure.Services.Vouchers
             var orderValue = booking.FinalPrice ?? booking.EstimatedPrice ?? 0;
 
             // 4. Validate voucher (including structural restrictions)
-            var validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking.CategoryId, cancellationToken);
+            var validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking, cancellationToken);
             if (validationError != null)
             {
                 await LogUsageAsync(voucher.Id, userId, request.BookingId, 0, false, validationError, cancellationToken);
@@ -364,7 +449,7 @@ namespace Infrastructure.Services.Vouchers
             Domain.Entity.Voucher voucher,
             Guid userId,
             long orderValue,
-            Guid bookingCategoryId,
+            Domain.Entity.Booking booking,
             CancellationToken cancellationToken)
         {
             // Step 1: Check status
@@ -405,16 +490,35 @@ namespace Infrastructure.Services.Vouchers
                     case RestrictionType.Category:
                         if (Guid.TryParse(restriction.Value, out var allowedCatId))
                         {
-                            if (bookingCategoryId != allowedCatId)
+                            if (booking.CategoryId != allowedCatId)
                                 return "This voucher is not applicable to the selected service category";
                         }
                         break;
 
-                    // Phase 2 & Phase 3 rules (e.g. City, PaymentMethod, User, IsFirstOrder) can be parsed here dynamically
+                    case RestrictionType.City:
+                        if (!string.IsNullOrEmpty(restriction.Value))
+                        {
+                            if (!booking.Address.Contains(restriction.Value, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return $"This voucher is only applicable to orders in {restriction.Value}";
+                            }
+                        }
+                        break;
+
+                    case RestrictionType.IsFirstOrder:
+                        var hasCompletedBooking = await _bookingRepository.ExistsAsync(
+                            b => b.CustomerProfile != null && b.CustomerProfile.UserId == userId && b.Status == BookingStatus.Completed,
+                            cancellationToken);
+
+                        if (hasCompletedBooking)
+                        {
+                            return "This voucher is only applicable to your first order";
+                        }
+                        break;
                 }
             }
 
-            return null; // All checks passed
+            return null; 
         }
 
         private static long CalculateDiscount(Domain.Entity.Voucher voucher, long orderValue)
