@@ -18,7 +18,8 @@ namespace Infrastructure.Repositories
         )
         {
             return await _dbSet
-                .Where(x => x.WorkerId == workerId)
+                .Include(x => x.WorkerProfile)
+                .Where(x => x.WorkerProfile!.UserId == workerId)
                 .OrderByDescending(x => x.IsDefault)
                 .ToListAsync(cancellationToken);
         }
@@ -28,10 +29,12 @@ namespace Infrastructure.Repositories
             CancellationToken cancellationToken
         )
         {
-            return await _dbSet.FirstOrDefaultAsync(
-                x => x.WorkerId == workerId && x.IsDefault,
-                cancellationToken
-            );
+            return await _dbSet
+                .Include(x => x.WorkerProfile)
+                .FirstOrDefaultAsync(
+                    x => x.WorkerProfile!.UserId == workerId && x.IsDefault,
+                    cancellationToken
+                );
         }
     }
 }

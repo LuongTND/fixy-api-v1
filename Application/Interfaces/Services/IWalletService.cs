@@ -31,14 +31,14 @@ namespace Application.Interfaces.Services
             Guid bookingId,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<WalletTransaction>> RefundAsync(
+        Task<OperationResult<WalletTransactionDto>> RefundAsync(
             Guid walletId,
             long amount,
             string referenceId,
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult<WalletTransaction>> WithdrawAsync(
+        Task<OperationResult<WalletTransactionDto>> WithdrawAsync(
             Guid walletId,
             long amount,
             string referenceId,

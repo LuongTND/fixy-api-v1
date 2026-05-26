@@ -6,7 +6,7 @@ namespace Application.Interfaces.Services
 {
     public interface IWorkerPayoutAccountService
     {
-        Task<OperationResult<WorkerPayoutAccount>> CreateAsync(
+        Task<OperationResult<WorkerPayoutAccountDto>> CreateAsync(
             Guid workerId,
             CreateWorkerPayoutAccountDto dto,
             CancellationToken cancellationToken

@@ -1,12 +1,11 @@
 ﻿using Application.Common;
 using Application.DTOs.Payout;
-using Domain.Entity;
 
 namespace Application.Interfaces.Services
 {
     public interface IPayoutService
     {
-        Task<OperationResult<PayoutRequest>> CreateRequestAsync(
+        Task<OperationResult<PayoutRequestDto>> CreateRequestAsync(
             Guid workerId,
             Guid payoutAccountId,
             long amount,

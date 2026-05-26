@@ -143,6 +143,7 @@ namespace Infrastructure
             services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
             services.AddScoped<IPaymentOrderRepository, PaymentOrderRepository>();
             services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
+            services.AddScoped<IDashboardRepository, DashboardRepository>();
 
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
@@ -170,6 +171,7 @@ namespace Infrastructure
             services.AddScoped<IBookingDraftService, BookingDraftService>();
             services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
             services.AddScoped<IWorkerPayoutAccountService, WorkerPayoutAccountService>();
+            services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<IPayoutService, PayoutService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();

@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260526031407_UpdatePayoutRequestEntity")]
+    partial class UpdatePayoutRequestEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -968,21 +971,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 26, 2, 37, 46, 205, DateTimeKind.Utc).AddTicks(3812),
+                            CreatedDate = new DateTime(2026, 5, 26, 3, 14, 6, 831, DateTimeKind.Utc).AddTicks(3189),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-                            CreatedDate = new DateTime(2026, 5, 26, 2, 37, 46, 205, DateTimeKind.Utc).AddTicks(3815),
+                            CreatedDate = new DateTime(2026, 5, 26, 3, 14, 6, 831, DateTimeKind.Utc).AddTicks(3197),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-                            CreatedDate = new DateTime(2026, 5, 26, 2, 37, 46, 205, DateTimeKind.Utc).AddTicks(3817),
+                            CreatedDate = new DateTime(2026, 5, 26, 3, 14, 6, 831, DateTimeKind.Utc).AddTicks(3199),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1397,6 +1400,9 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<long>("MinOrderValue")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("ServiceCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("datetime2");
 
@@ -1420,6 +1426,8 @@ namespace Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("CreatedById");
+
+                    b.HasIndex("ServiceCategoryId");
 
                     b.HasIndex("Status", "ExpiresAt")
                         .HasDatabaseName("idx_voucher_status");
@@ -2518,6 +2526,10 @@ namespace Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entity.ServiceCategory", null)
+                        .WithMany("Vouchers")
+                        .HasForeignKey("ServiceCategoryId");
+
                     b.Navigation("CreatedBy");
                 });
 
@@ -2813,6 +2825,8 @@ namespace Infrastructure.Persistence.Migrations
                     b.Navigation("Bookings");
 
                     b.Navigation("Children");
+
+                    b.Navigation("Vouchers");
 
                     b.Navigation("WorkerServices");
                 });

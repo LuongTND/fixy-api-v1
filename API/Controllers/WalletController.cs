@@ -1,12 +1,14 @@
 ﻿using Application.Common;
 using Application.Interfaces.Services;
 using Domain.Enum;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [Route("api/wallet")]
     [ApiController]
+    [Authorize]
     public class WalletController : ApiController
     {
         private readonly IWalletService _walletService;
