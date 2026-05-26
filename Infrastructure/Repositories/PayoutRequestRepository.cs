@@ -44,7 +44,7 @@ namespace Infrastructure.Repositories
         {
             return await _dbSet
                 .Include(x => x.PayoutAccount)
-                .Where(x => x.WorkerId == workerId)
+                .Where(x => x.WorkerProfileId == workerId)
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync(cancellationToken);
         }
@@ -55,7 +55,7 @@ namespace Infrastructure.Repositories
         )
         {
             return await _dbSet.AnyAsync(
-                x => x.WorkerId == workerId && x.Status == PayoutRequestStatus.Pending,
+                x => x.WorkerProfileId == workerId && x.Status == PayoutRequestStatus.Pending,
                 cancellationToken
             );
         }
@@ -85,7 +85,7 @@ namespace Infrastructure.Repositories
         {
             var data = _dbSet
                 .Include(x => x.PayoutAccount)
-                .Where(x => x.WorkerId == workerId)
+                .Where(x => x.WorkerProfileId == workerId)
                 .AsQueryable();
 
             var total = await data.CountAsync(cancellationToken);

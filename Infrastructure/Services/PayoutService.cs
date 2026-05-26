@@ -106,7 +106,7 @@ namespace Infrastructure.Services
 
                 var request = new PayoutRequest
                 {
-                    WorkerId = workerId,
+                    WorkerProfileId = workerProfile.Id,
                     PayoutAccountId = payoutAccountId,
                     Amount = amount,
                     Status = PayoutRequestStatus.Pending,
