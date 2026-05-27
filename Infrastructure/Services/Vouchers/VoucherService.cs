@@ -359,6 +359,13 @@ namespace Infrastructure.Services.Vouchers
                 {
                     voucher.Quota.UsedCount++;
                 }
+
+                // Increment campaign budget usage
+                if (voucher.CampaignId.HasValue && voucher.Campaign != null)
+                {
+                    voucher.Campaign.BudgetUsed += discountAmount;
+                }
+
                 _voucherRepository.Update(voucher);
 
                 // Update booking final price
@@ -419,9 +426,19 @@ namespace Infrastructure.Services.Vouchers
             var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
             var voucher = await _voucherRepository.GetByIdAsync(bookingVoucher.VoucherId, cancellationToken);
 
-            if (voucher != null && voucher.Quota != null && voucher.Quota.UsedCount > 0)
+            if (voucher != null)
             {
-                voucher.Quota.UsedCount--;
+                if (voucher.Quota != null && voucher.Quota.UsedCount > 0)
+                {
+                    voucher.Quota.UsedCount--;
+                }
+
+                // Decrement/Refund campaign budget usage
+                if (voucher.CampaignId.HasValue && voucher.Campaign != null)
+                {
+                    voucher.Campaign.BudgetUsed = Math.Max(0, voucher.Campaign.BudgetUsed - bookingVoucher.DiscountAmount);
+                }
+
                 _voucherRepository.Update(voucher);
             }
 
@@ -467,28 +484,31 @@ namespace Infrastructure.Services.Vouchers
             {
                 var validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking, cancellationToken);
                 var isEligible = validationError == null;
-                long calculatedDiscount = isEligible ? CalculateDiscount(voucher, orderValue) : 0;
-
-                resultList.Add(new EligibleVoucherDto
+                
+                if (isEligible)
                 {
-                    Id = voucher.Id,
-                    Code = voucher.Code,
-                    Type = voucher.Type,
-                    Value = voucher.Value,
-                    MinOrderValue = voucher.MinOrderValue,
-                    MaxDiscount = voucher.MaxDiscount,
-                    ExpiresAt = voucher.ExpiresAt,
-                    Description = voucher.Description ?? string.Empty,
-                    IsEligible = isEligible,
-                    IneligibleReason = validationError ?? string.Empty,
-                    CalculatedDiscount = calculatedDiscount
-                });
+                    long calculatedDiscount = CalculateDiscount(voucher, orderValue);
+
+                    resultList.Add(new EligibleVoucherDto
+                    {
+                        Id = voucher.Id,
+                        Code = voucher.Code,
+                        Type = voucher.Type,
+                        Value = voucher.Value,
+                        MinOrderValue = voucher.MinOrderValue,
+                        MaxDiscount = voucher.MaxDiscount,
+                        ExpiresAt = voucher.ExpiresAt,
+                        Description = voucher.Description ?? string.Empty,
+                        IsEligible = true,
+                        IneligibleReason = string.Empty,
+                        CalculatedDiscount = calculatedDiscount
+                    });
+                }
             }
 
-            // 4. Sort: Eligible first, then highest discount first, then by code
+            // 4. Sort: Highest discount first, then by code alphabetically
             var sortedResult = resultList
-                .OrderByDescending(v => v.IsEligible)
-                .ThenByDescending(v => v.CalculatedDiscount)
+                .OrderByDescending(v => v.CalculatedDiscount)
                 .ThenBy(v => v.Code)
                 .ToList();
 
@@ -511,6 +531,60 @@ namespace Infrastructure.Services.Vouchers
                 return "Voucher is not active";
 
             var now = DateTime.UtcNow.AddHours(7); // Vietnamese Time (GMT+7)
+
+            // Step 0: Check Campaign rules if voucher belongs to a campaign
+            if (voucher.CampaignId.HasValue && voucher.Campaign != null)
+            {
+                var campaign = voucher.Campaign;
+
+                // 1. Check campaign status
+                if (campaign.Status != CampaignStatus.Active)
+                {
+                    return $"This voucher belongs to a campaign that is currently {campaign.Status.ToString().ToLower()}";
+                }
+
+                // 2. Check campaign validity period
+                if (now < campaign.StartsAt)
+                {
+                    return "The promotion campaign has not started yet";
+                }
+                if (now > campaign.ExpiresAt)
+                {
+                    return "The promotion campaign has ended";
+                }
+
+                // 3. Check campaign budget limit
+                if (campaign.BudgetLimit.HasValue)
+                {
+                    var estimatedDiscount = CalculateDiscount(voucher, orderValue);
+                    if ((campaign.BudgetUsed + estimatedDiscount) > campaign.BudgetLimit.Value)
+                    {
+                        return "The promotion campaign budget has been fully spent";
+                    }
+                }
+
+                // 4. Check dynamic event trigger
+                if (campaign.AutoTriggerEvent.HasValue)
+                {
+                    switch (campaign.AutoTriggerEvent.Value)
+                    {
+                        case VoucherEventType.FirstBookingCompleted:
+                            var completedCountForFirst = await _bookingRepository.CountAsync(
+                                b => b.CustomerProfile != null && b.CustomerProfile.UserId == userId && b.Status == BookingStatus.Completed,
+                                cancellationToken);
+
+                            if (completedCountForFirst < 1)
+                            {
+                                return "This promotion is only available after completing your first booking";
+                            }
+                            if (completedCountForFirst > 1)
+                            {
+                                return "This promotion was only available immediately after your first booking completed";
+                            }
+                            break;
+                    }
+                }
+            }
 
             // Step 2: Check start date
             if (now < voucher.StartsAt)

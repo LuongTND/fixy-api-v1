@@ -87,6 +87,7 @@ namespace Infrastructure
             services.AddSingleton<IEmailQueue, EmailQueue>();
             services.AddHostedService<EmailBackgroundService>();
             services.AddHostedService<BookingTimeoutBackgroundService>();
+            services.AddHostedService<VoucherCampaignSchedulerService>();
             // Authentication
             services
                 .AddAuthentication(options =>
@@ -148,6 +149,7 @@ namespace Infrastructure
             services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
             services.AddScoped<IWorkerMatchingQueueRepository, WorkerMatchingQueueRepository>();
             services.AddScoped<IVoucherRepository, VoucherRepository>();
+            services.AddScoped<IVoucherCampaignRepository, VoucherCampaignRepository>();
             services.AddScoped<IVoucherUsageHistoryRepository, VoucherUsageHistoryRepository>();
             services.AddScoped<IBookingVoucherRepository, BookingVoucherRepository>();
             // Services
@@ -182,6 +184,7 @@ namespace Infrastructure
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IVoucherService, VoucherService>();
+            services.AddScoped<IVoucherCampaignService, VoucherCampaignService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

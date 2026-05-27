@@ -26,6 +26,7 @@ namespace Application.DTOs.Voucher
         /// Computed display status: Draft, Active, Expired, Disabled, OutOfStock
         /// </summary>
         public string DisplayStatus { get; set; } = string.Empty;
+        public Guid? CampaignId { get; set; }
         public DateTime CreatedDate { get; set; }
     }
 }

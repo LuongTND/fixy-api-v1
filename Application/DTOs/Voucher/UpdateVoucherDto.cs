@@ -15,5 +15,6 @@ namespace Application.DTOs.Voucher
         public string? Description { get; set; }
         public string? City { get; set; }
         public bool? FirstOrderOnly { get; set; }
+        public Guid? CampaignId { get; set; }
     }
 }

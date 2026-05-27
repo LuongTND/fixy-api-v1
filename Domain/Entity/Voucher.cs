@@ -22,6 +22,9 @@ namespace Domain.Entity
         public string? DeletedBy { get; set; }
 
         // Navigation Properties
+        public Guid? CampaignId { get; set; }
+        public virtual VoucherCampaign? Campaign { get; set; }
+
         public User? CreatedBy { get; set; }
         public VoucherQuota? Quota { get; set; }
         public ICollection<VoucherRestriction> Restrictions { get; set; } = new List<VoucherRestriction>();
