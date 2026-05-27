@@ -1,5 +1,6 @@
 ﻿using Application.Common;
 using Application.DTOs.Profile;
+using Application.DTOs.User;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -15,6 +16,47 @@ namespace Infrastructure.Services
         private readonly IMediaRepository _mediaRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IBlobService _blobService;
+
+        public async Task<OperationResult<PagedResponse<UserManagementDto>>> GetUsersAsync(
+            UserManagementQuery query,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var (users, totalCount) = await _userRepository.GetPagedUsersAsync(
+                query,
+                cancellationToken
+            );
+
+            var result = new PagedResponse<UserManagementDto>
+            {
+                Items = users
+                    .Select(x => new UserManagementDto
+                    {
+                        Id = x.Id,
+
+                        FullName = x.FullName,
+
+                        Email = x.Email ?? "",
+
+                        Phone = x.Phone ?? "",
+
+                        IsActive = x.IsActive,
+
+                        CreatedDate = x.CreatedDate,
+
+                        Role = x.UserRoles.Select(r => r.Role?.Name).FirstOrDefault() ?? "Unknown",
+                    })
+                    .ToList(),
+
+                TotalCount = totalCount,
+
+                PageNumber = query.PageNumber,
+
+                PageSize = query.PageSize,
+            };
+
+            return OperationResult<PagedResponse<UserManagementDto>>.Success(result);
+        }
 
         public UserService(
             IUserRepository userRepository,

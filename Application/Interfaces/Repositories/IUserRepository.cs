@@ -1,9 +1,14 @@
-﻿using Domain.Entity;
+﻿using Application.DTOs.User;
+using Domain.Entity;
 
 namespace Application.Interfaces.Repositories
 {
     public interface IUserRepository : IRepository<User>
     {
+        Task<(List<User>, int)> GetPagedUsersAsync(
+            UserManagementQuery query,
+            CancellationToken cancellationToken
+        );
         Task<User?> GetByIdWithRolesAsync(Guid id, CancellationToken ct = default);
 
         Task<User?> GetByIdWithProfilesAsync(Guid id, CancellationToken ct = default);
