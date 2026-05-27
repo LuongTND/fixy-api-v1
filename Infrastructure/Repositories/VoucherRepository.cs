@@ -16,6 +16,7 @@ namespace Infrastructure.Repositories
             return await _dbSet
                 .Include(v => v.Quota)
                 .Include(v => v.Restrictions)
+                .Include(v => v.Campaign)
                 .FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
         }
 
@@ -24,6 +25,7 @@ namespace Infrastructure.Repositories
             return await _dbSet
                 .Include(v => v.Quota)
                 .Include(v => v.Restrictions)
+                .Include(v => v.Campaign)
                 .FirstOrDefaultAsync(v => v.Code == code, cancellationToken);
         }
 
@@ -64,9 +66,17 @@ namespace Infrastructure.Repositories
         {
             var now = DateTime.UtcNow.AddHours(7); // Vietnamese Time (GMT+7)
             return await _dbSet
-                .Where(v => v.Status == Domain.Enum.VoucherStatus.Active && v.IsDeleted == false && v.StartsAt <= now && v.ExpiresAt >= now)
+                .Where(v => v.Status == Domain.Enum.VoucherStatus.Active 
+                            && v.IsDeleted == false 
+                            && v.StartsAt <= now 
+                            && v.ExpiresAt >= now
+                            && (v.CampaignId == null || (v.Campaign != null 
+                                                         && v.Campaign.Status == Domain.Enum.CampaignStatus.Active 
+                                                         && v.Campaign.StartsAt <= now 
+                                                         && v.Campaign.ExpiresAt >= now)))
                 .Include(v => v.Quota)
                 .Include(v => v.Restrictions)
+                .Include(v => v.Campaign)
                 .ToListAsync(cancellationToken);
         }
     }
