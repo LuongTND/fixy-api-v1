@@ -3,6 +3,7 @@ using Application.DTOs.Booking;
 using Application.Interfaces;
 using Application.Interfaces.Hubs;
 using Application.Interfaces.Repositories;
+using Application.Interfaces.Services;
 using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Worker;
 using Application.Settings;
@@ -21,6 +22,9 @@ namespace Infrastructure.Services.Booking
         private readonly IWorkerMatchingQueueRepository _matchingQueueRepository;
         private readonly IWorkerLocationService _workerLocationService;
         private readonly IBookingHubService _bookingHubService;
+        private readonly INotificationService _notificationService;
+        private readonly IMediaRepository _mediaRepository;
+        private readonly IServiceCategoryRepository _serviceCategoryRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly WorkerMatchingSettings _matchingSettings;
         private readonly ILogger<WorkerMatchingService> _logger;
@@ -32,6 +36,9 @@ namespace Infrastructure.Services.Booking
             IWorkerMatchingQueueRepository matchingQueueRepository,
             IWorkerLocationService workerLocationService,
             IBookingHubService bookingHubService,
+            INotificationService notificationService,
+            IMediaRepository mediaRepository,
+            IServiceCategoryRepository serviceCategoryRepository,
             IUnitOfWork unitOfWork,
             IOptions<WorkerMatchingSettings> matchingOptions,
             ILogger<WorkerMatchingService> logger
@@ -53,6 +60,12 @@ namespace Infrastructure.Services.Booking
                 ?? throw new ArgumentNullException(nameof(workerLocationService));
             _bookingHubService =
                 bookingHubService ?? throw new ArgumentNullException(nameof(bookingHubService));
+            _notificationService =
+                notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _mediaRepository =
+                mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
+            _serviceCategoryRepository =
+                serviceCategoryRepository ?? throw new ArgumentNullException(nameof(serviceCategoryRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _matchingSettings =
                 matchingOptions?.Value ?? throw new ArgumentNullException(nameof(matchingOptions));
@@ -250,6 +263,9 @@ namespace Infrastructure.Services.Booking
                     cancellationToken
                 );
 
+                // Send notification to worker
+                await SendNewBookingNotificationToWorkerAsync(booking, nextCandidate.WorkerProfileId, "AutoMatch", cancellationToken);
+
                 return OperationResult.Success("Worker found and notified");
             }
             else
@@ -347,6 +363,9 @@ namespace Infrastructure.Services.Booking
                 cancellationToken
             );
 
+            // 4. Send notification to the selected worker
+            await SendNewBookingNotificationToWorkerAsync(booking, workerProfileId, "DirectAssign", cancellationToken);
+
             return OperationResult.Success("Worker assigned and notified");
         }
 
@@ -379,5 +398,55 @@ namespace Infrastructure.Services.Booking
         }
 
         private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
+
+        /// <summary>
+        /// Sends a "new booking offer" notification to the assigned worker with full booking details.
+        /// </summary>
+        private async Task SendNewBookingNotificationToWorkerAsync(
+            Domain.Entity.Booking booking,
+            Guid workerProfileId,
+            string assignmentType,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Load worker profile to get UserId
+                var workerProfile = await _workerProfileRepository.GetByIdAsync(workerProfileId, cancellationToken);
+                if (workerProfile == null) return;
+
+                // Load category name
+                var category = await _serviceCategoryRepository.GetByIdAsync(booking.CategoryId, cancellationToken);
+                var categoryName = category?.Name ?? "Dịch vụ";
+
+                // Load attached images
+                var images = await _mediaRepository.FindAsync(
+                    m => m.OwnerId == booking.Id && m.OwnerType == MediaOwnerType.Booking && !m.IsDeleted,
+                    cancellationToken);
+
+                var meta = new
+                {
+                    bookingId = booking.Id,
+                    assignmentType,
+                    serviceName = categoryName,
+                    address = booking.Address,
+                    scheduledAt = booking.ScheduledAt,
+                    description = booking.Description,
+                    images = images.Select(m => m.FileUrl).ToList()
+                };
+
+                await _notificationService.SendNotificationAsync(
+                    workerProfile.UserId,
+                    NotificationType.Booking,
+                    "Bạn có yêu cầu dịch vụ mới!",
+                    $"Dịch vụ {categoryName} tại {booking.Address}.",
+                    $"/worker/bookings/{booking.Id}",
+                    meta,
+                    cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send new booking notification to worker {WorkerProfileId}", workerProfileId);
+            }
+        }
     }
 }

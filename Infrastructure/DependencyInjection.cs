@@ -16,6 +16,7 @@ using Application.Interfaces.Services.Voucher;
 using Application.Interfaces.Services.Worker;
 using Application.Services;
 using Application.Settings;
+using Domain.Entity;
 using Infrastructure.Common;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
@@ -27,6 +28,7 @@ using Infrastructure.Services.Chat;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
 using Infrastructure.Services.Payment;
+using Infrastructure.Services.Notifications;
 using Infrastructure.Services.ServiceCategories;
 using Infrastructure.Services.Vouchers;
 using Infrastructure.Services.Worker;
@@ -88,6 +90,7 @@ namespace Infrastructure
             services.AddHostedService<EmailBackgroundService>();
             services.AddHostedService<BookingTimeoutBackgroundService>();
             services.AddHostedService<VoucherCampaignSchedulerService>();
+            services.AddHostedService<BookingReminderSchedulerService>();
             // Authentication
             services
                 .AddAuthentication(options =>
@@ -152,6 +155,8 @@ namespace Infrastructure
             services.AddScoped<IVoucherCampaignRepository, VoucherCampaignRepository>();
             services.AddScoped<IVoucherUsageHistoryRepository, VoucherUsageHistoryRepository>();
             services.AddScoped<IBookingVoucherRepository, BookingVoucherRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped(typeof(IRepository<NotificationSetting>), typeof(Repository<NotificationSetting>));
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IJwtService, JwtService>();
@@ -185,6 +190,7 @@ namespace Infrastructure
             services.AddScoped<IReviewService, ReviewService>();
             services.AddScoped<IVoucherService, VoucherService>();
             services.AddScoped<IVoucherCampaignService, VoucherCampaignService>();
+            services.AddScoped<INotificationService, NotificationService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
