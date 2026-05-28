@@ -30,6 +30,7 @@ namespace Infrastructure.Services.Booking
         private readonly ICustomerProfileRepository _customerProfileRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerMatchingService _workerMatchingService;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<BookingService> _logger;
         private readonly IServiceProvider _serviceProvider;
 
@@ -54,6 +55,7 @@ namespace Infrastructure.Services.Booking
             ICustomerProfileRepository customerProfileRepository,
             IWorkerProfileRepository workerProfileRepository,
             IWorkerMatchingService workerMatchingService,
+            INotificationService notificationService,
             IMapper mapper,
             ILogger<BookingService> logger,
             IServiceProvider serviceProvider
@@ -80,6 +82,9 @@ namespace Infrastructure.Services.Booking
             _workerMatchingService =
                 workerMatchingService
                 ?? throw new ArgumentNullException(nameof(workerMatchingService));
+            _notificationService =
+                notificationService
+                ?? throw new ArgumentNullException(nameof(notificationService));
             _customerProfileRepository = customerProfileRepository;
             _workerProfileRepository = workerProfileRepository;
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -808,7 +813,61 @@ namespace Infrastructure.Services.Booking
                 cancellationToken
             );
 
+            // Send notification to customer on status changes
+            await SendBookingStatusNotificationAsync(booking, newStatus, message, cancellationToken);
+
             return OperationResult.Success(message);
+        }
+
+        /// <summary>
+        /// Sends a notification to the customer when the booking status changes.
+        /// </summary>
+        private async Task SendBookingStatusNotificationAsync(
+            BookingEntity booking,
+            BookingStatus newStatus,
+            string message,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Load customer profile to get UserId
+                var customerProfile = await _customerProfileRepository.GetByIdAsync(
+                    booking.CustomerProfileId, cancellationToken);
+                if (customerProfile == null) return;
+
+                // Build notification title based on status
+                var (title, body) = newStatus switch
+                {
+                    BookingStatus.PendingPayment => ("Thợ đã nhận đơn của bạn", "Vui lòng thanh toán để xác nhận đặt lịch."),
+                    BookingStatus.Confirmed => ("Đơn đặt lịch đã được xác nhận", "Thanh toán thành công. Thợ sẽ liên hệ bạn sớm."),
+                    BookingStatus.Traveling => ("Thợ đang di chuyển đến", "Thợ đang trên đường đến địa chỉ của bạn."),
+                    BookingStatus.Arrived => ("Thợ đã đến nơi", "Thợ đã có mặt tại địa chỉ của bạn."),
+                    BookingStatus.InProgress => ("Đang tiến hành sửa chữa", "Thợ đang thực hiện dịch vụ."),
+                    BookingStatus.Completed => ("Đơn hàng đã hoàn thành", "Dịch vụ đã hoàn tất. Hãy để lại đánh giá cho thợ nhé!"),
+                    _ => ((string?)null, (string?)null)
+                };
+
+                if (title == null) return;
+
+                var meta = new
+                {
+                    bookingId = booking.Id,
+                    status = newStatus.ToString()
+                };
+
+                await _notificationService.SendNotificationAsync(
+                    customerProfile.UserId,
+                    NotificationType.Booking,
+                    title,
+                    body!,
+                    $"/customer/bookings/{booking.Id}",
+                    meta,
+                    cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send booking status notification for booking {BookingId}", booking.Id);
+            }
         }
     }
 }

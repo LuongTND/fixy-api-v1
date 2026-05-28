@@ -4,6 +4,7 @@ using Application.DTOs.Voucher;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Voucher;
+using Application.Interfaces.Services;
 using AutoMapper;
 using Domain.Entity;
 using Domain.Enum;
@@ -21,6 +22,7 @@ namespace Infrastructure.Services.Vouchers
         private readonly IMapper _mapper;
         private readonly ILogger<VoucherService> _logger;
         private readonly ICurrentUserService _currentUserService;
+        private readonly INotificationService _notificationService;
 
         public VoucherService(
             IVoucherRepository voucherRepository,
@@ -30,7 +32,8 @@ namespace Infrastructure.Services.Vouchers
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ILogger<VoucherService> logger,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            INotificationService notificationService)
         {
             _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
             _usageHistoryRepository = usageHistoryRepository ?? throw new ArgumentNullException(nameof(usageHistoryRepository));
@@ -40,6 +43,7 @@ namespace Infrastructure.Services.Vouchers
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         }
 
         // =============================================
@@ -117,6 +121,18 @@ namespace Infrastructure.Services.Vouchers
 
             await _voucherRepository.AddAsync(voucher, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (voucher.Status == VoucherStatus.Active)
+            {
+                await _notificationService.SendPromoNotificationToAllCustomersAsync(
+                    title: $"Voucher mới dành cho bạn: {voucher.Code}",
+                    body: voucher.Description ?? $"Mã voucher '{voucher.Code}' giảm giá cực hời đã sẵn sàng. Sử dụng ngay khi đặt dịch vụ!",
+                    deepLink: "/customer/vouchers",
+                    meta: new { voucherId = voucher.Id, code = voucher.Code },
+                    voucherId: voucher.Id,
+                    cancellationToken: cancellationToken
+                );
+            }
 
             _logger.LogInformation("Voucher created. Code: {VoucherCode}, Id: {VoucherId}", voucher.Code, voucher.Id);
 
@@ -274,9 +290,22 @@ namespace Infrastructure.Services.Vouchers
                 return OperationResult<VoucherDto>.Failure("Voucher not found");
             }
 
+            var oldStatus = voucher.Status;
             voucher.Status = dto.Status;
             voucher.UpdatedDate = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (dto.Status == VoucherStatus.Active && oldStatus != VoucherStatus.Active)
+            {
+                await _notificationService.SendPromoNotificationToAllCustomersAsync(
+                    title: $"Voucher mới dành cho bạn: {voucher.Code}",
+                    body: voucher.Description ?? $"Mã voucher '{voucher.Code}' giảm giá cực hời đã sẵn sàng. Sử dụng ngay khi đặt dịch vụ!",
+                    deepLink: "/customer/vouchers",
+                    meta: new { voucherId = voucher.Id, code = voucher.Code },
+                    voucherId: voucher.Id,
+                    cancellationToken: cancellationToken
+                );
+            }
 
             _logger.LogInformation("Voucher status updated. Id: {VoucherId}, Status: {Status}", voucher.Id, dto.Status);
 

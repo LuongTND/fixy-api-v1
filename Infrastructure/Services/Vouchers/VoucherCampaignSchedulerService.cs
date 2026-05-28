@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
+using Application.Interfaces.Services;
 using Domain.Enum;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -62,11 +63,22 @@ namespace Infrastructure.Services.Vouchers
 
                 if (pendingCampaigns.Any())
                 {
+                    var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
                     foreach (var campaign in pendingCampaigns)
                     {
                         campaign.Status = CampaignStatus.Active;
                         campaignRepository.Update(campaign);
                         _logger.LogInformation("Voucher Campaign '{Name}' ({Id}) has been automatically ACTIVATED.", campaign.Name, campaign.Id);
+
+                        // Notify all customers about the new campaign
+                        await notificationService.SendPromoNotificationToAllCustomersAsync(
+                            title: $"Khuyến mãi mới: {campaign.Name}",
+                            body: campaign.Description ?? $"Chiến dịch khuyến mãi '{campaign.Name}' đã chính thức bắt đầu! Nhiều voucher hấp dẫn đang chờ bạn.",
+                            deepLink: "/customer/vouchers",
+                            meta: new { campaignId = campaign.Id },
+                            campaignId: campaign.Id,
+                            cancellationToken: cancellationToken
+                        );
                     }
                 }
 

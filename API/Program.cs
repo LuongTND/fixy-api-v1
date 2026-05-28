@@ -105,5 +105,6 @@ app.MapControllers();
 // Map SignalR Hubs
 app.MapHub<BookingHub>("/hubs/booking");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();

@@ -8,6 +8,7 @@ using Application.DTOs.VoucherCampaign;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Voucher;
+using Application.Interfaces.Services;
 using AutoMapper;
 using Domain.Entity;
 using Domain.Enum;
@@ -22,19 +23,22 @@ namespace Infrastructure.Services.Vouchers
         private readonly IMapper _mapper;
         private readonly ILogger<VoucherCampaignService> _logger;
         private readonly ICurrentUserService _currentUserService;
+        private readonly INotificationService _notificationService;
 
         public VoucherCampaignService(
             IVoucherCampaignRepository campaignRepository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ILogger<VoucherCampaignService> logger,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            INotificationService notificationService)
         {
             _campaignRepository = campaignRepository ?? throw new ArgumentNullException(nameof(campaignRepository));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         }
 
         public async Task<OperationResult<CampaignDto>> CreateAsync(CreateCampaignDto dto, CancellationToken cancellationToken = default)
@@ -47,6 +51,18 @@ namespace Infrastructure.Services.Vouchers
 
             await _campaignRepository.AddAsync(campaign, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (campaign.Status == CampaignStatus.Active)
+            {
+                await _notificationService.SendPromoNotificationToAllCustomersAsync(
+                    title: $"Khuyến mãi mới: {campaign.Name}",
+                    body: campaign.Description ?? $"Chiến dịch khuyến mãi '{campaign.Name}' đã chính thức bắt đầu! Nhiều voucher hấp dẫn đang chờ bạn.",
+                    deepLink: "/customer/vouchers",
+                    meta: new { campaignId = campaign.Id },
+                    campaignId: campaign.Id,
+                    cancellationToken: cancellationToken
+                );
+            }
 
             var result = _mapper.Map<CampaignDto>(campaign);
             return OperationResult<CampaignDto>.Success(result, "Voucher campaign created successfully");
@@ -111,8 +127,21 @@ namespace Infrastructure.Services.Vouchers
                 return OperationResult<CampaignDto>.Failure("Voucher campaign not found");
             }
 
+            var oldStatus = campaign.Status;
             campaign.Status = dto.Status;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (dto.Status == CampaignStatus.Active && oldStatus != CampaignStatus.Active)
+            {
+                await _notificationService.SendPromoNotificationToAllCustomersAsync(
+                    title: $"Khuyến mãi mới: {campaign.Name}",
+                    body: campaign.Description ?? $"Chiến dịch khuyến mãi '{campaign.Name}' đã chính thức bắt đầu! Nhiều voucher hấp dẫn đang chờ bạn.",
+                    deepLink: "/customer/vouchers",
+                    meta: new { campaignId = campaign.Id },
+                    campaignId: campaign.Id,
+                    cancellationToken: cancellationToken
+                );
+            }
 
             var result = _mapper.Map<CampaignDto>(campaign);
             return OperationResult<CampaignDto>.Success(result, $"Voucher campaign status updated to {dto.Status} successfully");
