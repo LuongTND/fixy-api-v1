@@ -45,6 +45,8 @@ namespace Infrastructure.Services
                         CreatedDate = x.CreatedDate,
 
                         Role = x.UserRoles.Select(r => r.Role?.Name).FirstOrDefault() ?? "Unknown",
+                        Gender = x.Gender.ToString(),
+                        AvatarUrl = x.AvatarUrl,
                     })
                     .ToList(),
 
