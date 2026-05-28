@@ -198,5 +198,56 @@ namespace Infrastructure.Services
                 }
             );
         }
+
+        public async Task<OperationResult> ActivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+
+            if (user == null)
+            {
+                return OperationResult.Failure("User not found");
+            }
+
+            if (user.IsActive)
+            {
+                return OperationResult.Failure("User already active");
+            }
+
+            user.IsActive = true;
+            _userRepository.Update(user);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult.Success("User activated successfully");
+        }
+
+        public async Task<OperationResult> DeactivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+
+            if (user == null)
+            {
+                return OperationResult.Failure("User not found");
+            }
+
+            if (!user.IsActive)
+            {
+                return OperationResult.Failure("User already inactive");
+            }
+
+            user.IsActive = false;
+
+            _userRepository.Update(user);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult.Success("User deactivated successfully");
+        }
     }
 }

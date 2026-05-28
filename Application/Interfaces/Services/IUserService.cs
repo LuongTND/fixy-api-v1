@@ -19,5 +19,14 @@ namespace Application.Interfaces.Services
             UpdateProfileRequestDto dto,
             CancellationToken cancellationToken
         );
+        Task<OperationResult> ActivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<OperationResult> DeactivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        );
     }
 }
