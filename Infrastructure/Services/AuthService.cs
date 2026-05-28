@@ -165,6 +165,8 @@ namespace Infrastructure.Services.Auth
 
             if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
                 return OperationResult<AuthResponseDto>.Failure("Invalid credentials");
+            if (!user.IsActive)
+                return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
 
             var roles = user.UserRoles.Select(x => x.Role!.Name).ToList();
 
@@ -237,7 +239,8 @@ namespace Infrastructure.Services.Auth
                     ct
                 );
             }
-
+            if (!user.IsActive)
+                return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
 
