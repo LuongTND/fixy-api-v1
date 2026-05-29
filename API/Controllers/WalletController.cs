@@ -1,12 +1,14 @@
 ﻿using Application.Common;
 using Application.Interfaces.Services;
 using Domain.Enum;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [Route("api/wallet")]
     [ApiController]
+    [Authorize]
     public class WalletController : ApiController
     {
         private readonly IWalletService _walletService;
@@ -38,6 +40,21 @@ namespace API.Controllers
                 GetUserId(),
                 GetUserRoles() == "CUSTOMER" ? WalletOwnerType.Customer : WalletOwnerType.Worker,
                 query,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [HttpPost("booking/{bookingId}/wallet")]
+        public async Task<IActionResult> PayBookingByWallet(
+            Guid bookingId,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _walletService.PayBookingAsync(
+                GetUserId(),
+                bookingId,
                 cancellationToken
             );
 

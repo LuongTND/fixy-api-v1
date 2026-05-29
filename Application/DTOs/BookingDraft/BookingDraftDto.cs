@@ -17,7 +17,7 @@ namespace Application.DTOs.BookingDraft
         public double? Lng { get; set; }
         public BookingScheduledType ScheduledType { get; set; }
         public DateTime? ScheduledAt { get; set; }
-        public Guid? WorkerId { get; set; }
+        public Guid? WorkerProfileId { get; set; }
         public bool AutoMatch { get; set; }
     }
 }

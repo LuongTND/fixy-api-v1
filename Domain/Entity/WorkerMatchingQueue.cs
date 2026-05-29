@@ -6,7 +6,7 @@ namespace Domain.Entity
     public class WorkerMatchingQueue : BaseEntity
     {
         public Guid BookingId { get; set; }
-        public Guid WorkerId { get; set; }
+        public Guid WorkerProfileId { get; set; }
         public int AttemptNo { get; set; } = 1;
         public MatchingStatus Status { get; set; }
         public double? DistanceKm { get; set; }

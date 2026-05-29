@@ -14,5 +14,6 @@ namespace Application.Interfaces.Repositories
             string otpCode,
             CancellationToken ct = default
         );
+        Task<UserOtp?> GetLatestOtpByTargetAsync(string target, CancellationToken ct);
     }
 }

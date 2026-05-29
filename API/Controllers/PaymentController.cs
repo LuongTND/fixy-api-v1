@@ -1,7 +1,8 @@
-﻿using Application.Interfaces.Services.Payment;
+﻿using System.Text.Json;
+using Application.DTOs.Payment;
+using Application.Interfaces.Services.Payment;
 using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
@@ -18,18 +19,16 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "CUSTOMER")]
-        [HttpPost("topup/vnpay")]
-        public async Task<IActionResult> CreateTopUpVnPay(
-            [FromBody] long amount,
+        [HttpPost("topup")]
+        public async Task<IActionResult> CreateTopUpPayment(
+            [FromBody] CreateTopupPaymentRequestDto request,
             CancellationToken cancellationToken
         )
         {
-            var userId = GetUserId();
-
             var result = await _paymentService.CreateTopUpPaymentUrlAsync(
-                userId,
-                amount,
-                PaymentMethod.Vnpay,
+                GetUserId(),
+                request.Amount,
+                request.Method,
                 cancellationToken
             );
 
@@ -37,30 +36,59 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "CUSTOMER")]
-        [HttpPost("topup/momo")]
-        public async Task<IActionResult> CreateTopUpMomo(
-            [FromBody] long amount,
+        [HttpPost("booking/{bookingId}")]
+        public async Task<IActionResult> CreateBookingPayment(
+            Guid bookingId,
+            [FromBody] CreateBookingPaymentRequestDto request,
             CancellationToken cancellationToken
         )
         {
-            var userId = GetUserId();
-
-            var result = await _paymentService.CreateTopUpPaymentUrlAsync(
-                userId,
-                amount,
-                PaymentMethod.Momo,
+            var result = await _paymentService.CreateBookingPaymentUrlAsync(
+                bookingId,
+                GetUserId(),
+                request.Method,
                 cancellationToken
             );
 
             return HandleResult(result);
         }
 
-        [HttpGet("vnpay-return")]
-        public async Task<IActionResult> VnPayReturn(CancellationToken cancellationToken)
+        [HttpGet("callback/vnpay")]
+        public async Task<IActionResult> HandleVnPayCallback(CancellationToken cancellationToken)
         {
             var response = Request.Query.ToDictionary(x => x.Key, x => x.Value.ToString());
-            var result = await _paymentService.HandleVnPayCallbackAsync(
+
+            var result = await _paymentService.HandleCallbackAsync(
+                PaymentMethod.Vnpay,
                 response,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [HttpGet("callback/momo")]
+        public async Task<IActionResult> HandleMoMoCallback(CancellationToken cancellationToken)
+        {
+            var response = Request.Query.ToDictionary(x => x.Key, x => x.Value.ToString());
+
+            var result = await _paymentService.HandleCallbackAsync(
+                PaymentMethod.Momo,
+                response,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [HttpPost("callback/payos")]
+        public async Task<IActionResult> HandlePayOSCallback(
+            [FromBody] PayOSCallbackDto callback,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _paymentService.HandlePayOSCallbackAsync(
+                callback,
                 cancellationToken
             );
 

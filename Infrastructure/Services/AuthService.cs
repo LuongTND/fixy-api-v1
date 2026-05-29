@@ -17,6 +17,7 @@ namespace Infrastructure.Services.Auth
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly ICustomerProfileRepository _customerProfileRepository;
         private readonly IUserOtpRepository _userOtpRepository;
         private readonly IRoleRepository _roleRepository;
         private readonly IUserRoleRepository _userRoleRepository;
@@ -31,6 +32,7 @@ namespace Infrastructure.Services.Auth
 
         public AuthService(
             IUserRepository userRepository,
+            ICustomerProfileRepository customerProfileRepository,
             IUserOtpRepository userOtpRepository,
             IRoleRepository roleRepository,
             IUserRoleRepository userRoleRepository,
@@ -44,6 +46,7 @@ namespace Infrastructure.Services.Auth
         )
         {
             _userRepository = userRepository;
+            _customerProfileRepository = customerProfileRepository;
             _userOtpRepository = userOtpRepository;
             _roleRepository = roleRepository;
             _userRoleRepository = userRoleRepository;
@@ -115,7 +118,13 @@ namespace Infrastructure.Services.Auth
                 },
                 ct
             );
-
+            if (request.RoleRegister == RoleRegister.Customer)
+            {
+                await _customerProfileRepository.AddAsync(
+                    new CustomerProfile { UserId = user.Id },
+                    ct
+                );
+            }
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
 
@@ -156,6 +165,8 @@ namespace Infrastructure.Services.Auth
 
             if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
                 return OperationResult<AuthResponseDto>.Failure("Invalid credentials");
+            if (!user.IsActive)
+                return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
 
             var roles = user.UserRoles.Select(x => x.Role!.Name).ToList();
 
@@ -228,7 +239,8 @@ namespace Infrastructure.Services.Auth
                     ct
                 );
             }
-
+            if (!user.IsActive)
+                return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
 

@@ -8,6 +8,16 @@ namespace Application.Interfaces.Services.Booking
     {
         Task<OperationResult<BookingDetailDto>> GetByIdAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
+        Task<OperationResult<PagedResponse<BookingDetailDto>>> GetWorkerBookingsAsync(
+            WorkerBookingsQuery query,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<OperationResult<PagedResponse<BookingDetailDto>>> GetCustomerBookingsAsync(
+            CustomerBookingsQuery query,
+            CancellationToken cancellationToken = default
+        );
+
         // Pending --> Confirmed
         Task<OperationResult> AcceptAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
@@ -33,5 +43,9 @@ namespace Application.Interfaces.Services.Booking
         Task<OperationResult> RespondProposalAsync(Guid bookingId, RespondProposalRequest request, CancellationToken cancellationToken = default);
 
         Task<OperationResult<SupportTicketDto>> ReportIssueAsync(Guid bookingId, ReportBookingIssueRequest request, CancellationToken cancellationToken = default);
+
+        Task<OperationResult> ConfirmPaymentAsync(Guid bookingId, CancellationToken cancellationToken = default);
+
+        Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(Guid bookingId, CancellationToken cancellationToken = default);
     }
 }

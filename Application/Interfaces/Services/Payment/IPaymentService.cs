@@ -1,23 +1,31 @@
 ﻿using Application.Common;
+using Application.DTOs.Payment;
+using Domain.Entity;
 using Domain.Enum;
 
 namespace Application.Interfaces.Services.Payment
 {
     public interface IPaymentService
     {
-        //Topup VNPAY
         Task<OperationResult<string>> CreateTopUpPaymentUrlAsync(
             Guid userId,
             long amount,
             PaymentMethod method,
             CancellationToken cancellationToken
         );
-        Task HandleMoMoReturnAsync(
+        Task<OperationResult<string>> CreateBookingPaymentUrlAsync(
+            Guid bookingId,
+            Guid userId,
+            PaymentMethod method,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult<bool>> HandleCallbackAsync(
+            PaymentMethod method,
             Dictionary<string, string> response,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<bool>> HandleVnPayCallbackAsync(
-            Dictionary<string, string> response,
+        Task<OperationResult<bool>> HandlePayOSCallbackAsync(
+            PayOSCallbackDto callback,
             CancellationToken cancellationToken
         );
     }

@@ -9,40 +9,46 @@ namespace Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<Booking> builder)
         {
             builder.HasKey(x => x.Id);
-            builder.Property(x => x.Description).IsRequired();
-            builder.Property(x => x.Address).IsRequired();
-            builder.Property(x => x.ScheduledType).HasConversion<string>();
+
+            // =========================
+            // Enum Conversion
+            // =========================
+
             builder.Property(x => x.Status).HasConversion<string>();
-            builder
-                .HasIndex(x => new
-                {
-                    x.CustomerId,
-                    x.Status,
-                    x.CreatedDate,
-                })
-                .HasDatabaseName("idx_booking_customer");
-            builder
-                .HasIndex(x => new { x.WorkerId, x.Status })
-                .HasDatabaseName("idx_booking_worker");
-            builder
-                .HasIndex(x => new { x.Status, x.ScheduledAt })
-                .HasDatabaseName("idx_booking_scheduled");
+
+            builder.Property(x => x.ScheduledType).HasConversion<string>();
+
+            // =========================
+            // Properties
+            // =========================
+
+            builder.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+
+            builder.Property(x => x.Address).HasMaxLength(500).IsRequired();
+
+            builder.Property(x => x.WorkerProposedNote).HasMaxLength(1000);
+
+            builder.Property(x => x.CancelReason).HasMaxLength(1000);
+
+            // =========================
+            // Relationships
+            // =========================
 
             builder
-                .HasOne(x => x.Customer)
+                .HasOne(x => x.CustomerProfile)
                 .WithMany(x => x.Bookings)
-                .HasForeignKey(x => x.CustomerId)
+                .HasForeignKey(x => x.CustomerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder
-                .HasOne(x => x.Worker)
+                .HasOne(x => x.WorkerProfile)
                 .WithMany(x => x.Bookings)
-                .HasForeignKey(x => x.WorkerId)
+                .HasForeignKey(x => x.WorkerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder
                 .HasOne(x => x.Category)
-                .WithMany(x => x.Bookings)
+                .WithMany()
                 .HasForeignKey(x => x.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -57,6 +63,24 @@ namespace Infrastructure.Persistence.Configurations
                 .WithMany(x => x.Reorders)
                 .HasForeignKey(x => x.ReorderFromId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // =========================
+            // Indexes
+            // =========================
+
+            builder
+                .HasIndex(x => new { x.CustomerProfileId, x.Status })
+                .HasDatabaseName("idx_booking_customer");
+
+            builder
+                .HasIndex(x => new { x.WorkerProfileId, x.Status })
+                .HasDatabaseName("idx_booking_worker");
+
+            builder.HasIndex(x => x.ScheduledAt).HasDatabaseName("idx_booking_schedule");
+
+            builder
+                .HasIndex(x => new { x.Status, x.CreatedDate })
+                .HasDatabaseName("idx_booking_status");
         }
     }
 }

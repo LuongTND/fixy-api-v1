@@ -11,6 +11,9 @@ namespace Application.DTOs.WorkerProfile
         public DateOnly? DateOfBirth { get; set; }
         public int ExperienceYears { get; set; }
         public double RatingAvg { get; set; }
+        public int TotalReviews { get; set; }
+        public int TotalOrders { get; set; }
+
         public string? Gender { get; set; }
         public string Status { get; set; } = string.Empty;
         public List<WorkerServiceDto> Services { get; set; } = new List<WorkerServiceDto>();

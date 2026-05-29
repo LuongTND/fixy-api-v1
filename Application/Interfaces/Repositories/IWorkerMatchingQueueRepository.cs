@@ -19,5 +19,10 @@ namespace Application.Interfaces.Repositories
         /// Get the next candidate worker in the queue for a booking (Status == Pending, ordered by Score descending).
         /// </summary>
         Task<WorkerMatchingQueue?> GetNextCandidateAsync(Guid bookingId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get all matching queue entries for a specific booking, ordered by score descending and distance ascending.
+        /// </summary>
+        Task<List<WorkerMatchingQueue>> GetQueueForBookingAsync(Guid bookingId, CancellationToken cancellationToken = default);
     }
 }

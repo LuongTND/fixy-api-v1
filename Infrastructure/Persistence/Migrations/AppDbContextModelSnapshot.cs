@@ -36,6 +36,9 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("CustomerProfileId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -59,7 +62,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Label")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<double?>("Lat")
                         .HasColumnType("float");
@@ -70,18 +74,22 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Ward")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("WorkerProfileId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "IsDefault")
-                        .HasDatabaseName("idx_addr_default");
+                    b.HasIndex("WorkerProfileId")
+                        .IsUnique()
+                        .HasFilter("[WorkerProfileId] IS NOT NULL");
+
+                    b.HasIndex("CustomerProfileId", "IsDefault")
+                        .HasDatabaseName("idx_customer_default_address");
 
                     b.ToTable("Addresses");
                 });
@@ -94,10 +102,12 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("CancelReason")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
@@ -117,7 +127,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CustomerId")
+                    b.Property<Guid>("CustomerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("DeletedBy")
@@ -128,7 +138,8 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<long?>("EstimatedPrice")
                         .HasColumnType("bigint");
@@ -155,6 +166,9 @@ namespace Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("ServiceCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -165,11 +179,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("WorkerId")
+                    b.Property<Guid?>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("WorkerProposedNote")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<long?>("WorkerProposedPrice")
                         .HasColumnType("bigint");
@@ -185,14 +200,19 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ReorderFromId");
 
-                    b.HasIndex("Status", "ScheduledAt")
-                        .HasDatabaseName("idx_booking_scheduled");
+                    b.HasIndex("ScheduledAt")
+                        .HasDatabaseName("idx_booking_schedule");
 
-                    b.HasIndex("WorkerId", "Status")
-                        .HasDatabaseName("idx_booking_worker");
+                    b.HasIndex("ServiceCategoryId");
 
-                    b.HasIndex("CustomerId", "Status", "CreatedDate")
+                    b.HasIndex("CustomerProfileId", "Status")
                         .HasDatabaseName("idx_booking_customer");
+
+                    b.HasIndex("Status", "CreatedDate")
+                        .HasDatabaseName("idx_booking_status");
+
+                    b.HasIndex("WorkerProfileId", "Status")
+                        .HasDatabaseName("idx_booking_worker");
 
                     b.ToTable("Bookings");
                 });
@@ -605,6 +625,9 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<long>("FinalAmount")
                         .HasColumnType("bigint");
 
+                    b.Property<long?>("GatewayOrderCode")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("GatewayRef")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -695,7 +718,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -707,7 +730,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("Status", "CreatedDate")
                         .HasDatabaseName("idx_payout_status");
 
-                    b.HasIndex("WorkerId", "Status", "CreatedDate")
+                    b.HasIndex("WorkerProfileId", "Status", "CreatedDate")
                         .HasDatabaseName("idx_payout_worker");
 
                     b.ToTable("PayoutRequests");
@@ -859,7 +882,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Comment")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
@@ -867,11 +891,13 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("CustomerId")
+                    b.Property<Guid>("CustomerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsVisible")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<int>("Rating")
                         .HasColumnType("int");
@@ -885,21 +911,26 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("WorkerReply")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId")
                         .IsUnique();
 
-                    b.HasIndex("CustomerId");
+                    b.HasIndex("IsVisible")
+                        .HasDatabaseName("idx_review_visible");
 
-                    b.HasIndex("WorkerId", "IsVisible", "CreatedDate")
-                        .HasDatabaseName("idx_review_worker");
+                    b.HasIndex("CustomerProfileId", "CreatedDate")
+                        .HasDatabaseName("idx_review_customer");
+
+                    b.HasIndex("WorkerProfileId", "Rating")
+                        .HasDatabaseName("idx_review_worker_rating");
 
                     b.ToTable("Reviews");
                 });
@@ -937,21 +968,21 @@ namespace Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("a1f7d8c1-3e21-4a8c-9b11-2d7f4c5e1001"),
-                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6139),
+                            CreatedDate = new DateTime(2026, 5, 27, 2, 42, 19, 748, DateTimeKind.Utc).AddTicks(1822),
                             IsActive = true,
                             Name = "ADMIN"
                         },
                         new
                         {
                             Id = new Guid("b2e8c9d2-4f32-4b9d-8c22-3e8f5d6f2002"),
-                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6142),
+                            CreatedDate = new DateTime(2026, 5, 27, 2, 42, 19, 748, DateTimeKind.Utc).AddTicks(1825),
                             IsActive = true,
                             Name = "CUSTOMER"
                         },
                         new
                         {
                             Id = new Guid("c3f9d0e3-5a43-4cad-9d33-4f9a6e7f3003"),
-                            CreatedDate = new DateTime(2026, 5, 15, 7, 49, 3, 443, DateTimeKind.Utc).AddTicks(6145),
+                            CreatedDate = new DateTime(2026, 5, 27, 2, 42, 19, 748, DateTimeKind.Utc).AddTicks(1826),
                             IsActive = true,
                             Name = "WORKER"
                         });
@@ -1125,6 +1156,10 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<DateTime?>("CitizenIdIssueDate")
                         .HasColumnType("datetime2");
 
@@ -1133,8 +1168,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("CitizenIdNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("CitizenIdVerifiedAt")
                         .HasColumnType("datetime2");
@@ -1157,12 +1192,12 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Gender")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1183,13 +1218,12 @@ namespace Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<int?>("OAuthProvider")
-                        .HasColumnType("int");
+                    b.Property<string>("OAuthProvider")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
@@ -1206,6 +1240,10 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CitizenIdNumber")
+                        .IsUnique()
+                        .HasFilter("[CitizenIdNumber] IS NOT NULL");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -1224,6 +1262,7 @@ namespace Infrastructure.Persistence.Migrations
                             CreatedDate = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "admin@fixy.com",
                             FullName = "System Admin",
+                            Gender = "Male",
                             IsActive = true,
                             IsCitizenIdVerified = false,
                             IsDeleted = false,
@@ -1325,12 +1364,13 @@ namespace Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("CategoryId")
+                    b.Property<Guid?>("CampaignId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uniqueidentifier");
@@ -1338,23 +1378,34 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<long?>("MaxDiscount")
                         .HasColumnType("bigint");
-
-                    b.Property<int?>("MaxUsage")
-                        .HasColumnType("int");
 
                     b.Property<long>("MinOrderValue")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -1363,25 +1414,187 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("UsedCount")
-                        .HasColumnType("int");
-
                     b.Property<long>("Value")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("CampaignId");
 
                     b.HasIndex("Code")
                         .IsUnique();
 
                     b.HasIndex("CreatedById");
 
-                    b.HasIndex("IsActive", "ExpiresAt")
-                        .HasDatabaseName("idx_voucher_active");
+                    b.HasIndex("Status", "ExpiresAt")
+                        .HasDatabaseName("idx_voucher_status");
 
                     b.ToTable("Vouchers");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherCampaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AutoTriggerEvent")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("BudgetLimit")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("BudgetUsed")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VoucherCampaigns");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherQuota", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("MaxUsage")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxUsagePerUser")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VoucherId")
+                        .IsUnique();
+
+                    b.ToTable("VoucherQuotas");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherRestriction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VoucherId", "Type")
+                        .HasDatabaseName("idx_restriction_voucher_type");
+
+                    b.ToTable("VoucherRestrictions");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherUsageHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("BookingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("DiscountAmount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FailReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VoucherId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId")
+                        .HasDatabaseName("idx_usage_booking");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("VoucherId", "UserId")
+                        .HasDatabaseName("idx_usage_voucher_user");
+
+                    b.ToTable("VoucherUsageHistories");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerCertificate", b =>
@@ -1565,7 +1778,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -1576,7 +1789,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("BookingId", "Status")
                         .HasDatabaseName("idx_mq_booking");
 
-                    b.HasIndex("WorkerId", "Status", "OfferedAt")
+                    b.HasIndex("WorkerProfileId", "Status", "OfferedAt")
                         .HasDatabaseName("idx_mq_worker");
 
                     b.ToTable("WorkerMatchingQueues");
@@ -1618,12 +1831,12 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<Guid>("WorkerProfileId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId", "IsDefault")
+                    b.HasIndex("WorkerProfileId", "IsDefault")
                         .HasDatabaseName("idx_payout_acct_worker");
 
                     b.ToTable("WorkerPayoutAccounts");
@@ -1646,7 +1859,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Bio")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -1658,7 +1872,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("float");
 
                     b.Property<int>("ExperienceYears")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("FeaturedPackage")
                         .HasColumnType("nvarchar(max)");
@@ -1667,22 +1883,33 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsAcceptingJobs")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsBusy")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsOnline")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<DateTime?>("LastLocationAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("MaxDistanceKm")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(10);
 
                     b.Property<double>("RatingAvg")
-                        .HasColumnType("float");
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(4, 2)
+                        .HasColumnType("float(4)")
+                        .HasDefaultValue(0.0);
 
                     b.Property<string>("RejectReason")
                         .HasColumnType("nvarchar(max)");
@@ -1692,7 +1919,14 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("TotalOrders")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("TotalReviews")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
@@ -1710,11 +1944,11 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("Status", "IsOnline")
-                        .HasDatabaseName("idx_worker_available");
-
                     b.HasIndex("Status", "RatingAvg")
                         .HasDatabaseName("idx_worker_search");
+
+                    b.HasIndex("Status", "IsOnline", "IsAcceptingJobs")
+                        .HasDatabaseName("idx_worker_available");
 
                     b.ToTable("WorkerProfiles");
                 });
@@ -1918,6 +2152,15 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<string>("ExternalTransactionId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<Guid?>("PaymentOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PayoutRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("PlatformFee")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("ReferenceId")
                         .HasColumnType("nvarchar(450)");
 
@@ -1935,7 +2178,13 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalTransactionId");
+                    b.HasIndex("ExternalTransactionId")
+                        .IsUnique()
+                        .HasFilter("[ExternalTransactionId] IS NOT NULL");
+
+                    b.HasIndex("PaymentOrderId");
+
+                    b.HasIndex("PayoutRequestId");
 
                     b.HasIndex("ReferenceId");
 
@@ -1946,13 +2195,19 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.Address", b =>
                 {
-                    b.HasOne("Domain.Entity.User", "User")
+                    b.HasOne("Domain.Entity.CustomerProfile", "CustomerProfile")
                         .WithMany("Addresses")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CustomerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.Navigation("User");
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                        .WithOne("Address")
+                        .HasForeignKey("Domain.Entity.Address", "WorkerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("CustomerProfile");
+
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.Booking", b =>
@@ -1963,14 +2218,14 @@ namespace Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entity.ServiceCategory", "Category")
-                        .WithMany("Bookings")
+                        .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entity.User", "Customer")
+                    b.HasOne("Domain.Entity.CustomerProfile", "CustomerProfile")
                         .WithMany("Bookings")
-                        .HasForeignKey("CustomerId")
+                        .HasForeignKey("CustomerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1979,20 +2234,24 @@ namespace Infrastructure.Persistence.Migrations
                         .HasForeignKey("ReorderFromId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
+                    b.HasOne("Domain.Entity.ServiceCategory", null)
                         .WithMany("Bookings")
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("ServiceCategoryId");
+
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
+                        .WithMany("Bookings")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CancelledBy");
 
                     b.Navigation("Category");
 
-                    b.Navigation("Customer");
+                    b.Navigation("CustomerProfile");
 
                     b.Navigation("ReorderFrom");
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.BookingVoucher", b =>
@@ -2038,7 +2297,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.User", "User")
                         .WithOne("CustomerProfile")
                         .HasForeignKey("Domain.Entity.CustomerProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2088,7 +2347,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.User", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2099,7 +2358,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.User", "User")
                         .WithOne("NotificationSetting")
                         .HasForeignKey("Domain.Entity.NotificationSetting", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -2136,9 +2395,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasForeignKey("ReviewedById")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
                         .WithMany()
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2146,7 +2405,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Navigation("ReviewedBy");
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.PlatformConfig", b =>
@@ -2170,7 +2429,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.User", "User")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ReplacedBy");
@@ -2183,26 +2442,26 @@ namespace Infrastructure.Persistence.Migrations
                     b.HasOne("Domain.Entity.Booking", "Booking")
                         .WithOne("Review")
                         .HasForeignKey("Domain.Entity.Review", "BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entity.CustomerProfile", "CustomerProfile")
+                        .WithMany("Reviews")
+                        .HasForeignKey("CustomerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entity.CustomerProfile", "Customer")
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
                         .WithMany("Reviews")
-                        .HasForeignKey("CustomerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
-                        .WithMany("Reviews")
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Booking");
 
-                    b.Navigation("Customer");
+                    b.Navigation("CustomerProfile");
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.RolePermission", b =>
@@ -2312,10 +2571,10 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
                 {
-                    b.HasOne("Domain.Entity.ServiceCategory", "Category")
+                    b.HasOne("Domain.Entity.VoucherCampaign", "Campaign")
                         .WithMany("Vouchers")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Domain.Entity.User", "CreatedBy")
                         .WithMany()
@@ -2323,9 +2582,57 @@ namespace Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Category");
+                    b.Navigation("Campaign");
 
                     b.Navigation("CreatedBy");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherQuota", b =>
+                {
+                    b.HasOne("Domain.Entity.Voucher", "Voucher")
+                        .WithOne("Quota")
+                        .HasForeignKey("Domain.Entity.VoucherQuota", "VoucherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Voucher");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherRestriction", b =>
+                {
+                    b.HasOne("Domain.Entity.Voucher", "Voucher")
+                        .WithMany("Restrictions")
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Voucher");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherUsageHistory", b =>
+                {
+                    b.HasOne("Domain.Entity.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entity.Voucher", "Voucher")
+                        .WithMany("UsageHistories")
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("User");
+
+                    b.Navigation("Voucher");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerCertificate", b =>
@@ -2394,7 +2701,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasOne("Domain.Entity.WorkerProfile", "Worker")
                         .WithMany()
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2405,13 +2712,13 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.WorkerPayoutAccount", b =>
                 {
-                    b.HasOne("Domain.Entity.WorkerProfile", "Worker")
+                    b.HasOne("Domain.Entity.WorkerProfile", "WorkerProfile")
                         .WithMany("PayoutAccounts")
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("WorkerProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Worker");
+                    b.Navigation("WorkerProfile");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerProfile", b =>
@@ -2486,11 +2793,25 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("WalletTransaction", b =>
                 {
+                    b.HasOne("Domain.Entity.PaymentOrder", "PaymentOrder")
+                        .WithMany("WalletTransactions")
+                        .HasForeignKey("PaymentOrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Domain.Entity.PayoutRequest", "PayoutRequest")
+                        .WithMany("WalletTransactions")
+                        .HasForeignKey("PayoutRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Wallet", "Wallet")
                         .WithMany("Transactions")
                         .HasForeignKey("WalletId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("PaymentOrder");
+
+                    b.Navigation("PayoutRequest");
 
                     b.Navigation("Wallet");
                 });
@@ -2518,6 +2839,10 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.CustomerProfile", b =>
                 {
+                    b.Navigation("Addresses");
+
+                    b.Navigation("Bookings");
+
                     b.Navigation("Reviews");
                 });
 
@@ -2525,11 +2850,15 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Invoice");
 
+                    b.Navigation("WalletTransactions");
+
                     b.Navigation("WorkerEarning");
                 });
 
             modelBuilder.Entity("Domain.Entity.PayoutRequest", b =>
                 {
+                    b.Navigation("WalletTransactions");
+
                     b.Navigation("WorkerEarnings");
                 });
 
@@ -2551,8 +2880,6 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.Navigation("Children");
 
-                    b.Navigation("Vouchers");
-
                     b.Navigation("WorkerServices");
                 });
 
@@ -2563,10 +2890,6 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.User", b =>
                 {
-                    b.Navigation("Addresses");
-
-                    b.Navigation("Bookings");
-
                     b.Navigation("CustomerProfile");
 
                     b.Navigation("NotificationSetting");
@@ -2587,6 +2910,17 @@ namespace Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Domain.Entity.Voucher", b =>
                 {
                     b.Navigation("BookingVouchers");
+
+                    b.Navigation("Quota");
+
+                    b.Navigation("Restrictions");
+
+                    b.Navigation("UsageHistories");
+                });
+
+            modelBuilder.Entity("Domain.Entity.VoucherCampaign", b =>
+                {
+                    b.Navigation("Vouchers");
                 });
 
             modelBuilder.Entity("Domain.Entity.WorkerPayoutAccount", b =>
@@ -2596,6 +2930,8 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Entity.WorkerProfile", b =>
                 {
+                    b.Navigation("Address");
+
                     b.Navigation("Bookings");
 
                     b.Navigation("Certificates");

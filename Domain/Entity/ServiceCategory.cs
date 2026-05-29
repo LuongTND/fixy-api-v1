@@ -19,6 +19,5 @@ namespace Domain.Entity
         public ICollection<ServiceCategory> Children { get; set; } = new List<ServiceCategory>();
         public ICollection<WorkerService> WorkerServices { get; set; } = new List<WorkerService>();
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
-        public ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
     }
 }

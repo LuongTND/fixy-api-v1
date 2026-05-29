@@ -20,7 +20,7 @@ namespace Domain.Entity
         public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
         public PaymentOrderType Type { get; set; }
-
+        public long? GatewayOrderCode { get; set; }
         public string? GatewayRef { get; set; }
 
         public string? GatewayResponse { get; set; }
@@ -38,5 +38,7 @@ namespace Domain.Entity
         public Invoice? Invoice { get; set; }
 
         public WorkerEarning? WorkerEarning { get; set; }
+        public ICollection<WalletTransaction> WalletTransactions { get; set; } =
+            new List<WalletTransaction>();
     }
 }

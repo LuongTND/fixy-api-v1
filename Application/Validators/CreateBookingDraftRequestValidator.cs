@@ -8,11 +8,9 @@ namespace Application.Validators
     {
         public CreateBookingDraftRequestValidator()
         {
-            RuleFor(x => x.CategoryId)
-                .NotEmpty();
+            RuleFor(x => x.CategoryId).NotEmpty();
 
-            RuleFor(x => x.Description)
-                .NotEmpty();
+            RuleFor(x => x.Description).NotEmpty();
 
             RuleFor(x => x.MediaIds)
                 .Must(list => list.Count <= 5)
@@ -24,13 +22,12 @@ namespace Application.Validators
 
             RuleFor(x => x)
                 .Must(x =>
-                    x.AddressId.HasValue ||
-                    (!string.IsNullOrWhiteSpace(x.Address) && x.Lat.HasValue && x.Lng.HasValue))
-                    .WithMessage("Address information is required");
+                    x.AddressId.HasValue
+                    || (!string.IsNullOrWhiteSpace(x.Address) && x.Lat.HasValue && x.Lng.HasValue)
+                )
+                .WithMessage("Address information is required");
 
-            RuleFor(x => x.WorkerId)
-                .NotEmpty()
-                .When(x => !x.AutoMatch);
+            RuleFor(x => x.WorkerProfileId).NotEmpty().When(x => !x.AutoMatch);
         }
     }
 }

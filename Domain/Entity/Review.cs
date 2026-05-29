@@ -4,17 +4,46 @@ namespace Domain.Entity
 {
     public class Review : BaseAuditableEntity
     {
+        // =========================
+        // Ownership
+        // =========================
+
         public Guid BookingId { get; set; }
-        public Guid CustomerId { get; set; }
-        public Guid WorkerId { get; set; }
+
+        public Guid CustomerProfileId { get; set; }
+
+        public Guid WorkerProfileId { get; set; }
+
+        // =========================
+        // Review Content
+        // =========================
+
         public int Rating { get; set; }
+
         public string? Comment { get; set; }
+
+        // =========================
+        // Worker Reply
+        // =========================
+
         public string? WorkerReply { get; set; }
+
         public DateTime? RepliedAt { get; set; }
+
+        // =========================
+        // Visibility
+        // =========================
+
         public bool IsVisible { get; set; } = true;
 
+        // =========================
+        // Navigation
+        // =========================
+
         public Booking? Booking { get; set; }
-        public CustomerProfile? Customer { get; set; }
-        public WorkerProfile? Worker { get; set; }
+
+        public CustomerProfile? CustomerProfile { get; set; }
+
+        public WorkerProfile? WorkerProfile { get; set; }
     }
 }

@@ -12,7 +12,9 @@ obj/
 .vscode/
 
 # Logs
-*.log
+logs/
+logs/*.log
+logs/errors/*.log
 
 # App settings
 appsettings.json

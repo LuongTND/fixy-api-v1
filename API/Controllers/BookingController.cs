@@ -84,6 +84,14 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "CUSTOMER, ADMIN")]
+        [HttpGet("{id:guid}/matching-queue")]
+        public async Task<IActionResult> GetMatchingQueue(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetMatchingQueueAsync(id, cancellationToken);
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "WORKER")]
         // Worker declines the booking with a reason. Triggers re-routing to next worker.
         [HttpPost("{id:guid}/decline")]
@@ -116,6 +124,22 @@ namespace API.Controllers
         public async Task<IActionResult> ReportIssue(Guid id, [FromBody] ReportBookingIssueRequest request, CancellationToken cancellationToken)
         {
             var result = await _bookingService.ReportIssueAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "CUSTOMER")]
+        [HttpGet]
+        public async Task<IActionResult> GetCustomerBookings([FromQuery] CustomerBookingsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetCustomerBookingsAsync(query, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpGet("worker")]
+        public async Task<IActionResult> GetWorkerBookings([FromQuery] WorkerBookingsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetWorkerBookingsAsync(query, cancellationToken);
             return HandleResult(result);
         }
     }

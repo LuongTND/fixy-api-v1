@@ -12,11 +12,14 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.Method).HasConversion<string>();
             builder.Property(x => x.AccountNumber).IsRequired();
             builder.Property(x => x.AccountName).IsRequired();
-            builder.HasIndex(x => new { x.WorkerId, x.IsDefault }).HasDatabaseName("idx_payout_acct_worker");
+            builder
+                .HasIndex(x => new { x.WorkerProfileId, x.IsDefault })
+                .HasDatabaseName("idx_payout_acct_worker");
 
-            builder.HasOne(x => x.Worker)
+            builder
+                .HasOne(x => x.WorkerProfile)
                 .WithMany(x => x.PayoutAccounts)
-                .HasForeignKey(x => x.WorkerId)
+                .HasForeignKey(x => x.WorkerProfileId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

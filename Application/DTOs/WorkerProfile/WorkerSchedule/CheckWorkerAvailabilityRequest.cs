@@ -1,4 +1,4 @@
-﻿namespace Application.DTOs.WorkerProfile
+﻿namespace Application.DTOs.WorkerProfile.WorkerSchedule
 {
     public class CheckWorkerAvailabilityRequest
     {

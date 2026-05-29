@@ -8,10 +8,44 @@ using FluentValidation.AspNetCore;
 using Infrastructure;
 using Infrastructure.Hubs;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 Env.Load();
 builder.Configuration.AddEnvironmentVariables();
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "FIXY.API")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+    )
+    .WriteTo.File(
+        path: "logs/fixy-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}",
+        shared: true
+    )
+    .WriteTo.File(
+        path: "logs/errors/fixy-error-.log",
+        rollingInterval: RollingInterval.Day,
+        restrictedToMinimumLevel: LogEventLevel.Error,
+        retainedFileCountLimit: 90,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"
+    )
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -104,5 +138,8 @@ app.MapControllers();
 
 // Map SignalR Hubs
 app.MapHub<BookingHub>("/hubs/booking");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<SupportHub>("/hubs/support");
 
 app.Run();

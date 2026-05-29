@@ -1,3 +1,4 @@
+using Application.DTOs.Media;
 using Domain.Enum;
 
 namespace Application.DTOs.Booking
@@ -5,8 +6,10 @@ namespace Application.DTOs.Booking
     public class BookingDetailDto
     {
         public Guid Id { get; set; }
-        public Guid CustomerId { get; set; }
-        public Guid? WorkerId { get; set; }
+        public Guid CustomerProfileId { get; set; }
+        public Guid? WorkerProfileId { get; set; }
+        public string? WorkerName { get; set; }
+        public string? WorkerPhone { get; set; }
         public Guid CategoryId { get; set; }
         public string Description { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
@@ -25,5 +28,8 @@ namespace Application.DTOs.Booking
         public string? WorkerProposedNote { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
+        public List<MediaDto> RequestImages { get; set; } = new List<MediaDto>();
+
+        public List<MediaDto> CompleteImages { get; set; } = new List<MediaDto>();
     }
 }

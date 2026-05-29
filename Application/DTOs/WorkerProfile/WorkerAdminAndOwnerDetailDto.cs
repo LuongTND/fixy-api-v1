@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Media;
+﻿using Application.DTOs.Address;
+using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.DTOs.WorkerProfile.WorkerService;
 using Domain.Enum;
@@ -23,7 +24,9 @@ public class WorkerAdminAndOwnerDetailDto
     public string? Bio { get; set; }
 
     public int ExperienceYears { get; set; }
-
+    public double RatingAvg { get; set; }
+    public int TotalReviews { get; set; }
+    public int TotalOrders { get; set; }
     public double MaxDistanceKm { get; set; }
 
     public string? CitizenIdNumber { get; set; }
@@ -33,6 +36,7 @@ public class WorkerAdminAndOwnerDetailDto
     public DateTime? CitizenIdIssueDate { get; set; }
 
     public string? RejectReason { get; set; }
+    public AddressDto? Address { get; set; } = new();
 
     public List<WorkerServiceDto> Services { get; set; } = [];
 

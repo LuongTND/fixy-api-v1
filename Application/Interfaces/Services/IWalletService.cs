@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Wallet;
 using Domain.Entity;
 using Domain.Enum;
@@ -19,28 +19,33 @@ namespace Application.Interfaces.Services
             PagedQuery query,
             CancellationToken cancellationToken
         );
-        Task<OperationResult<WalletTransaction>> TopUpAsync(
+        Task<OperationResult> TopUpAsync(
             Guid userId,
             long amount,
             string externalId,
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult<WalletTransaction>> PayAsync(
+        Task<OperationResult<WalletTransactionDto>> PayBookingAsync(
+            Guid userId,
+            Guid bookingId,
+            CancellationToken cancellationToken
+        );
+        Task<OperationResult<WalletTransactionDto>> RefundAsync(
             Guid walletId,
             long amount,
             string referenceId,
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult<WalletTransaction>> RefundAsync(
-            Guid walletId,
+        Task<OperationResult<WalletTransactionDto>> AddWorkerIncomeAsync(
+            Guid workerId,
+            Guid paymentOrderId,
             long amount,
-            string referenceId,
             CancellationToken cancellationToken
         );
 
-        Task<OperationResult<WalletTransaction>> WithdrawAsync(
+        Task<OperationResult<WalletTransactionDto>> WithdrawAsync(
             Guid walletId,
             long amount,
             string referenceId,

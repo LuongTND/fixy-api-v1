@@ -1,10 +1,15 @@
 ﻿using Application.Common;
 using Application.DTOs.Profile;
+using Application.DTOs.User;
 
 namespace Application.Interfaces.Services
 {
     public interface IUserService
     {
+        Task<OperationResult<PagedResponse<UserManagementDto>>> GetUsersAsync(
+            UserManagementQuery query,
+            CancellationToken cancellationToken = default
+        );
         Task<OperationResult<ProfileDto>> GetProfileAsync(
             Guid userId,
             CancellationToken cancellationToken
@@ -13,6 +18,15 @@ namespace Application.Interfaces.Services
             Guid userId,
             UpdateProfileRequestDto dto,
             CancellationToken cancellationToken
+        );
+        Task<OperationResult> ActivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<OperationResult> DeactivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
         );
     }
 }
