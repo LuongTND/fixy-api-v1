@@ -140,5 +140,6 @@ app.MapControllers();
 app.MapHub<BookingHub>("/hubs/booking");
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<SupportHub>("/hubs/support");
 
 app.Run();

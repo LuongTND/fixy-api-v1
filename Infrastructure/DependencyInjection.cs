@@ -32,6 +32,7 @@ using Infrastructure.Services.Notifications;
 using Infrastructure.Services.ServiceCategories;
 using Infrastructure.Services.Vouchers;
 using Infrastructure.Services.Worker;
+using Infrastructure.Services.Support;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -191,6 +192,8 @@ namespace Infrastructure
             services.AddScoped<IVoucherService, VoucherService>();
             services.AddScoped<IVoucherCampaignService, VoucherCampaignService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<ISupportTicketService, SupportTicketService>();
+            services.AddScoped<ISupportHubService, SupportHubService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
