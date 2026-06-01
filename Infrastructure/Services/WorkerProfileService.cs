@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Address;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile;
@@ -954,6 +954,57 @@ namespace Infrastructure.Services
 
                 throw;
             }
+        }
+
+        public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> SearchWorkersForCustomerAsync(
+            CustomerWorkerSearchQuery query,
+            CancellationToken cancellationToken
+        )
+        {
+            var (items, distances, totalCount) =
+                await _workerProfileRepository.SearchWorkersForCustomerAsync(
+                    query,
+                    cancellationToken
+                );
+
+            var dtoItems = new List<WorkerProfileDto>();
+            for (int i = 0; i < items.Count; i++)
+            {
+                var worker = items[i];
+                var distance = distances[i];
+
+                dtoItems.Add(new WorkerProfileDto
+                {
+                    Id = worker.Id,
+                    UserId = worker.UserId,
+                    FullName = worker.User?.FullName ?? string.Empty,
+                    AvatarUrl = worker.User?.AvatarUrl,
+                    DateOfBirth = worker.User?.DateOfBirth,
+                    Gender = worker.User?.Gender.ToString(),
+                    Status = worker.Status.ToString(),
+                    ExperienceYears = worker.ExperienceYears,
+                    RatingAvg = worker.RatingAvg,
+                    TotalReviews = worker.TotalReviews,
+                    TotalOrders = worker.TotalOrders,
+                    IsOnline = worker.IsOnline,
+                    IsBusy = worker.IsBusy,
+                    DistanceKm = distance.HasValue ? Math.Round(distance.Value, 2) : null,
+                    City = worker.Address?.City,
+                    District = worker.Address?.District,
+                    Services = worker.Services.Select(MapWorkerService).ToList(),
+                });
+            }
+
+            return OperationResult<PagedResponse<WorkerProfileDto>>.Success(
+                new PagedResponse<WorkerProfileDto>
+                {
+                    Items = dtoItems,
+                    PageNumber = query.PageNumber,
+                    PageSize = query.PageSize,
+                    TotalCount = totalCount,
+                },
+                "Search workers successfully"
+            );
         }
 
         //Private method

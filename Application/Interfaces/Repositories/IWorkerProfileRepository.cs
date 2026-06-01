@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.WorkerProfile;
 using Domain.Entity;
 
@@ -17,6 +17,11 @@ namespace Application.Interfaces.Repositories
         Task<WorkerProfile?> GetWorkerProfileDetailByUserIdAsync(
             Guid userId,
             CancellationToken cancellationToken = default
+        );
+
+        Task<(List<WorkerProfile> Items, List<double?> Distances, int TotalCount)> SearchWorkersForCustomerAsync(
+            CustomerWorkerSearchQuery query,
+            CancellationToken cancellationToken
         );
     }
 }
