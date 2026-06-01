@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.WorkerProfile;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 
@@ -63,6 +63,11 @@ namespace Application.Interfaces.Services
         Task<OperationResult> UpdateCentificatesAsync(
             Guid workerId,
             List<WorkerCertificateUploadRequestDto> dto,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult<PagedResponse<WorkerProfileDto>>> SearchWorkersForCustomerAsync(
+            CustomerWorkerSearchQuery query,
             CancellationToken cancellationToken
         );
     }
