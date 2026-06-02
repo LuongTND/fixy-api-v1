@@ -5,7 +5,6 @@ using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entity;
 using Domain.Enum;
-using Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
@@ -102,8 +101,6 @@ namespace Infrastructure.Services
                 // HOLD MONEY
                 wallet.Balance -= amount;
 
-                wallet.LifetimeSpent += amount;
-
                 var request = new PayoutRequest
                 {
                     WorkerProfileId = workerProfile.Id,
@@ -190,6 +187,18 @@ namespace Infrastructure.Services
             {
                 return OperationResult.Failure("Payout request already processed");
             }
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                request.WorkerProfile!.UserId,
+                WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null)
+            {
+                return OperationResult.Failure("Wallet not found");
+            }
+            wallet.LifetimeSpent += request.Amount;
+            _walletRepository.Update(wallet);
 
             var tx = request.WalletTransactions.FirstOrDefault(x =>
                 x.Type == WalletTransactionType.Withdrawal
