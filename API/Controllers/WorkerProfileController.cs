@@ -152,7 +152,7 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "WORKER")]
-        [HttpPut("me")]
+        [HttpPatch("me")]
         public async Task<IActionResult> UpdateProfile(
             [FromForm] WorkerProfileUpdateRequestDto dto,
             CancellationToken cancellationToken
