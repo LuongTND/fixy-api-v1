@@ -1,3 +1,4 @@
+using API.Extensions;
 using API.Middlewares;
 using API.Services;
 using Application;
@@ -117,6 +118,9 @@ builder.Services.AddCors(options =>
         }
     );
 });
+
+// Add Rate Limiting
+builder.Services.AddCustomRateLimiter();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
@@ -131,6 +135,8 @@ app.UseHttpsRedirection();
 // Exception handling middleware
 app.UseExceptionMiddleware();
 app.UseCors("AllowReactApp");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
