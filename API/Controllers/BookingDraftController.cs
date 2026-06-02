@@ -2,6 +2,7 @@ using Application.DTOs.BookingDraft;
 using Application.Interfaces.Services.Booking;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace API.Controllers
 {
@@ -18,6 +19,7 @@ namespace API.Controllers
         }
 
         [HttpPost]
+        [EnableRateLimiting("BookingDraftPolicy")]
         public async Task<IActionResult> Create([FromBody] CreateBookingDraftRequest request,CancellationToken cancellationToken)
         {
             var result = await _bookingDraftService.CreateAsync(request, cancellationToken);
