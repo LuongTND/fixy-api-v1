@@ -28,6 +28,14 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "CUSTOMER, WORKER")]
+        [HttpPost("{id:guid}/cancel")]
+        public async Task<IActionResult> Cancel(Guid id, [FromBody] CancelBookingRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.CancelAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "WORKER")]
         // Worker accepts the booking. Pending -> Confirmed.
         [HttpPost("{id:guid}/accept")]
