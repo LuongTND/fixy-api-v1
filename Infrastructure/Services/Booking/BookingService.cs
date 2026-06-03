@@ -898,6 +898,7 @@ namespace Infrastructure.Services.Booking
             {
                 var customerValidStates = new[]
                 {
+                    BookingStatus.Matching,
                     BookingStatus.Pending,
                     BookingStatus.PendingPayment,
                     BookingStatus.Confirmed
@@ -911,7 +912,7 @@ namespace Infrastructure.Services.Booking
             else if (isWorker)
             {
                 // Worker chỉ được phép hủy lịch hẹn khi ở trạng thái Pending
-                if (booking.Status != BookingStatus.Pending)
+                if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Matching)
                 {
                     return OperationResult.Failure($"Thợ sửa chữa không thể hủy lịch hẹn ở trạng thái hiện tại: {booking.Status}");
                 }
