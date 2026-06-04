@@ -133,6 +133,63 @@ namespace Infrastructure.Repositories
             return (items, totalCount);
         }
 
+        public async Task<(List<Booking> Items, int TotalCount)> GetAllBookingsAsync(
+            AllBookingsQuery query,
+            CancellationToken ct = default
+        )
+        {
+            var dbQuery = _dbSet
+                .AsNoTracking()
+                .Include(x => x.CustomerProfile)
+                    .ThenInclude(x => x!.User)
+                .Include(x => x.WorkerProfile)
+                    .ThenInclude(x => x!.User)
+                .AsQueryable();
+
+            if (query.Status.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.Status == query.Status.Value);
+            }
+
+            if (query.CustomerProfileId.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.CustomerProfileId == query.CustomerProfileId.Value);
+            }
+
+            if (query.WorkerProfileId.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.WorkerProfileId == query.WorkerProfileId.Value);
+            }
+
+            if (query.FromDate.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.CreatedDate >= query.FromDate.Value);
+            }
+
+            if (query.ToDate.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.CreatedDate <= query.ToDate.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+            {
+                var search = query.SearchTerm.Trim().ToLower();
+                dbQuery = dbQuery.Where(x =>
+                    x.Description.ToLower().Contains(search) || x.Address.ToLower().Contains(search)
+                );
+            }
+
+            var totalCount = await dbQuery.CountAsync(ct);
+
+            var items = await dbQuery
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((query.PageNumber - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync(ct);
+
+            return (items, totalCount);
+        }
+
         public async Task LoadWorkerAndPaymentOrderAsync(
             Booking booking,
             CancellationToken cancellationToken = default
