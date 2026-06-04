@@ -687,6 +687,32 @@ namespace Infrastructure.Services.Booking
             );
         }
 
+        public async Task<OperationResult<PagedResponse<BookingDetailDto>>> GetAllBookingsAsync(
+            AllBookingsQuery query,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var (items, totalCount) = await _bookingRepository.GetAllBookingsAsync(
+                query,
+                cancellationToken
+            );
+
+            var dtos = _mapper.Map<List<BookingDetailDto>>(items);
+
+            var response = new PagedResponse<BookingDetailDto>
+            {
+                Items = dtos,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount,
+            };
+
+            return OperationResult<PagedResponse<BookingDetailDto>>.Success(
+                response,
+                "All bookings retrieved successfully"
+            );
+        }
+
         public async Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default
