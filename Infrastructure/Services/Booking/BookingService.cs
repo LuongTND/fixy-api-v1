@@ -338,38 +338,45 @@ namespace Infrastructure.Services.Booking
                         {
                             _logger.LogWarning("WorkerProfile is null for Booking {BookingId}", bookingId);
                         }
-                        else if (booking.PaymentOrder == null)
-                        {
-                            _logger.LogWarning("PaymentOrder is null for Booking {BookingId}", bookingId);
-                        }
                         else
                         {
-                            if (booking.PaymentOrder.Status == PaymentStatus.Paid)
+                            // Increase the number of completed orders for the worker
+                            booking.WorkerProfile.TotalOrders += 1;
+                            _workerProfileRepository.Update(booking.WorkerProfile);
+
+                            if (booking.PaymentOrder == null)
                             {
-                                var workerUserId = booking.WorkerProfile.UserId;
-                                var paymentOrderId = booking.PaymentOrder.Id;
-                                var amount = booking.PaymentOrder.FinalAmount;
-
-                                var walletService = _serviceProvider.GetRequiredService<IWalletService>();
-                                var result = await walletService.AddWorkerIncomeAsync(
-                                    workerUserId,
-                                    paymentOrderId,
-                                    amount,
-                                    cancellationToken
-                                );
-
-                                if (result.IsSuccess)
-                                {
-                                    _logger.LogInformation("Successfully added income to worker wallet for Booking {BookingId}", bookingId);
-                                }
-                                else
-                                {
-                                    _logger.LogWarning("Failed to add income to worker wallet for Booking {BookingId}: {Message}", bookingId, result.Message);
-                                }
+                                _logger.LogWarning("PaymentOrder is null for Booking {BookingId}", bookingId);
                             }
                             else
                             {
-                                _logger.LogWarning("PaymentOrder Status is not Paid (Status: {Status}) for Booking {BookingId}", booking.PaymentOrder.Status, bookingId);
+                                if (booking.PaymentOrder.Status == PaymentStatus.Paid)
+                                {
+                                    var workerUserId = booking.WorkerProfile.UserId;
+                                    var paymentOrderId = booking.PaymentOrder.Id;
+                                    var amount = booking.PaymentOrder.FinalAmount;
+
+                                    var walletService = _serviceProvider.GetRequiredService<IWalletService>();
+                                    var result = await walletService.AddWorkerIncomeAsync(
+                                        workerUserId,
+                                        paymentOrderId,
+                                        amount,
+                                        cancellationToken
+                                    );
+
+                                    if (result.IsSuccess)
+                                    {
+                                        _logger.LogInformation("Successfully added income to worker wallet for Booking {BookingId}", bookingId);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("Failed to add income to worker wallet for Booking {BookingId}: {Message}", bookingId, result.Message);
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("PaymentOrder Status is not Paid (Status: {Status}) for Booking {BookingId}", booking.PaymentOrder.Status, bookingId);
+                                }
                             }
                         }
                     }
