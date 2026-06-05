@@ -338,38 +338,45 @@ namespace Infrastructure.Services.Booking
                         {
                             _logger.LogWarning("WorkerProfile is null for Booking {BookingId}", bookingId);
                         }
-                        else if (booking.PaymentOrder == null)
-                        {
-                            _logger.LogWarning("PaymentOrder is null for Booking {BookingId}", bookingId);
-                        }
                         else
                         {
-                            if (booking.PaymentOrder.Status == PaymentStatus.Paid)
+                            // Increase the number of completed orders for the worker
+                            booking.WorkerProfile.TotalOrders += 1;
+                            _workerProfileRepository.Update(booking.WorkerProfile);
+
+                            if (booking.PaymentOrder == null)
                             {
-                                var workerUserId = booking.WorkerProfile.UserId;
-                                var paymentOrderId = booking.PaymentOrder.Id;
-                                var amount = booking.PaymentOrder.FinalAmount;
-
-                                var walletService = _serviceProvider.GetRequiredService<IWalletService>();
-                                var result = await walletService.AddWorkerIncomeAsync(
-                                    workerUserId,
-                                    paymentOrderId,
-                                    amount,
-                                    cancellationToken
-                                );
-
-                                if (result.IsSuccess)
-                                {
-                                    _logger.LogInformation("Successfully added income to worker wallet for Booking {BookingId}", bookingId);
-                                }
-                                else
-                                {
-                                    _logger.LogWarning("Failed to add income to worker wallet for Booking {BookingId}: {Message}", bookingId, result.Message);
-                                }
+                                _logger.LogWarning("PaymentOrder is null for Booking {BookingId}", bookingId);
                             }
                             else
                             {
-                                _logger.LogWarning("PaymentOrder Status is not Paid (Status: {Status}) for Booking {BookingId}", booking.PaymentOrder.Status, bookingId);
+                                if (booking.PaymentOrder.Status == PaymentStatus.Paid)
+                                {
+                                    var workerUserId = booking.WorkerProfile.UserId;
+                                    var paymentOrderId = booking.PaymentOrder.Id;
+                                    var amount = booking.PaymentOrder.FinalAmount;
+
+                                    var walletService = _serviceProvider.GetRequiredService<IWalletService>();
+                                    var result = await walletService.AddWorkerIncomeAsync(
+                                        workerUserId,
+                                        paymentOrderId,
+                                        amount,
+                                        cancellationToken
+                                    );
+
+                                    if (result.IsSuccess)
+                                    {
+                                        _logger.LogInformation("Successfully added income to worker wallet for Booking {BookingId}", bookingId);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("Failed to add income to worker wallet for Booking {BookingId}: {Message}", bookingId, result.Message);
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("PaymentOrder Status is not Paid (Status: {Status}) for Booking {BookingId}", booking.PaymentOrder.Status, bookingId);
+                                }
                             }
                         }
                     }
@@ -680,6 +687,41 @@ namespace Infrastructure.Services.Booking
             );
         }
 
+        public async Task<OperationResult<PagedResponse<BookingDetailDto>>> GetAllBookingsAsync(
+            AllBookingsQuery query,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var (items, totalCount) = await _bookingRepository.GetAllBookingsAsync(
+                query,
+                cancellationToken
+            );
+
+            var dtos = _mapper.Map<List<BookingDetailDto>>(items);
+
+            var response = new PagedResponse<BookingDetailDto>
+            {
+                Items = dtos,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize,
+                TotalCount = totalCount,
+            };
+
+            return OperationResult<PagedResponse<BookingDetailDto>>.Success(
+                response,
+                "All bookings retrieved successfully"
+            );
+        }
+
+        public async Task<OperationResult<BookingAdminStatsDto>> GetAdminStatsAsync(
+            AllBookingsQuery query,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var stats = await _bookingRepository.GetAdminStatsAsync(query, cancellationToken);
+            return OperationResult<BookingAdminStatsDto>.Success(stats, "Admin booking statistics retrieved successfully");
+        }
+
         public async Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default
@@ -867,6 +909,158 @@ namespace Infrastructure.Services.Booking
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to send booking status notification for booking {BookingId}", booking.Id);
+            }
+        }
+
+        public async Task<OperationResult> CancelAsync(Guid bookingId,CancelBookingRequest request,CancellationToken cancellationToken = default)
+        {
+            var currentUserIdStr = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(currentUserIdStr) || !Guid.TryParse(currentUserIdStr, out var currentUserId))
+            {
+                return OperationResult.Failure("Không tìm thấy thông tin người dùng hiện tại");
+            }
+
+            var booking = await _bookingRepository.GetBookingWithWorkerAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult.Failure("Không tìm thấy thông tin lịch hẹn");
+            }
+
+            // 1. Kiểm tra Quyền sở hữu (Authorization Check)
+            var isCustomer = booking.CustomerProfile?.UserId == currentUserId;
+            var isWorker = booking.WorkerProfile?.UserId == currentUserId;
+
+            if (!isCustomer && !isWorker)
+            {
+                return OperationResult.Failure("Bạn không có quyền hủy lịch hẹn này");
+            }
+
+            // 2. Kiểm tra Trạng thái hợp lệ theo từng Vai trò (Role-based Status Validation)
+            if (isCustomer)
+            {
+                var customerValidStates = new[]
+                {
+                    BookingStatus.Matching,
+                    BookingStatus.Pending,
+                    BookingStatus.PendingPayment,
+                    BookingStatus.Confirmed
+                };
+
+                if (!customerValidStates.Contains(booking.Status))
+                {
+                    return OperationResult.Failure($"Khách hàng không thể hủy lịch hẹn ở trạng thái hiện tại: {booking.Status}");
+                }
+            }
+            else if (isWorker)
+            {
+                // Worker chỉ được phép hủy lịch hẹn khi ở trạng thái Pending
+                if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Matching)
+                {
+                    return OperationResult.Failure($"Thợ sửa chữa không thể hủy lịch hẹn ở trạng thái hiện tại: {booking.Status}");
+                }
+            }
+
+            // 3. Khởi tạo Database Transaction
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                // Cập nhật thông tin hủy trên Booking
+                booking.Status = BookingStatus.Cancelled;
+                booking.CancelledById = currentUserId;
+                booking.CancelledAt = DateTime.UtcNow;
+                booking.CancelReason = request.Reason;
+                booking.UpdatedDate = DateTime.UtcNow;
+
+                _bookingRepository.Update(booking);
+
+                // A. Giải phóng Voucher nếu có áp dụng
+                var voucherService = _serviceProvider.GetRequiredService<Application.Interfaces.Services.Voucher.IVoucherService>();
+                await voucherService.ReleaseVoucherAsync(bookingId, cancellationToken);
+
+                // B. Xử lý Hoàn tiền ví nếu đã thanh toán
+                if (booking.PaymentOrder != null && booking.PaymentOrder.Status == PaymentStatus.Paid)
+                {
+                    var walletService = _serviceProvider.GetRequiredService<IWalletService>();
+
+                    var refundResult = await walletService.RefundAsync(
+                        booking.CustomerProfile!.UserId,
+                        booking.PaymentOrder.FinalAmount,
+                        bookingId.ToString(),
+                        cancellationToken
+                    );
+
+                    if (!refundResult.IsSuccess)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                        return OperationResult.Failure($"Lỗi hoàn tiền về ví khách hàng: {refundResult.Message}");
+                    }
+
+                    booking.PaymentOrder.Status = PaymentStatus.Refunded;
+                    booking.PaymentOrder.RefundedAt = DateTime.UtcNow;
+                    var paymentOrderRepository = _serviceProvider.GetRequiredService<IPaymentOrderRepository>();
+                    paymentOrderRepository.Update(booking.PaymentOrder);
+                }
+
+                // C. Làm sạch Hàng đợi Matching (Đánh dấu Skipped cho các Worker khác đang được offer đơn này)
+                var queueEntries = await _matchingQueueRepository.FindAsync(
+                    x => x.BookingId == bookingId && (x.Status == MatchingStatus.Pending || x.Status == MatchingStatus.Offered),
+                    cancellationToken
+                );
+                foreach (var entry in queueEntries)
+                {
+                    entry.Status = MatchingStatus.Skipped;
+                    _matchingQueueRepository.Update(entry);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync(cancellationToken);
+
+                // 4. Đồng bộ thời gian thực qua SignalR & Gửi thông báo đẩy (Push)
+                await _bookingHubService.SendStatusUpdateAsync(
+                    bookingId,
+                    new BookingStatusUpdateDto
+                    {
+                        BookingId = bookingId,
+                        Status = BookingStatus.Cancelled.ToString(),
+                        UpdatedAt = DateTime.UtcNow,
+                        Message = $"Lịch hẹn đã bị hủy bởi {(isCustomer ? "Khách hàng" : "Thợ")}"
+                    },
+                    cancellationToken
+                );
+
+                // Gửi thông báo đẩy cho bên đối tác
+                if (isCustomer && booking.WorkerProfile != null)
+                {
+                    await _notificationService.SendNotificationAsync(
+                        booking.WorkerProfile.UserId,
+                        NotificationType.Booking,
+                        "Khách hàng đã hủy lịch hẹn",
+                        $"Đơn hàng #{booking.Id.ToString()[..8]} đã bị hủy bởi khách hàng.",
+                        $"/worker/bookings/{bookingId}",
+                        new { bookingId = bookingId, status = BookingStatus.Cancelled.ToString() },
+                        cancellationToken: cancellationToken
+                    );
+                }
+                else if (isWorker && booking.CustomerProfile != null)
+                {
+                    await _notificationService.SendNotificationAsync(
+                        booking.CustomerProfile.UserId,
+                        NotificationType.Booking,
+                        "Thợ đã hủy lịch hẹn",
+                        $"Thợ sửa chữa đã hủy lịch hẹn #{booking.Id.ToString()[..8]}. Chúng tôi sẽ tìm thợ khác cho bạn.",
+                        $"/customer/bookings/{bookingId}",
+                        new { bookingId = bookingId, status = BookingStatus.Cancelled.ToString() },
+                        cancellationToken: cancellationToken
+                    );
+                }
+
+                return OperationResult.Success("Hủy lịch hẹn thành công");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                _logger.LogError(ex, "Lỗi xảy ra khi hủy lịch hẹn {BookingId}", bookingId);
+                return OperationResult.Failure("Có lỗi xảy ra trong quá trình xử lý yêu cầu hủy");
             }
         }
     }

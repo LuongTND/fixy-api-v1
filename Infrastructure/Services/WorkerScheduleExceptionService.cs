@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Domain.Entity;
@@ -48,7 +48,11 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken = default
         )
         {
-            if (date < DateOnly.FromDateTime(DateTime.UtcNow))
+            var localZone = TimeZoneInfo.FindSystemTimeZoneById(
+                System.OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"
+            );
+            var localToday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, localZone));
+            if (date < localToday)
             {
                 return OperationResult.Failure("Cannot add day off in the past");
             }
@@ -84,7 +88,14 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken = default
         )
         {
-            var date = DateOnly.FromDateTime(bookingTime);
+            // Convert bookingTime to local Vietnam time (+07:00) before extracting date and time
+            var utcTime = bookingTime.ToUniversalTime();
+            var localZone = TimeZoneInfo.FindSystemTimeZoneById(
+                System.OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"
+            );
+            var localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, localZone);
+
+            var date = DateOnly.FromDateTime(localTime);
 
             var exception = await _workerScheduleExceptionRepository.GetByWorkerAndDateAsync(
                 workerProfileId,
@@ -103,7 +114,7 @@ namespace Infrastructure.Services
                 // custom giờ riêng
                 if (exception.StartTime != null && exception.EndTime != null)
                 {
-                    var currentTimeEx = TimeOnly.FromDateTime(bookingTime);
+                    var currentTimeEx = TimeOnly.FromDateTime(localTime);
 
                     var isAvailableEx =
                         currentTimeEx >= exception.StartTime && currentTimeEx <= exception.EndTime;
@@ -117,7 +128,7 @@ namespace Infrastructure.Services
                 }
             }
 
-            var dayOfWeek = bookingTime.DayOfWeek switch
+            var dayOfWeek = localTime.DayOfWeek switch
             {
                 DayOfWeek.Monday => WeekDay.Mon,
                 DayOfWeek.Tuesday => WeekDay.Tue,
@@ -149,7 +160,7 @@ namespace Infrastructure.Services
                 return OperationResult<bool>.Failure("Schedule time is invalid");
             }
 
-            var currentTime = TimeOnly.FromDateTime(bookingTime);
+            var currentTime = TimeOnly.FromDateTime(localTime);
 
             var isAvailable = currentTime >= schedule.StartTime && currentTime <= schedule.EndTime;
 

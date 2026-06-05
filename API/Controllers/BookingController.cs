@@ -28,6 +28,14 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "CUSTOMER, WORKER")]
+        [HttpPost("{id:guid}/cancel")]
+        public async Task<IActionResult> Cancel(Guid id, [FromBody] CancelBookingRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.CancelAsync(id, request, cancellationToken);
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "WORKER")]
         // Worker accepts the booking. Pending -> Confirmed.
         [HttpPost("{id:guid}/accept")]
@@ -127,8 +135,24 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
-        [Authorize(Roles = "CUSTOMER")]
+        [Authorize(Roles = "ADMIN")]
         [HttpGet]
+        public async Task<IActionResult> GetAllBookings([FromQuery] AllBookingsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetAllBookingsAsync(query, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("admin/stats")]
+        public async Task<IActionResult> GetAdminStats([FromQuery] AllBookingsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.GetAdminStatsAsync(query, cancellationToken);
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "CUSTOMER")]
+        [HttpGet("customer")]
         public async Task<IActionResult> GetCustomerBookings([FromQuery] CustomerBookingsQuery query, CancellationToken cancellationToken)
         {
             var result = await _bookingService.GetCustomerBookingsAsync(query, cancellationToken);

@@ -180,6 +180,7 @@ namespace Infrastructure
             services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
             services.AddScoped<IWorkerPayoutAccountService, WorkerPayoutAccountService>();
             services.AddScoped<IDashboardService, DashboardService>();
+            services.AddScoped<IReportExportService, ReportExportService>();
             services.AddScoped<IPayoutService, PayoutService>();
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<MoMoService>();

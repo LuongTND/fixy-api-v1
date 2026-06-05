@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Application.DTOs.WorkerProfile;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.Interfaces.Services;
@@ -41,6 +41,20 @@ namespace API.Controllers
             var result = await _workerProfileService.GetPagedWorkerProfiles(
                 query,
                 role,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchWorkers(
+            [FromQuery] CustomerWorkerSearchQuery query,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _workerProfileService.SearchWorkersForCustomerAsync(
+                query,
                 cancellationToken
             );
 
@@ -138,7 +152,7 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "WORKER")]
-        [HttpPut("me")]
+        [HttpPatch("me")]
         public async Task<IActionResult> UpdateProfile(
             [FromForm] WorkerProfileUpdateRequestDto dto,
             CancellationToken cancellationToken
