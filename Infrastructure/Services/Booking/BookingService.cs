@@ -713,6 +713,15 @@ namespace Infrastructure.Services.Booking
             );
         }
 
+        public async Task<OperationResult<BookingAdminStatsDto>> GetAdminStatsAsync(
+            AllBookingsQuery query,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var stats = await _bookingRepository.GetAdminStatsAsync(query, cancellationToken);
+            return OperationResult<BookingAdminStatsDto>.Success(stats, "Admin booking statistics retrieved successfully");
+        }
+
         public async Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(
             Guid bookingId,
             CancellationToken cancellationToken = default
