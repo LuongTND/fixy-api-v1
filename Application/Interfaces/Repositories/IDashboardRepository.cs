@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Dashboard;
+using Application.DTOs.Dashboard;
+using Application.DTOs.Report;
 
 namespace Application.Interfaces.Repositories
 {
@@ -17,5 +18,10 @@ namespace Application.Interfaces.Repositories
         Task<List<BookingTrendDto>> GetDailyBookingTrendAsync(int year, int month);
 
         Task<List<TopServiceDto>> GetTopServicesAsync(int year, int? month = null);
+
+        Task<List<BookingReportDto>> GetBookingsForReportAsync(
+            DateTime startDate,
+            DateTime endDate
+        );
     }
 }

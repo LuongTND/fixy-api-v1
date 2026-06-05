@@ -1,4 +1,5 @@
-﻿using Application.DTOs.Dashboard;
+using Application.DTOs.Dashboard;
+using Application.DTOs.Report;
 using Application.Interfaces.Repositories;
 using Domain.Enum;
 using Infrastructure.Persistence;
@@ -153,5 +154,77 @@ namespace Infrastructure.Repositories
                 .Take(10)
                 .ToListAsync();
         }
+
+        public async Task<List<BookingReportDto>> GetBookingsForReportAsync(
+            DateTime startDate,
+            DateTime endDate
+        )
+        {
+            var rawData = await _context
+                .Bookings.AsNoTracking()
+                .Include(b => b.CustomerProfile!)
+                .ThenInclude(cp => cp.User!)
+                .Include(b => b.WorkerProfile!)
+                .ThenInclude(wp => wp.User!)
+                .Include(b => b.Category)
+                .Where(b => !b.IsDeleted && b.CreatedDate >= startDate && b.CreatedDate <= endDate)
+                .OrderByDescending(b => b.CreatedDate)
+                .Select(b => new
+                {
+                    b.Id,
+                    CustomerName =
+                        b.CustomerProfile != null && b.CustomerProfile.User != null
+                            ? b.CustomerProfile.User.FullName
+                            : "",
+                    WorkerName =
+                        b.WorkerProfile != null && b.WorkerProfile.User != null
+                            ? b.WorkerProfile.User.FullName
+                            : "Chưa nhận",
+                    CategoryName =
+                        b.Category != null ? b.Category.Name : "",
+                    b.Address,
+                    b.Status,
+                    b.EstimatedPrice,
+                    b.FinalPrice,
+                    b.CreatedDate,
+                    b.CompletedAt,
+                })
+                .ToListAsync();
+
+            return rawData
+                .Select(b => new BookingReportDto
+                {
+                    BookingId = b.Id,
+                    CustomerName = b.CustomerName,
+                    WorkerName = b.WorkerName,
+                    CategoryName = b.CategoryName,
+                    Address = b.Address,
+                    Status = MapStatusToVietnamese(b.Status),
+                    EstimatedPrice = b.EstimatedPrice ?? 0,
+                    FinalPrice = b.FinalPrice ?? 0,
+                    CreatedAt = b.CreatedDate,
+                    CompletedAt = b.CompletedAt,
+                })
+                .ToList();
+        }
+
+        private static string MapStatusToVietnamese(BookingStatus status)
+        {
+            return status switch
+            {
+                BookingStatus.Pending => "Chờ xử lý",
+                BookingStatus.PendingPayment => "Chờ thanh toán",
+                BookingStatus.Matching => "Đang tìm thợ",
+                BookingStatus.Confirmed => "Đã xác nhận",
+                BookingStatus.Traveling => "Thợ đang đến",
+                BookingStatus.Arrived => "Thợ đã đến",
+                BookingStatus.InProgress => "Đang thực hiện",
+                BookingStatus.Completed => "Hoàn thành",
+                BookingStatus.Cancelled => "Đã hủy",
+                BookingStatus.Disputed => "Tranh chấp",
+                _ => status.ToString(),
+            };
+        }
     }
 }
+
