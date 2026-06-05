@@ -23,6 +23,11 @@ namespace Application.Interfaces.Services.Booking
             CancellationToken cancellationToken = default
         );
 
+        Task<OperationResult<BookingAdminStatsDto>> GetAdminStatsAsync(
+            AllBookingsQuery query,
+            CancellationToken cancellationToken = default
+        );
+
         // Pending --> Confirmed
         Task<OperationResult> AcceptAsync(Guid bookingId, CancellationToken cancellationToken = default);
 

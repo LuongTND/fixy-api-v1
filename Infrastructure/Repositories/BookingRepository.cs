@@ -190,6 +190,66 @@ namespace Infrastructure.Repositories
             return (items, totalCount);
         }
 
+        public async Task<BookingAdminStatsDto> GetAdminStatsAsync(
+            AllBookingsQuery query,
+            CancellationToken ct = default
+        )
+        {
+            var dbQuery = _dbSet.AsNoTracking().AsQueryable();
+
+            if (query.Status.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.Status == query.Status.Value);
+            }
+
+            if (query.CustomerProfileId.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.CustomerProfileId == query.CustomerProfileId.Value);
+            }
+
+            if (query.WorkerProfileId.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.WorkerProfileId == query.WorkerProfileId.Value);
+            }
+
+            if (query.FromDate.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.CreatedDate >= query.FromDate.Value);
+            }
+
+            if (query.ToDate.HasValue)
+            {
+                dbQuery = dbQuery.Where(x => x.CreatedDate <= query.ToDate.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+            {
+                var search = query.SearchTerm.Trim().ToLower();
+                dbQuery = dbQuery.Where(x =>
+                    x.Description.ToLower().Contains(search) || x.Address.ToLower().Contains(search)
+                );
+            }
+
+            var allStats = await dbQuery
+                .GroupBy(x => 1)
+                .Select(g => new
+                {
+                    Total = g.Count(),
+                    InProgress = g.Count(x => x.Status != BookingStatus.Completed),
+                    Completed = g.Count(x => x.Status == BookingStatus.Completed),
+                    TotalValue = g.Sum(x => x.FinalPrice ?? x.EstimatedPrice) ?? 0
+                })
+                .FirstOrDefaultAsync(ct);
+
+            return new BookingAdminStatsDto
+            {
+                TotalBookings = allStats?.Total ?? 0,
+                InProgressBookings = allStats?.InProgress ?? 0,
+                CompletedBookings = allStats?.Completed ?? 0,
+                TotalValue = allStats?.TotalValue ?? 0
+            };
+        }
+
         public async Task LoadWorkerAndPaymentOrderAsync(
             Booking booking,
             CancellationToken cancellationToken = default

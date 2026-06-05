@@ -31,6 +31,11 @@ namespace Application.Interfaces.Repositories
             CancellationToken cancellationToken = default
         );
 
+        Task<BookingAdminStatsDto> GetAdminStatsAsync(
+            AllBookingsQuery query,
+            CancellationToken cancellationToken = default
+        );
+
         Task LoadWorkerAndPaymentOrderAsync(
             Booking booking,
             CancellationToken cancellationToken = default
