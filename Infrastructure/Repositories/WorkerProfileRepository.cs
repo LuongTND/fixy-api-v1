@@ -249,11 +249,13 @@ namespace Infrastructure.Repositories
                 DistanceKm = (!hasCoordinates || x.EffectiveLat == null || x.EffectiveLng == null)
                     ? (double?)null
                     : EarthRadiusKm * Math.Acos(
-                        Math.Min(1.0,
-                            Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad) +
-                            Math.Cos(lat1Rad) * Math.Cos(x.EffectiveLat.Value * Deg2Rad) *
-                            Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad)
-                        )
+                        (Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad) +
+                         Math.Cos(lat1Rad) * Math.Cos(x.EffectiveLat.Value * Deg2Rad) *
+                         Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad)) > 1.0
+                            ? 1.0
+                            : (Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad) +
+                               Math.Cos(lat1Rad) * Math.Cos(x.EffectiveLat.Value * Deg2Rad) *
+                               Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad))
                     )
             });
 
