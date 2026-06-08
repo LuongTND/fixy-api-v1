@@ -158,6 +158,9 @@ namespace Infrastructure
             services.AddScoped<IBookingVoucherRepository, BookingVoucherRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped(typeof(IRepository<NotificationSetting>), typeof(Repository<NotificationSetting>));
+            services.AddScoped(typeof(IRepository<UserFcmToken>), typeof(Repository<UserFcmToken>));
+            // Firebase Cloud Messaging - Singleton vì FirebaseApp là global singleton
+            services.AddSingleton<IFcmService, FcmService>();
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IJwtService, JwtService>();

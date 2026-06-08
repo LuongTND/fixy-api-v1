@@ -56,6 +56,7 @@ namespace Infrastructure.Persistence
 
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<NotificationSetting> NotificationSettings { get; set; }
+        public DbSet<UserFcmToken> UserFcmTokens { get; set; }
 
         public DbSet<SupportTicket> SupportTickets { get; set; }
         public DbSet<SupportMessage> SupportMessages { get; set; }
