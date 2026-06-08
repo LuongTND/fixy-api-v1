@@ -80,5 +80,36 @@ namespace API.Controllers
             var result = await _notificationService.UpdateSettingsAsync(userId, dto, cancellationToken);
             return HandleResult(result);
         }
+
+        /// <summary>
+        /// Register an FCM token for the current user's device/browser.
+        /// Call this after user grants notification permission in the browser.
+        /// </summary>
+        [HttpPost("fcm-token")]
+        public async Task<IActionResult> RegisterFcmToken([FromBody] RegisterFcmTokenDto dto, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Token))
+                return BadRequest(new { Message = "Token is required." });
+
+            var userId = GetUserId();
+            var result = await _notificationService.RegisterFcmTokenAsync(userId, dto, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Unregister an FCM token. Call this when user logs out to stop receiving push notifications on this device.
+        /// </summary>
+        [HttpDelete("fcm-token")]
+        public async Task<IActionResult> UnregisterFcmToken([FromBody] RegisterFcmTokenDto dto, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Token))
+                return BadRequest(new { Message = "Token is required." });
+
+            var userId = GetUserId();
+            var result = await _notificationService.UnregisterFcmTokenAsync(userId, dto.Token, cancellationToken);
+            return HandleResult(result);
+        }
     }
 }
+
+
