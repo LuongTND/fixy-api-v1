@@ -18,8 +18,6 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.City).HasMaxLength(100).IsRequired();
 
-            builder.Property(x => x.District).HasMaxLength(100).IsRequired();
-
             builder.Property(x => x.Ward).HasMaxLength(100).IsRequired();
 
             builder.Property(x => x.Detail).HasMaxLength(300).IsRequired();
