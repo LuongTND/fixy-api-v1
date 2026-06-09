@@ -235,7 +235,6 @@ namespace Infrastructure.Services
                             {
                                 Id = address.Id,
                                 City = address.City,
-                                District = address.District,
                                 Ward = address.Ward,
                                 Detail = address.Detail,
                                 Lat = address.Lat,
@@ -340,7 +339,6 @@ namespace Infrastructure.Services
                 {
                     WorkerProfileId = workerProfile.Id,
                     City = dto.CreateAddressRequestDto.City,
-                    District = dto.CreateAddressRequestDto.District,
                     Ward = dto.CreateAddressRequestDto.Ward,
                     Detail = dto.CreateAddressRequestDto.Detail,
                     Lat = dto.CreateAddressRequestDto.Lat,
@@ -597,7 +595,6 @@ namespace Infrastructure.Services
             }
 
             address.City = dto.Address.City;
-            address.District = dto.Address.District;
             address.Ward = dto.Address.Ward;
             address.Detail = dto.Address.Detail;
             address.Lat = dto.Address.Lat;
@@ -956,7 +953,9 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> SearchWorkersForCustomerAsync(
+        public async Task<
+            OperationResult<PagedResponse<WorkerProfileDto>>
+        > SearchWorkersForCustomerAsync(
             CustomerWorkerSearchQuery query,
             CancellationToken cancellationToken
         )
@@ -973,26 +972,27 @@ namespace Infrastructure.Services
                 var worker = items[i];
                 var distance = distances[i];
 
-                dtoItems.Add(new WorkerProfileDto
-                {
-                    Id = worker.Id,
-                    UserId = worker.UserId,
-                    FullName = worker.User?.FullName ?? string.Empty,
-                    AvatarUrl = worker.User?.AvatarUrl,
-                    DateOfBirth = worker.User?.DateOfBirth,
-                    Gender = worker.User?.Gender.ToString(),
-                    Status = worker.Status.ToString(),
-                    ExperienceYears = worker.ExperienceYears,
-                    RatingAvg = worker.RatingAvg,
-                    TotalReviews = worker.TotalReviews,
-                    TotalOrders = worker.TotalOrders,
-                    IsOnline = worker.IsOnline,
-                    IsBusy = worker.IsBusy,
-                    DistanceKm = distance.HasValue ? Math.Round(distance.Value, 2) : null,
-                    City = worker.Address?.City,
-                    District = worker.Address?.District,
-                    Services = worker.Services.Select(MapWorkerService).ToList(),
-                });
+                dtoItems.Add(
+                    new WorkerProfileDto
+                    {
+                        Id = worker.Id,
+                        UserId = worker.UserId,
+                        FullName = worker.User?.FullName ?? string.Empty,
+                        AvatarUrl = worker.User?.AvatarUrl,
+                        DateOfBirth = worker.User?.DateOfBirth,
+                        Gender = worker.User?.Gender.ToString(),
+                        Status = worker.Status.ToString(),
+                        ExperienceYears = worker.ExperienceYears,
+                        RatingAvg = worker.RatingAvg,
+                        TotalReviews = worker.TotalReviews,
+                        TotalOrders = worker.TotalOrders,
+                        IsOnline = worker.IsOnline,
+                        IsBusy = worker.IsBusy,
+                        DistanceKm = distance.HasValue ? Math.Round(distance.Value, 2) : null,
+                        City = worker.Address?.City,
+                        Services = worker.Services.Select(MapWorkerService).ToList(),
+                    }
+                );
             }
 
             return OperationResult<PagedResponse<WorkerProfileDto>>.Success(

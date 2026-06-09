@@ -77,7 +77,6 @@ namespace Infrastructure.Services
                     Id = address.Id,
                     Label = address.Label,
                     City = address.City,
-                    District = address.District,
                     Ward = address.Ward,
                     Detail = address.Detail,
                     Lat = address.Lat,
@@ -151,7 +150,6 @@ namespace Infrastructure.Services
                     CustomerProfileId = customerProfileId,
                     Label = dto.Label,
                     City = dto.City,
-                    District = dto.District,
                     Ward = dto.Ward,
                     Detail = dto.Detail,
                     Lat = dto.Lat,
@@ -169,7 +167,6 @@ namespace Infrastructure.Services
                         Id = address.Id,
                         Label = address.Label,
                         City = address.City,
-                        District = address.District,
                         Ward = address.Ward,
                         Detail = address.Detail,
                         Lat = address.Lat,
@@ -264,7 +261,6 @@ namespace Infrastructure.Services
 
             address.Label = dto.Label;
             address.City = dto.City;
-            address.District = dto.District;
             address.Ward = dto.Ward;
             address.Detail = dto.Detail;
             address.Lat = dto.Lat;
@@ -283,7 +279,6 @@ namespace Infrastructure.Services
                     Id = address.Id,
                     Label = address.Label,
                     City = address.City,
-                    District = address.District,
                     Ward = address.Ward,
                     Detail = address.Detail,
                     Lat = address.Lat,

@@ -141,7 +141,11 @@ namespace Infrastructure.Repositories
             );
         }
 
-        public async Task<(List<WorkerProfile> Items, List<double?> Distances, int TotalCount)> SearchWorkersForCustomerAsync(
+        public async Task<(
+            List<WorkerProfile> Items,
+            List<double?> Distances,
+            int TotalCount
+        )> SearchWorkersForCustomerAsync(
             CustomerWorkerSearchQuery query,
             CancellationToken cancellationToken
         )
@@ -163,7 +167,8 @@ namespace Infrastructure.Repositories
             // 2. Lọc theo danh mục (hỗ trợ phân cấp bằng Code)
             if (query.CategoryId.HasValue)
             {
-                var targetCategory = await _context.Set<ServiceCategory>()
+                var targetCategory = await _context
+                    .Set<ServiceCategory>()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Id == query.CategoryId.Value, cancellationToken);
 
@@ -172,10 +177,15 @@ namespace Infrastructure.Repositories
                     var categoryCode = targetCategory.Code;
                     var codePrefix = categoryCode + ".";
 
-                    queryDb = queryDb.Where(x => x.Services.Any(s =>
-                        s.Category != null &&
-                        (s.Category.Code == categoryCode || s.Category.Code.StartsWith(codePrefix))
-                    ));
+                    queryDb = queryDb.Where(x =>
+                        x.Services.Any(s =>
+                            s.Category != null
+                            && (
+                                s.Category.Code == categoryCode
+                                || s.Category.Code.StartsWith(codePrefix)
+                            )
+                        )
+                    );
                 }
             }
 
@@ -186,7 +196,9 @@ namespace Infrastructure.Repositories
                 queryDb = queryDb.Where(x =>
                     x.User!.FullName.ToLower().Contains(keyword)
                     || (x.Bio != null && x.Bio.ToLower().Contains(keyword))
-                    || x.Services.Any(s => s.Category != null && s.Category.Name.ToLower().Contains(keyword))
+                    || x.Services.Any(s =>
+                        s.Category != null && s.Category.Name.ToLower().Contains(keyword)
+                    )
                 );
             }
 
@@ -206,28 +218,30 @@ namespace Infrastructure.Repositories
             if (!string.IsNullOrWhiteSpace(query.City))
             {
                 var city = query.City.Trim().ToLower();
-                queryDb = queryDb.Where(x => x.Address != null && x.Address.City.ToLower().Contains(city));
+                queryDb = queryDb.Where(x =>
+                    x.Address != null && x.Address.City.ToLower().Contains(city)
+                );
             }
-            if (!string.IsNullOrWhiteSpace(query.District))
-            {
-                var district = query.District.Trim().ToLower();
-                queryDb = queryDb.Where(x => x.Address != null && x.Address.District.ToLower().Contains(district));
-            }
+
             if (!string.IsNullOrWhiteSpace(query.Ward))
             {
                 var ward = query.Ward.Trim().ToLower();
-                queryDb = queryDb.Where(x => x.Address != null && x.Address.Ward.ToLower().Contains(ward));
+                queryDb = queryDb.Where(x =>
+                    x.Address != null && x.Address.Ward.ToLower().Contains(ward)
+                );
             }
 
             // 7. Lọc theo khoảng giá
             if (query.MinPrice.HasValue || query.MaxPrice.HasValue)
             {
-                queryDb = queryDb.Where(x => x.Services.Any(s =>
-                    (!query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value) &&
-                    (query.CategoryId.HasValue || s.IsPrimary) &&
-                    (!query.MinPrice.HasValue || s.BasePrice >= query.MinPrice.Value) &&
-                    (!query.MaxPrice.HasValue || s.BasePrice <= query.MaxPrice.Value)
-                ));
+                queryDb = queryDb.Where(x =>
+                    x.Services.Any(s =>
+                        (!query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value)
+                        && (query.CategoryId.HasValue || s.IsPrimary)
+                        && (!query.MinPrice.HasValue || s.BasePrice >= query.MinPrice.Value)
+                        && (!query.MaxPrice.HasValue || s.BasePrice <= query.MaxPrice.Value)
+                    )
+                );
             }
 
             // 8. Projection với tính toán khoảng cách Haversine
@@ -237,27 +251,39 @@ namespace Infrastructure.Repositories
             const double EarthRadiusKm = 6371.0;
             const double Deg2Rad = Math.PI / 180.0;
 
-            var projectedQuery = queryDb.Select(x => new
-            {
-                Worker = x,
-                EffectiveLat = x.CurrentLat ?? (x.Address != null ? x.Address.Lat : (double?)null),
-                EffectiveLng = x.CurrentLng ?? (x.Address != null ? x.Address.Lng : (double?)null)
-            })
-            .Select(x => new
-            {
-                x.Worker,
-                DistanceKm = (!hasCoordinates || x.EffectiveLat == null || x.EffectiveLng == null)
-                    ? (double?)null
-                    : EarthRadiusKm * Math.Acos(
-                        (Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad) +
-                         Math.Cos(lat1Rad) * Math.Cos(x.EffectiveLat.Value * Deg2Rad) *
-                         Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad)) > 1.0
-                            ? 1.0
-                            : (Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad) +
-                               Math.Cos(lat1Rad) * Math.Cos(x.EffectiveLat.Value * Deg2Rad) *
-                               Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad))
+            var projectedQuery = queryDb
+                .Select(x => new
+                {
+                    Worker = x,
+                    EffectiveLat = x.CurrentLat
+                        ?? (x.Address != null ? x.Address.Lat : (double?)null),
+                    EffectiveLng = x.CurrentLng
+                        ?? (x.Address != null ? x.Address.Lng : (double?)null),
+                })
+                .Select(x => new
+                {
+                    x.Worker,
+                    DistanceKm = (
+                        !hasCoordinates || x.EffectiveLat == null || x.EffectiveLng == null
                     )
-            });
+                        ? (double?)null
+                        : EarthRadiusKm
+                            * Math.Acos(
+                                (
+                                    Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad)
+                                    + Math.Cos(lat1Rad)
+                                        * Math.Cos(x.EffectiveLat.Value * Deg2Rad)
+                                        * Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad)
+                                ) > 1.0
+                                    ? 1.0
+                                    : (
+                                        Math.Sin(lat1Rad) * Math.Sin(x.EffectiveLat.Value * Deg2Rad)
+                                        + Math.Cos(lat1Rad)
+                                            * Math.Cos(x.EffectiveLat.Value * Deg2Rad)
+                                            * Math.Cos(x.EffectiveLng.Value * Deg2Rad - lng1Rad)
+                                    )
+                            ),
+                });
 
             // 9. Lọc theo bán kính
             if (hasCoordinates && query.RadiusKm.HasValue)
@@ -275,7 +301,7 @@ namespace Infrastructure.Repositories
             var typedQuery = projectedQuery.Select(x => new WorkerSearchProjection
             {
                 Worker = x.Worker,
-                DistanceKm = x.DistanceKm
+                DistanceKm = x.DistanceKm,
             });
 
             if (sortBy == "nearest" && hasCoordinates)
@@ -295,16 +321,20 @@ namespace Infrastructure.Repositories
                 if (query.SortDescending)
                 {
                     orderedQuery = typedQuery.OrderByDescending(x =>
-                        x.Worker.Services
-                            .Where(s => !query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value)
-                            .Max(s => s.BasePrice));
+                        x.Worker.Services.Where(s =>
+                                !query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value
+                            )
+                            .Max(s => s.BasePrice)
+                    );
                 }
                 else
                 {
                     orderedQuery = typedQuery.OrderBy(x =>
-                        x.Worker.Services
-                            .Where(s => !query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value)
-                            .Min(s => s.BasePrice));
+                        x.Worker.Services.Where(s =>
+                                !query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value
+                            )
+                            .Min(s => s.BasePrice)
+                    );
                 }
             }
             else if (sortBy == "most_completed")
@@ -344,4 +374,3 @@ namespace Infrastructure.Repositories
         }
     }
 }
-
