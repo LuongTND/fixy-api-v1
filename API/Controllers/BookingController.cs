@@ -166,5 +166,13 @@ namespace API.Controllers
             var result = await _bookingService.GetWorkerBookingsAsync(query, cancellationToken);
             return HandleResult(result);
         }
+
+        [Authorize(Roles = "CUSTOMER")]
+        [HttpPost("{id:guid}/reorder")]
+        public async Task<IActionResult> Reorder(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _bookingService.ReorderBookingAsync(id, cancellationToken);
+            return HandleResult(result);
+        }
     }
 }

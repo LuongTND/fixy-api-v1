@@ -1063,5 +1063,91 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("Có lỗi xảy ra trong quá trình xử lý yêu cầu hủy");
             }
         }
+
+        public async Task<OperationResult<BookingDetailDto>> ReorderBookingAsync(
+            Guid bookingId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var customerProfile = await GetCurrentCustomerProfileAsync(cancellationToken);
+            if (customerProfile == null)
+            {
+                return OperationResult<BookingDetailDto>.Failure("Không tìm thấy thông tin khách hàng");
+            }
+
+            var originalBooking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (originalBooking == null)
+            {
+                return OperationResult<BookingDetailDto>.Failure("Không tìm thấy thông tin lịch hẹn gốc");
+            }
+
+            if (originalBooking.CustomerProfileId != customerProfile.Id)
+            {
+                return OperationResult<BookingDetailDto>.Failure("Bạn không có quyền đặt lại lịch hẹn này");
+            }
+
+            if (!originalBooking.WorkerProfileId.HasValue)
+            {
+                return OperationResult<BookingDetailDto>.Failure("Lịch hẹn gốc không có thông tin thợ để thực hiện đặt lại");
+            }
+
+            var workerProfileId = originalBooking.WorkerProfileId.Value;
+            var workerProfile = await _workerProfileRepository.GetByIdAsync(workerProfileId, cancellationToken);
+            if (workerProfile == null || workerProfile.Status != WorkerStatus.Approved)
+            {
+                return OperationResult<BookingDetailDto>.Failure("Thợ sửa chữa hiện không hoạt động hoặc chưa được duyệt");
+            }
+
+            var workerServiceRepository = _serviceProvider.GetRequiredService<IWorkerServiceRepository>();
+            var workerService = await workerServiceRepository.FirstOrDefaultAsync(
+                x => x.WorkerProfileId == workerProfileId && x.CategoryId == originalBooking.CategoryId,
+                cancellationToken
+            );
+
+            if (workerService == null)
+            {
+                return OperationResult<BookingDetailDto>.Failure("Thợ sửa chữa này hiện không còn cung cấp dịch vụ thuộc danh mục này");
+            }
+
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var newBooking = new BookingEntity
+                {
+                    CustomerProfileId = customerProfile.Id,
+                    WorkerProfileId = workerProfileId,
+                    CategoryId = originalBooking.CategoryId,
+                    Description = originalBooking.Description,
+                    Address = originalBooking.Address,
+                    Lat = originalBooking.Lat,
+                    Lng = originalBooking.Lng,
+                    ScheduledType = BookingScheduledType.Now,
+                    Status = BookingStatus.Pending,
+                    EstimatedPrice = workerService.BasePrice,
+                    ReorderFromId = originalBooking.Id
+                };
+
+                await _bookingRepository.AddAsync(newBooking, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                await _workerMatchingService.ProcessDirectAssignAsync(newBooking.Id, workerProfileId, cancellationToken);
+
+                await _unitOfWork.CommitTransactionAsync(cancellationToken);
+
+                var detailResult = await GetByIdAsync(newBooking.Id, cancellationToken);
+                if (!detailResult.IsSuccess)
+                {
+                    return OperationResult<BookingDetailDto>.Failure("Không thể lấy thông tin chi tiết của lịch hẹn mới");
+                }
+
+                return OperationResult<BookingDetailDto>.Success(detailResult.Data!, "Đặt lại dịch vụ thành công");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync(cancellationToken);
+                _logger.LogError(ex, "Lỗi xảy ra khi đặt lại lịch hẹn {BookingId}", bookingId);
+                return OperationResult<BookingDetailDto>.Failure("Có lỗi xảy ra trong quá trình đặt lại dịch vụ");
+            }
+        }
     }
 }
