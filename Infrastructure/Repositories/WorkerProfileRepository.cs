@@ -1,3 +1,4 @@
+using Application.Common;
 using Application.DTOs.WorkerProfile;
 using Application.Interfaces.Repositories;
 using Domain.Entity;
@@ -293,63 +294,102 @@ namespace Infrastructure.Repositories
                 );
             }
 
-            // 10. Sắp xếp
+            // 10. Truy vấn động biên giá dịch vụ (Dynamic Min/Max Price Bounds)
+            var activeServicesQuery = queryDb
+                .SelectMany(x => x.Services)
+                .Where(s =>
+                    (!query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value)
+                    && (query.CategoryId.HasValue || s.IsPrimary)
+                );
+
+            double minPriceBound = RankingConstants.FallbackMinPrice;
+            double maxPriceBound = RankingConstants.FallbackMaxPrice;
+
+            if (await activeServicesQuery.AnyAsync(cancellationToken))
+            {
+                minPriceBound = (double)await activeServicesQuery.MinAsync(
+                    s => s.BasePrice,
+                    cancellationToken
+                );
+                maxPriceBound = (double)await activeServicesQuery.MaxAsync(
+                    s => s.BasePrice,
+                    cancellationToken
+                );
+            }
+
+            // Tránh chia cho 0 nếu tất cả dịch vụ có cùng một giá
+            if (Math.Abs(maxPriceBound - minPriceBound) < 0.01)
+            {
+                maxPriceBound = minPriceBound + 10000.0;
+            }
+
+            // 11. Xác định bộ trọng số theo kiểu sắp xếp
             var sortBy = query.SortBy?.ToLower();
+            bool isSortPriceDescending = query.SortDescending;
 
-            IOrderedQueryable<WorkerSearchProjection> orderedQuery;
+            double wRating = RankingConstants.DefRatingWeight;
+            double wPrice = RankingConstants.DefPriceWeight;
+            double wDistance = RankingConstants.DefDistanceWeight;
 
+            if (sortBy == "price")
+            {
+                wRating = RankingConstants.PricePriorityRatingWeight;
+                wPrice = RankingConstants.PricePriorityPriceWeight;
+                wDistance = RankingConstants.PricePriorityDistanceWeight;
+            }
+            else if (sortBy == "nearest" && hasCoordinates)
+            {
+                wRating = RankingConstants.DistPriorityRatingWeight;
+                wPrice = RankingConstants.DistPriorityPriceWeight;
+                wDistance = RankingConstants.DistPriorityDistanceWeight;
+            }
+
+            double maxRadiusBound = query.RadiusKm ?? RankingConstants.DefaultMaxRadiusKm;
+
+            // 12. Chiếu dữ liệu với ServicePrice
             var typedQuery = projectedQuery.Select(x => new WorkerSearchProjection
             {
                 Worker = x.Worker,
                 DistanceKm = x.DistanceKm,
+                ServicePrice = (double)(x.Worker.Services
+                    .Where(s =>
+                        (!query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value)
+                        && (query.CategoryId.HasValue || s.IsPrimary)
+                    )
+                    .Select(s => s.BasePrice)
+                    .FirstOrDefault()),
             });
 
-            if (sortBy == "nearest" && hasCoordinates)
+            // 13. Tính điểm xếp hạng tổng hợp (Weighted Ranking Score)
+            var scoredQuery = typedQuery.Select(x => new WorkerSearchProjection
             {
-                orderedQuery = query.SortDescending
-                    ? typedQuery.OrderByDescending(x => x.DistanceKm)
-                    : typedQuery.OrderBy(x => x.DistanceKm);
-            }
-            else if (sortBy == "rating")
-            {
-                orderedQuery = query.SortDescending
-                    ? typedQuery.OrderByDescending(x => x.Worker.RatingAvg)
-                    : typedQuery.OrderBy(x => x.Worker.RatingAvg);
-            }
-            else if (sortBy == "price")
-            {
-                if (query.SortDescending)
-                {
-                    orderedQuery = typedQuery.OrderByDescending(x =>
-                        x.Worker.Services.Where(s =>
-                                !query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value
-                            )
-                            .Max(s => s.BasePrice)
-                    );
-                }
-                else
-                {
-                    orderedQuery = typedQuery.OrderBy(x =>
-                        x.Worker.Services.Where(s =>
-                                !query.CategoryId.HasValue || s.CategoryId == query.CategoryId.Value
-                            )
-                            .Min(s => s.BasePrice)
-                    );
-                }
-            }
-            else if (sortBy == "most_completed")
-            {
-                orderedQuery = query.SortDescending
-                    ? typedQuery.OrderByDescending(x => x.Worker.TotalOrders)
-                    : typedQuery.OrderBy(x => x.Worker.TotalOrders);
-            }
-            else
-            {
-                // Mặc định: thợ nổi bật (Featured) lên trước, sau đó theo ngày tạo
-                orderedQuery = typedQuery
-                    .OrderByDescending(x => x.Worker.FeaturedUntil > DateTime.UtcNow)
-                    .ThenByDescending(x => x.Worker.CreatedDate);
-            }
+                Worker = x.Worker,
+                DistanceKm = x.DistanceKm,
+                ServicePrice = x.ServicePrice,
+                RankingScore =
+                    // A. Rating Component: RatingAvg / 5.0 (chuẩn hóa về [0, 1])
+                    (wRating * (x.Worker.RatingAvg / 5.0))
+                    // B. Price Component: chuẩn hóa giá theo biên động
+                    + (wPrice
+                        * (
+                            isSortPriceDescending
+                                ? ((x.ServicePrice - minPriceBound)
+                                    / (maxPriceBound - minPriceBound))
+                                : (1.0
+                                    - ((x.ServicePrice - minPriceBound)
+                                        / (maxPriceBound - minPriceBound)))
+                        ))
+                    // C. Distance Component: chuẩn hóa khoảng cách
+                    + (wDistance
+                        * (
+                            x.DistanceKm.HasValue
+                                ? (1.0 - (x.DistanceKm.Value / maxRadiusBound))
+                                : 0.5
+                        )),
+            });
+
+            // 14. Sắp xếp theo điểm tổng hợp giảm dần
+            var orderedQuery = scoredQuery.OrderByDescending(x => x.RankingScore);
 
             var totalCount = await typedQuery.CountAsync(cancellationToken);
 
@@ -365,12 +405,15 @@ namespace Infrastructure.Repositories
         }
 
         /// <summary>
-        /// Helper class for projecting worker search results with calculated distance.
+        /// Helper class for projecting worker search results with calculated distance,
+        /// service price, and weighted ranking score.
         /// </summary>
         private class WorkerSearchProjection
         {
             public WorkerProfile Worker { get; set; } = null!;
             public double? DistanceKm { get; set; }
+            public double ServicePrice { get; set; }
+            public double RankingScore { get; set; }
         }
     }
 }
