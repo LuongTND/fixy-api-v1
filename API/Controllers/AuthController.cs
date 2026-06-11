@@ -84,6 +84,20 @@ public class AuthController : ApiController
     }
 
     // =========================
+    // LOGIN GOOGLE
+    // =========================
+
+    [HttpPost("login/google")]
+    public async Task<IActionResult> LoginGoogle(
+        [FromBody] GoogleLoginRequestDto request,
+        CancellationToken cancellationToken
+    )
+    {
+        var result = await _authService.GoogleLoginAsync(request, cancellationToken);
+        return HandleResult(result);
+    }
+
+    // =========================
     // REFRESH TOKEN
     // =========================
 
