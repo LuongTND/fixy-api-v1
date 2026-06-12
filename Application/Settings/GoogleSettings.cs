@@ -2,6 +2,7 @@
 {
     public class GoogleSettings
     {
-        public string GoogleClientId { get; set; } = string.Empty;
+        public string WebClientId { get; set; } = string.Empty;
+        public string IosClientId { get; set; } = string.Empty;
     }
 }
