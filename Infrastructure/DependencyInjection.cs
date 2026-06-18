@@ -67,6 +67,8 @@ namespace Infrastructure
             // Jwt Settings
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
             services.Configure<GoogleSettings>(configuration.GetSection("GoogleSettings"));
+            services.Configure<FacebookSettings>(configuration.GetSection("FacebookSettings"));
+            services.AddHttpClient();
 
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings

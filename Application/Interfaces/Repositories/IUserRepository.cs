@@ -1,4 +1,4 @@
-﻿using Application.DTOs.User;
+using Application.DTOs.User;
 using Domain.Entity;
 
 namespace Application.Interfaces.Repositories
@@ -20,5 +20,7 @@ namespace Application.Interfaces.Repositories
         Task<User?> GetWithCustomerProfileByIdAsync(Guid userId, CancellationToken ct = default);
 
         Task<User?> GetWithWorkerProfileByIdAsync(Guid userId, CancellationToken ct = default);
+
+        Task<User?> GetByOAuthIdAsync(Domain.Enum.OAuthProvider provider,string oauthId, CancellationToken ct = default);
     }
 }
