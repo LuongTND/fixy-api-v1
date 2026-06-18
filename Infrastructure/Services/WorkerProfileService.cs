@@ -1,4 +1,5 @@
 using Application.Common;
+using Application.Common.Interfaces;
 using Application.DTOs.Address;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile;
@@ -17,6 +18,7 @@ namespace Infrastructure.Services
     public class WorkerProfileService : IWorkerProfileService
     {
         private readonly IUserRepository _userRepository;
+        private readonly ICurrentUserService _currentUserService;
         private readonly IAddressRepository _addressRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
@@ -39,7 +41,8 @@ namespace Infrastructure.Services
             IMediaRepository mediaRepository,
             IUnitOfWork unitOfWork,
             IBlobService blobService,
-            IWorkerWeeklyScheduleService workerWeeklyScheduleService
+            IWorkerWeeklyScheduleService workerWeeklyScheduleService,
+            ICurrentUserService currentUserService
         )
         {
             _userRepository = userRepository;
@@ -52,6 +55,7 @@ namespace Infrastructure.Services
             _unitOfWork = unitOfWork;
             _blobService = blobService;
             _workerWeeklyScheduleService = workerWeeklyScheduleService;
+            _currentUserService = currentUserService;
         }
 
         public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
@@ -289,11 +293,40 @@ namespace Infrastructure.Services
                 return OperationResult.Failure("Worker must have exactly one primary service");
             }
 
-            var user = await _userRepository.GetByTargetAsync(dto.Target);
+            User? user = null;
+            if (_currentUserService.UserId != null && Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            {
+                user = await _userRepository.GetByIdAsync(currentUserId, cancellationToken);
+            }
+
+            if (user == null && !string.IsNullOrWhiteSpace(dto.Target))
+            {
+                user = await _userRepository.GetByTargetAsync(dto.Target, cancellationToken);
+            }
 
             if (user == null)
             {
                 return OperationResult.Failure("User not found");
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Target))
+            {
+                if (dto.Target.Contains('@'))
+                {
+                    if (user.Email != dto.Target)
+                    {
+                        user.Email = dto.Target;
+                        _userRepository.Update(user);
+                    }
+                }
+                else
+                {
+                    if (user.Phone != dto.Target)
+                    {
+                        user.Phone = dto.Target;
+                        _userRepository.Update(user);
+                    }
+                }
             }
             var existingWorker = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
                 user.Id,
@@ -408,7 +441,6 @@ namespace Infrastructure.Services
                         WorkerProfileId = workerProfile.Id,
                         Title = certificate.Title,
                         IssuedBy = certificate.IssuedBy,
-                        IssuedAt = certificate.IssuedAt,
                     };
 
                     await _workerCertificateRepository.AddAsync(
@@ -904,7 +936,6 @@ namespace Infrastructure.Services
                         WorkerProfileId = workerProfile.Id,
                         Title = certificate.Title,
                         IssuedBy = certificate.IssuedBy,
-                        IssuedAt = certificate.IssuedAt,
                     };
 
                     await _workerCertificateRepository.AddAsync(
