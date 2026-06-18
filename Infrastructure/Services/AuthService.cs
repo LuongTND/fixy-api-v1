@@ -207,7 +207,7 @@ namespace Infrastructure.Services.Auth
                 request.Credential,
                 new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { _googleSettings.GoogleClientId },
+                    Audience = new[] { _googleSettings.WebClientId, _googleSettings.IosClientId },
                 }
             );
 
