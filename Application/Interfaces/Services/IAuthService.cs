@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Auth;
 
 namespace Application.Interfaces.Services.Auth
@@ -18,6 +18,7 @@ namespace Application.Interfaces.Services.Auth
             GoogleLoginRequestDto requestDto,
             CancellationToken cancellationToken
         );
+        Task<OperationResult<AuthResponseDto>> FacebookLoginAsync(FacebookLoginRequestDto requestDto,CancellationToken cancellationToken);
         Task<OperationResult<AuthResponseDto>> RefreshTokenAsync(
             string refreshToken,
             CancellationToken cancellationToken

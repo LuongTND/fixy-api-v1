@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Application.DTOs.Auth;
 using Application.Interfaces.Services.Auth;
 using Application.Interfaces.Services.Email;
@@ -94,6 +94,17 @@ public class AuthController : ApiController
     )
     {
         var result = await _authService.GoogleLoginAsync(request, cancellationToken);
+        return HandleResult(result);
+    }
+
+    // =========================
+    // LOGIN FACEBOOK
+    // =========================
+
+    [HttpPost("login/facebook")]
+    public async Task<IActionResult> LoginFacebook([FromBody] FacebookLoginRequestDto request,CancellationToken cancellationToken)
+    {
+        var result = await _authService.FacebookLoginAsync(request, cancellationToken);
         return HandleResult(result);
     }
 
