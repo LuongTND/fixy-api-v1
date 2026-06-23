@@ -11,6 +11,7 @@ using Domain.Entity;
 using Domain.Enum;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Infrastructure.Services;
 
 namespace Infrastructure.Services.Booking
 {
@@ -25,6 +26,7 @@ namespace Infrastructure.Services.Booking
         private readonly INotificationService _notificationService;
         private readonly IMediaRepository _mediaRepository;
         private readonly IServiceCategoryRepository _serviceCategoryRepository;
+        private readonly IWorkerScheduleExceptionService _workerScheduleExceptionService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly WorkerMatchingSettings _matchingSettings;
         private readonly ILogger<WorkerMatchingService> _logger;
@@ -39,6 +41,7 @@ namespace Infrastructure.Services.Booking
             INotificationService notificationService,
             IMediaRepository mediaRepository,
             IServiceCategoryRepository serviceCategoryRepository,
+            IWorkerScheduleExceptionService workerScheduleExceptionService,
             IUnitOfWork unitOfWork,
             IOptions<WorkerMatchingSettings> matchingOptions,
             ILogger<WorkerMatchingService> logger
@@ -66,6 +69,8 @@ namespace Infrastructure.Services.Booking
                 mediaRepository ?? throw new ArgumentNullException(nameof(mediaRepository));
             _serviceCategoryRepository =
                 serviceCategoryRepository ?? throw new ArgumentNullException(nameof(serviceCategoryRepository));
+            _workerScheduleExceptionService =
+                workerScheduleExceptionService ?? throw new ArgumentNullException(nameof(workerScheduleExceptionService));
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _matchingSettings =
                 matchingOptions?.Value ?? throw new ArgumentNullException(nameof(matchingOptions));
@@ -111,7 +116,7 @@ namespace Infrastructure.Services.Booking
                     && wp.Status == WorkerStatus.Approved,
                     //&& wp.IsOnline
                     //&& !wp.IsBusy
-                    //&& wp.IsAcceptingJobs
+                    //&& wp.IsAcceptingJobs,
                 cancellationToken
             );
 
@@ -124,10 +129,52 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("No workers are currently available");
             }
 
-            // 3. Calculate distance for each worker and filter by MaxDistanceKm
+            // 3. Filter by worker schedule availability
+            var scheduledAtUtc = booking.ScheduledAt ?? DateTime.UtcNow;
+            if (scheduledAtUtc.Kind == DateTimeKind.Unspecified)
+            {
+                scheduledAtUtc = DateTime.SpecifyKind(scheduledAtUtc, DateTimeKind.Utc);
+            }
+
+            var availableWorkers = new List<WorkerProfile>();
+            foreach (var worker in activeWorkers)
+            {
+                var availabilityResult = await _workerScheduleExceptionService.IsWorkerAvailableAsync(
+                    worker.Id,
+                    scheduledAtUtc,
+                    cancellationToken
+                );
+
+                if (availabilityResult.IsSuccess && availabilityResult.Data)
+                {
+                    availableWorkers.Add(worker);
+                }
+                else
+                {
+                    _logger.LogDebug(
+                        "Worker {WorkerProfileId} excluded from auto-match for Booking {BookingId}: outside working schedule/exception at {ScheduledAt}. Reason: {Reason}",
+                        worker.Id,
+                        bookingId,
+                        scheduledAtUtc,
+                        availabilityResult.Message ?? "Not working/day off"
+                    );
+                }
+            }
+
+            if (availableWorkers.Count == 0)
+            {
+                _logger.LogWarning(
+                    "No workers available within working schedule for booking {BookingId} at {ScheduledAt}",
+                    bookingId,
+                    scheduledAtUtc
+                );
+                return OperationResult.Failure("No workers are available at the requested time");
+            }
+
+            // 4. Calculate distance for each worker and filter by MaxDistanceKm
             var candidates = new List<(WorkerProfile Worker, double DistanceKm)>();
 
-            foreach (var worker in activeWorkers)
+            foreach (var worker in availableWorkers)
             {
                 // Try to get real-time location from Redis first
                 double? workerLat = null;
@@ -171,13 +218,13 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("No workers available within service range");
             }
 
-            // 4. Sort by RatingAvg DESC, then by DistanceKm ASC (tie-breaker)
+            // 5. Sort by RatingAvg DESC, then by DistanceKm ASC (tie-breaker)
             var sortedCandidates = candidates
                 .OrderByDescending(c => c.Worker.RatingAvg)
                 .ThenBy(c => c.DistanceKm)
                 .ToList();
 
-            // 5. Populate the WorkerMatchingQueues table
+            // 6. Populate the WorkerMatchingQueues table
             var queueEntries = new List<WorkerMatchingQueue>();
             foreach (var (worker, distanceKm) in sortedCandidates)
             {
@@ -203,7 +250,7 @@ namespace Infrastructure.Services.Booking
                 bookingId
             );
 
-            // 6. Offer to the first (best-ranked) worker
+            // 7. Offer to the first (best-ranked) worker
             return await OfferToNextWorkerAsync(bookingId, cancellationToken);
         }
 

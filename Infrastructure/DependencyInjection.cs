@@ -27,12 +27,12 @@ using Infrastructure.Services.Booking;
 using Infrastructure.Services.Chat;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
-using Infrastructure.Services.Payment;
 using Infrastructure.Services.Notifications;
+using Infrastructure.Services.Payment;
 using Infrastructure.Services.ServiceCategories;
+using Infrastructure.Services.Support;
 using Infrastructure.Services.Vouchers;
 using Infrastructure.Services.Worker;
-using Infrastructure.Services.Support;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -66,6 +66,9 @@ namespace Infrastructure
 
             // Jwt Settings
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
+            services.Configure<GoogleSettings>(configuration.GetSection("GoogleSettings"));
+            services.Configure<FacebookSettings>(configuration.GetSection("FacebookSettings"));
+            services.AddHttpClient();
 
             var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
             // SMTP Settings
@@ -157,7 +160,13 @@ namespace Infrastructure
             services.AddScoped<IVoucherUsageHistoryRepository, VoucherUsageHistoryRepository>();
             services.AddScoped<IBookingVoucherRepository, BookingVoucherRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
-            services.AddScoped(typeof(IRepository<NotificationSetting>), typeof(Repository<NotificationSetting>));
+            services.AddScoped(
+                typeof(IRepository<NotificationSetting>),
+                typeof(Repository<NotificationSetting>)
+            );
+            services.AddScoped(typeof(IRepository<UserFcmToken>), typeof(Repository<UserFcmToken>));
+            // Firebase Cloud Messaging - Singleton vì FirebaseApp là global singleton
+            services.AddSingleton<IFcmService, FcmService>();
             // Services
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IJwtService, JwtService>();

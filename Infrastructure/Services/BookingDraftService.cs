@@ -442,7 +442,9 @@ namespace Infrastructure.Services
                 ScheduledType = draft.ScheduledType,
                 ScheduledAt = draft.ScheduledAt,
 
-                Status = workerProfileId.HasValue ? BookingStatus.Pending : (draft.AutoMatch ? BookingStatus.Matching : BookingStatus.Pending),
+                Status = workerProfileId.HasValue
+                    ? BookingStatus.Pending
+                    : (draft.AutoMatch ? BookingStatus.Matching : BookingStatus.Pending),
                 EstimatedPrice = estimatedPrice,
             };
 
@@ -457,7 +459,11 @@ namespace Infrastructure.Services
             // Trigger auto-matching or direct assignment
             if (workerProfileId.HasValue)
             {
-                await _workerMatchingService.ProcessDirectAssignAsync(booking.Id, workerProfileId.Value, cancellationToken);
+                await _workerMatchingService.ProcessDirectAssignAsync(
+                    booking.Id,
+                    workerProfileId.Value,
+                    cancellationToken
+                );
             }
             else if (draft.AutoMatch)
             {
@@ -596,8 +602,8 @@ namespace Infrastructure.Services
 
                 var addressText = string.Join(
                     ", ",
-                    new[] { address.Detail, address.Ward, address.District, address.City }.Where(
-                        x => !string.IsNullOrWhiteSpace(x)
+                    new[] { address.Detail, address.Ward, address.City }.Where(x =>
+                        !string.IsNullOrWhiteSpace(x)
                     )
                 );
 

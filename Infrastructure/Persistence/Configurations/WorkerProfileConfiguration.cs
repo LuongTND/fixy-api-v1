@@ -48,7 +48,8 @@ namespace Infrastructure.Persistence.Configurations
             // Statistics
             // =========================
 
-            builder.Property(x => x.RatingAvg).HasPrecision(4, 2).HasDefaultValue(0);
+            builder.Property(x => x.RatingAvg).HasDefaultValue(0);
+
 
             builder.Property(x => x.TotalReviews).HasDefaultValue(0);
 

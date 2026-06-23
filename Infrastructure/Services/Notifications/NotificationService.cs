@@ -11,6 +11,7 @@ using Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Services.Notifications
 {
@@ -18,6 +19,8 @@ namespace Infrastructure.Services.Notifications
     {
         private readonly INotificationRepository _notificationRepository;
         private readonly IRepository<NotificationSetting> _settingRepository;
+        private readonly IRepository<UserFcmToken> _fcmTokenRepository;
+        private readonly IFcmService _fcmService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly ILogger<NotificationService> _logger;
@@ -26,6 +29,8 @@ namespace Infrastructure.Services.Notifications
         public NotificationService(
             INotificationRepository notificationRepository,
             IRepository<NotificationSetting> settingRepository,
+            IRepository<UserFcmToken> fcmTokenRepository,
+            IFcmService fcmService,
             IUnitOfWork unitOfWork,
             IHubContext<NotificationHub> hubContext,
             ILogger<NotificationService> logger,
@@ -33,6 +38,8 @@ namespace Infrastructure.Services.Notifications
         {
             _notificationRepository = notificationRepository;
             _settingRepository = settingRepository;
+            _fcmTokenRepository = fcmTokenRepository;
+            _fcmService = fcmService;
             _unitOfWork = unitOfWork;
             _hubContext = hubContext;
             _logger = logger;
@@ -53,6 +60,7 @@ namespace Infrastructure.Services.Notifications
             var setting = await _settingRepository.FirstOrDefaultAsync(
                 s => s.UserId == userId, cancellationToken);
 
+            bool isPushEnabled = true; // Mặc định bật nếu chưa có setting
             if (setting != null)
             {
                 var shouldSkip = type switch
@@ -68,6 +76,8 @@ namespace Infrastructure.Services.Notifications
                     _logger.LogInformation("Notification skipped for user {UserId}: type {Type} is disabled in settings.", userId, type);
                     return;
                 }
+
+                isPushEnabled = setting.ViaPush;
             }
 
             // 2. Serialize meta to JSON string
@@ -105,17 +115,41 @@ namespace Infrastructure.Services.Notifications
                 CreatedDate = notification.CreatedDate
             };
 
-            // 5. Push to web client via SignalR
+            // 5. Push to web client via SignalR (In-App - khi user đang online)
             try
             {
                 await _hubContext.Clients.User(userId.ToString())
                     .SendAsync("ReceiveNotification", dto, cancellationToken);
 
-                _logger.LogInformation("Notification sent to user {UserId}: {Title}", userId, title);
+                _logger.LogInformation("SignalR notification sent to user {UserId}: {Title}", userId, title);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to send SignalR notification to user {UserId}. Notification saved to DB.", userId);
+            }
+
+            // 6. Push via FCM (Web Push - khi user offline, trình duyệt chạy ngầm)
+            if (isPushEnabled)
+            {
+                var userFcmTokens = await _fcmTokenRepository.FindAsync(
+                    t => t.UserId == userId, cancellationToken);
+
+                if (userFcmTokens.Count > 0)
+                {
+                    var tokenStrings = userFcmTokens.Select(t => t.Token).ToList();
+
+                    // Fire-and-forget để không block response chính
+                    _ = Task.Run(async () =>
+                    {
+                        await _fcmService.SendBatchPushNotificationAsync(
+                            tokenStrings,
+                            title,
+                            body,
+                            deepLink,
+                            meta,
+                            CancellationToken.None);
+                    }, CancellationToken.None);
+                }
             }
         }
 
@@ -413,6 +447,68 @@ namespace Infrastructure.Services.Notifications
             }
 
             return true;
+        }
+
+        public async Task<OperationResult> RegisterFcmTokenAsync(Guid userId, RegisterFcmTokenDto dto, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                // Kiểm tra token đã tồn tại chưa (chỉ 1 record duy nhất trên toàn hệ thống do unique index)
+                var existingToken = await _fcmTokenRepository.FirstOrDefaultAsync(
+                    t => t.Token == dto.Token, cancellationToken);
+
+                if (existingToken != null)
+                {
+                    // Token đã tồn tại nhưng có thể thuộc về user khác (login tài khoản mới trên cùng browser)
+                    if (existingToken.UserId != userId)
+                    {
+                        existingToken.UserId = userId;
+                        _fcmTokenRepository.Update(existingToken);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
+                    return OperationResult.Success("FCM token registered successfully.");
+                }
+
+                var fcmToken = new UserFcmToken
+                {
+                    UserId = userId,
+                    Token = dto.Token,
+                    DeviceType = dto.DeviceType ?? "Web",
+                    Browser = dto.Browser
+                };
+
+                await _fcmTokenRepository.AddAsync(fcmToken, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return OperationResult.Success("FCM token registered successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to register FCM token for user {UserId}", userId);
+                return OperationResult.Failure("An error occurred while registering the FCM token.");
+            }
+        }
+
+        public async Task<OperationResult> UnregisterFcmTokenAsync(Guid userId, string token, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tokenEntity = await _fcmTokenRepository.FirstOrDefaultAsync(
+                    t => t.Token == token && t.UserId == userId, cancellationToken);
+
+                if (tokenEntity != null)
+                {
+                    _fcmTokenRepository.Remove(tokenEntity);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+
+                return OperationResult.Success("FCM token unregistered successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unregister FCM token for user {UserId}", userId);
+                return OperationResult.Failure("An error occurred while unregistering the FCM token.");
+            }
         }
     }
 }

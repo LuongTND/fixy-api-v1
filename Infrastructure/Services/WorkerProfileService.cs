@@ -1,4 +1,5 @@
 using Application.Common;
+using Application.Common.Interfaces;
 using Application.DTOs.Address;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile;
@@ -17,6 +18,7 @@ namespace Infrastructure.Services
     public class WorkerProfileService : IWorkerProfileService
     {
         private readonly IUserRepository _userRepository;
+        private readonly ICurrentUserService _currentUserService;
         private readonly IAddressRepository _addressRepository;
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
@@ -39,7 +41,8 @@ namespace Infrastructure.Services
             IMediaRepository mediaRepository,
             IUnitOfWork unitOfWork,
             IBlobService blobService,
-            IWorkerWeeklyScheduleService workerWeeklyScheduleService
+            IWorkerWeeklyScheduleService workerWeeklyScheduleService,
+            ICurrentUserService currentUserService
         )
         {
             _userRepository = userRepository;
@@ -52,6 +55,7 @@ namespace Infrastructure.Services
             _unitOfWork = unitOfWork;
             _blobService = blobService;
             _workerWeeklyScheduleService = workerWeeklyScheduleService;
+            _currentUserService = currentUserService;
         }
 
         public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
@@ -235,7 +239,6 @@ namespace Infrastructure.Services
                             {
                                 Id = address.Id,
                                 City = address.City,
-                                District = address.District,
                                 Ward = address.Ward,
                                 Detail = address.Detail,
                                 Lat = address.Lat,
@@ -290,11 +293,40 @@ namespace Infrastructure.Services
                 return OperationResult.Failure("Worker must have exactly one primary service");
             }
 
-            var user = await _userRepository.GetByTargetAsync(dto.Target);
+            User? user = null;
+            if (_currentUserService.UserId != null && Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            {
+                user = await _userRepository.GetByIdAsync(currentUserId, cancellationToken);
+            }
+
+            if (user == null && !string.IsNullOrWhiteSpace(dto.Target))
+            {
+                user = await _userRepository.GetByTargetAsync(dto.Target, cancellationToken);
+            }
 
             if (user == null)
             {
                 return OperationResult.Failure("User not found");
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.Target))
+            {
+                if (dto.Target.Contains('@'))
+                {
+                    if (user.Email != dto.Target)
+                    {
+                        user.Email = dto.Target;
+                        _userRepository.Update(user);
+                    }
+                }
+                else
+                {
+                    if (user.Phone != dto.Target)
+                    {
+                        user.Phone = dto.Target;
+                        _userRepository.Update(user);
+                    }
+                }
             }
             var existingWorker = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
                 user.Id,
@@ -340,7 +372,6 @@ namespace Infrastructure.Services
                 {
                     WorkerProfileId = workerProfile.Id,
                     City = dto.CreateAddressRequestDto.City,
-                    District = dto.CreateAddressRequestDto.District,
                     Ward = dto.CreateAddressRequestDto.Ward,
                     Detail = dto.CreateAddressRequestDto.Detail,
                     Lat = dto.CreateAddressRequestDto.Lat,
@@ -410,7 +441,6 @@ namespace Infrastructure.Services
                         WorkerProfileId = workerProfile.Id,
                         Title = certificate.Title,
                         IssuedBy = certificate.IssuedBy,
-                        IssuedAt = certificate.IssuedAt,
                     };
 
                     await _workerCertificateRepository.AddAsync(
@@ -597,7 +627,6 @@ namespace Infrastructure.Services
             }
 
             address.City = dto.Address.City;
-            address.District = dto.Address.District;
             address.Ward = dto.Address.Ward;
             address.Detail = dto.Address.Detail;
             address.Lat = dto.Address.Lat;
@@ -907,7 +936,6 @@ namespace Infrastructure.Services
                         WorkerProfileId = workerProfile.Id,
                         Title = certificate.Title,
                         IssuedBy = certificate.IssuedBy,
-                        IssuedAt = certificate.IssuedAt,
                     };
 
                     await _workerCertificateRepository.AddAsync(
@@ -956,7 +984,9 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> SearchWorkersForCustomerAsync(
+        public async Task<
+            OperationResult<PagedResponse<WorkerProfileDto>>
+        > SearchWorkersForCustomerAsync(
             CustomerWorkerSearchQuery query,
             CancellationToken cancellationToken
         )
@@ -973,26 +1003,27 @@ namespace Infrastructure.Services
                 var worker = items[i];
                 var distance = distances[i];
 
-                dtoItems.Add(new WorkerProfileDto
-                {
-                    Id = worker.Id,
-                    UserId = worker.UserId,
-                    FullName = worker.User?.FullName ?? string.Empty,
-                    AvatarUrl = worker.User?.AvatarUrl,
-                    DateOfBirth = worker.User?.DateOfBirth,
-                    Gender = worker.User?.Gender.ToString(),
-                    Status = worker.Status.ToString(),
-                    ExperienceYears = worker.ExperienceYears,
-                    RatingAvg = worker.RatingAvg,
-                    TotalReviews = worker.TotalReviews,
-                    TotalOrders = worker.TotalOrders,
-                    IsOnline = worker.IsOnline,
-                    IsBusy = worker.IsBusy,
-                    DistanceKm = distance.HasValue ? Math.Round(distance.Value, 2) : null,
-                    City = worker.Address?.City,
-                    District = worker.Address?.District,
-                    Services = worker.Services.Select(MapWorkerService).ToList(),
-                });
+                dtoItems.Add(
+                    new WorkerProfileDto
+                    {
+                        Id = worker.Id,
+                        UserId = worker.UserId,
+                        FullName = worker.User?.FullName ?? string.Empty,
+                        AvatarUrl = worker.User?.AvatarUrl,
+                        DateOfBirth = worker.User?.DateOfBirth,
+                        Gender = worker.User?.Gender.ToString(),
+                        Status = worker.Status.ToString(),
+                        ExperienceYears = worker.ExperienceYears,
+                        RatingAvg = worker.RatingAvg,
+                        TotalReviews = worker.TotalReviews,
+                        TotalOrders = worker.TotalOrders,
+                        IsOnline = worker.IsOnline,
+                        IsBusy = worker.IsBusy,
+                        DistanceKm = distance.HasValue ? Math.Round(distance.Value, 2) : null,
+                        City = worker.Address?.City,
+                        Services = worker.Services.Select(MapWorkerService).ToList(),
+                    }
+                );
             }
 
             return OperationResult<PagedResponse<WorkerProfileDto>>.Success(

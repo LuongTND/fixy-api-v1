@@ -59,5 +59,7 @@ namespace Application.Interfaces.Services.Booking
         Task<OperationResult<List<BookingMatchingQueueDto>>> GetMatchingQueueAsync(Guid bookingId, CancellationToken cancellationToken = default);
 
         Task<OperationResult> CancelAsync(Guid bookingId, CancelBookingRequest request, CancellationToken cancellationToken = default);
+
+        Task<OperationResult<BookingDetailDto>> ReorderBookingAsync(Guid bookingId, CancellationToken cancellationToken = default);
     }
 }

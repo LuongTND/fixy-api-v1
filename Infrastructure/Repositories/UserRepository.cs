@@ -1,4 +1,4 @@
-﻿using Application.DTOs.User;
+using Application.DTOs.User;
 using Application.Interfaces.Repositories;
 using Domain.Entity;
 using Infrastructure.Persistence;
@@ -117,6 +117,10 @@ namespace Infrastructure.Repositories
             return await _dbSet
                 .Include(x => x.WorkerProfile)
                 .FirstOrDefaultAsync(x => x.Id == userId, ct);
+        }
+        public async Task<User?> GetByOAuthIdAsync(Domain.Enum.OAuthProvider provider,string oauthId,CancellationToken ct = default)
+        {
+            return await _dbSet.FirstOrDefaultAsync(x => x.OAuthProvider == provider && x.OAuthId == oauthId,ct);
         }
     }
 }

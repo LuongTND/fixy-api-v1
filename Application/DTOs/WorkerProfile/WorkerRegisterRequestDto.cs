@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Address;
+using Application.DTOs.Address;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.DTOs.WorkerProfile.WorkerService;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +7,7 @@ namespace Application.DTOs.WorkerProfile
 {
     public class WorkerRegisterRequestDto
     {
-        public string Target { get; set; } = string.Empty!;
+        public string? Target { get; set; }
         public string? Bio { get; set; }
         public int ExperienceYears { get; set; }
         public int MaxDistanceKm { get; set; }

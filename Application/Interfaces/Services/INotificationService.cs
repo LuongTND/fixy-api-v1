@@ -36,5 +36,8 @@ namespace Application.Interfaces.Services
             Guid? voucherId = null,
             Guid? campaignId = null,
             CancellationToken cancellationToken = default);
+
+        Task<OperationResult> RegisterFcmTokenAsync(Guid userId, RegisterFcmTokenDto dto, CancellationToken cancellationToken = default);
+        Task<OperationResult> UnregisterFcmTokenAsync(Guid userId, string token, CancellationToken cancellationToken = default);
     }
 }

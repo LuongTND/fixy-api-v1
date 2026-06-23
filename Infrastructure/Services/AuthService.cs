@@ -1,4 +1,5 @@
-﻿using System.Data;
+using System.Data;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Application.Common;
 using Application.DTOs.Auth;
@@ -28,7 +29,9 @@ namespace Infrastructure.Services.Auth
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtService _jwtService;
         private readonly GoogleSettings _googleSettings;
+        private readonly FacebookSettings _facebookSettings;
         private readonly JwtSettings _jwtSettings;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public AuthService(
             IUserRepository userRepository,
@@ -42,7 +45,9 @@ namespace Infrastructure.Services.Auth
             IPasswordHasher passwordHasher,
             IJwtService jwtService,
             IOptions<GoogleSettings> googleSettings,
-            IOptions<JwtSettings> jwtSettings
+            IOptions<FacebookSettings> facebookSettings,
+            IOptions<JwtSettings> jwtSettings,
+            IHttpClientFactory httpClientFactory
         )
         {
             _userRepository = userRepository;
@@ -56,7 +61,9 @@ namespace Infrastructure.Services.Auth
             _passwordHasher = passwordHasher;
             _jwtService = jwtService;
             _googleSettings = googleSettings.Value;
+            _facebookSettings = facebookSettings.Value;
             _jwtSettings = jwtSettings.Value;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<OperationResult<AuthResponseDto>> RegisterAsync(
@@ -207,7 +214,7 @@ namespace Infrastructure.Services.Auth
                 request.Credential,
                 new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { _googleSettings.GoogleClientId },
+                    Audience = new[] { _googleSettings.WebClientId, _googleSettings.IosClientId },
                 }
             );
 
@@ -241,6 +248,135 @@ namespace Infrastructure.Services.Auth
             }
             if (!user.IsActive)
                 return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
+            var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            await _refreshTokenRepository.AddAsync(
+                new RefreshToken
+                {
+                    UserId = user.Id,
+                    TokenHash = TokenHasher.Hash(refreshToken),
+                    ExpiresAt = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpirationDays),
+                },
+                ct
+            );
+
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return OperationResult<AuthResponseDto>.Success(
+                new AuthResponseDto
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken,
+                    Email = user.Email ?? "",
+                    UserId = user.Id.ToString(),
+                    Roles = new List<string> { role.Name },
+                },
+                "Login successfully"
+            );
+        }
+
+        public async Task<OperationResult<AuthResponseDto>> FacebookLoginAsync(
+            FacebookLoginRequestDto request,
+            CancellationToken ct
+        )
+        {
+            // Step 1: Validate token and get user info from Facebook Graph API
+            var httpClient = _httpClientFactory.CreateClient();
+            var graphUrl = $"https://graph.facebook.com/v19.0/me?fields=id,name,email,picture.type(large)&access_token={request.AccessToken}";
+
+            var response = await httpClient.GetAsync(graphUrl, ct);
+
+            if (!response.IsSuccessStatusCode)
+                return OperationResult<AuthResponseDto>.Failure("Invalid Facebook access token");
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            var fbUser = JsonSerializer.Deserialize<JsonElement>(json);
+
+            var facebookId = fbUser.GetProperty("id").GetString();
+            var name = fbUser.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : "";
+            var email = fbUser.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : null;
+            var avatarUrl = fbUser.TryGetProperty("picture", out var picProp)
+                && picProp.TryGetProperty("data", out var dataProp)
+                && dataProp.TryGetProperty("url", out var urlProp)
+                ? urlProp.GetString()
+                : null;
+
+            if (string.IsNullOrEmpty(facebookId))
+                return OperationResult<AuthResponseDto>.Failure("Could not retrieve Facebook user ID");
+
+            // Step 2: Find existing user by OAuthId
+            var user = await _userRepository.GetByOAuthIdAsync(OAuthProvider.Facebook, facebookId, ct);
+
+            if (user == null && !string.IsNullOrEmpty(email))
+            {
+                // Check if a user with this email already exists (link accounts)
+                user = await _userRepository.GetByTargetAsync(email, ct);
+                if (user != null)
+                {
+                    user.OAuthProvider = OAuthProvider.Facebook;
+                    user.OAuthId = facebookId;
+                    if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(avatarUrl))
+                        user.AvatarUrl = avatarUrl;
+                }
+            }
+
+            if (user == null)
+            {
+                // Step 3: Create new user
+                user = new User
+                {
+                    Email = email,
+                    FullName = name ?? "",
+                    IsEmailVerified = !string.IsNullOrEmpty(email),
+                    OAuthProvider = OAuthProvider.Facebook,
+                    OAuthId = facebookId,
+                    AvatarUrl = avatarUrl,
+                };
+
+                await _userRepository.AddAsync(user, ct);
+
+                // Create wallet for new user
+                await _walletRepository.AddAsync(
+                    new Wallet
+                    {
+                        UserId = user.Id,
+                        OwnerType = WalletOwnerType.Customer,
+                        Balance = 0,
+                        LifetimeEarned = 0,
+                        LifetimeSpent = 0,
+                        CreatedAt = DateTime.UtcNow,
+                    },
+                    ct
+                );
+
+                // Create customer profile
+                await _customerProfileRepository.AddAsync(
+                    new CustomerProfile { UserId = user.Id },
+                    ct
+                );
+            }
+
+            if (!user.IsActive)
+                return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
+
+            // Step 4: Ensure customer role
+            var role = await _roleRepository.GetCustomerRoleAsync(ct);
+
+            var exists = await _userRoleRepository.ExistsAsync(
+                ur => ur.UserId == user.Id && ur.RoleId == role.Id,
+                ct
+            );
+
+            if (!exists)
+            {
+                await _userRoleRepository.AddAsync(
+                    new UserRole { UserId = user.Id, RoleId = role.Id },
+                    ct
+                );
+            }
+
+            // Step 5: Generate tokens
             var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
             var refreshToken = _jwtService.GenerateRefreshToken();
 
