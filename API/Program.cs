@@ -111,7 +111,10 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:3000")
+                .WithOrigins(
+                    "http://localhost:3000",
+                    "https://fixy-fe-v1.vercel.app"
+                )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
