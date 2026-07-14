@@ -21,3 +21,7 @@ appsettings.json
 /API/appsettings.json
 /API/appsettings.json
 API/.env
+
+# Chặn các file cấu hình publish của Visual Studio
+**/PublishProfiles/
+**/ServiceDependencies/
