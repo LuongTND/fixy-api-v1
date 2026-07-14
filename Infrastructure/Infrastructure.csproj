@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,12 +11,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Services\Email\Templates\ForgotPasswordOtpTemplate.cshtml">
+    <Content Include="Services\Email\Templates\ForgotPasswordOtpTemplate.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Services\Email\Templates\RegisterOtpTemplate.cshtml">
+    </Content>
+    <Content Include="Services\Email\Templates\RegisterOtpTemplate.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
