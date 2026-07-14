@@ -1,4 +1,4 @@
-﻿using Application.Common.Models.Email;
+using Application.Common.Models.Email;
 using Application.Interfaces.Services.Email;
 using RazorLight;
 
@@ -10,15 +10,11 @@ namespace Infrastructure.Services.Email
 
         public RazorTemplateEngine()
         {
-            var templatePath = Path.GetFullPath(
-                Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "..",
-                    "Infrastructure",
-                    "Services",
-                    "Email",
-                    "Templates"
-                )
+            var templatePath = Path.Combine(
+                AppContext.BaseDirectory,
+                "Services",
+                "Email",
+                "Templates"
             );
 
             _engine = new RazorLightEngineBuilder()
