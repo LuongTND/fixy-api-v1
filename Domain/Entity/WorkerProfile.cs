@@ -13,7 +13,13 @@ namespace Domain.Entity
 
         public string? Bio { get; set; }
 
+        public string? BioEn { get; set; }
+
+        public string? BioKo { get; set; }
+
         public int ExperienceYears { get; set; }
+
+        public DateTime? ProfileUpdatedAt { get; set; }
 
         // =========================
         // Working Area
@@ -53,7 +59,7 @@ namespace Domain.Entity
         // Statistics
         // =========================
 
-        public WorkerBadge Badge { get; set; } = WorkerBadge.New;
+        public WorkerBadge Badge { get; set; } = WorkerBadge.NewArrival;
 
         public double RatingAvg { get; set; }
 
