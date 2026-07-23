@@ -11,6 +11,9 @@ namespace Domain.Entity
         public string Code { get; set; } = string.Empty;
         public int SortOrder { get; set; }
         public bool IsActive { get; set; } = true;
+        public long? MinPrice { get; set; }
+        public long? MaxPrice { get; set; }
+        public int? ReferenceDurationMinutes { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedDate { get; set; }
         public string? DeletedBy { get; set; }

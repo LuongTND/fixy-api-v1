@@ -354,7 +354,7 @@ namespace Infrastructure.Services
                     ExperienceYears = dto.ExperienceYears,
                     MaxDistanceKm = dto.MaxDistanceKm,
                     Status = WorkerStatus.Pending,
-                    Badge = WorkerBadge.New,
+                    Badge = WorkerBadge.NewArrival,
                     RatingAvg = 0,
                     TotalReviews = 0,
                     TotalOrders = 0,

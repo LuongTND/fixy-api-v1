@@ -31,6 +31,8 @@ namespace Domain.Entity
 
         public DateTime? ScheduledAt { get; set; }
 
+        public int? TotalDurationMinutes { get; set; }
+
         public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
         // =========================
