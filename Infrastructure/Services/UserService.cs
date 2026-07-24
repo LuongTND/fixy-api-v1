@@ -130,6 +130,8 @@ namespace Infrastructure.Services
             user.Phone = dto.Phone;
             user.DateOfBirth = dto.DateOfBirth;
             user.Gender = dto.Gender;
+            user.Nationality = dto.Nationality;
+            
 
             if (dto.Avatar != null)
             {
@@ -197,6 +199,7 @@ namespace Infrastructure.Services
                     DateOfBirth = user.DateOfBirth,
                     Gender = user.Gender.ToString(),
                     AvatarUrl = user.AvatarUrl,
+                    Nationality = user.Nationality
                 }
             );
         }
