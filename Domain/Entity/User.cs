@@ -28,6 +28,18 @@ namespace Domain.Entity
         public string? AvatarUrl { get; set; }
 
         // =========================
+        // SpaTaiNha Profile & Referral
+        // =========================
+
+        public string? Nationality { get; set; }
+
+        public string PreferredLanguage { get; set; } = "vi";
+
+        public string? CountryCode { get; set; }
+
+        public string? ReferralCode { get; set; }
+
+        // =========================
         // Identification
         // =========================
 

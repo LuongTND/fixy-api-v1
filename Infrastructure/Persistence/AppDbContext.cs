@@ -65,6 +65,11 @@ namespace Infrastructure.Persistence
         public DbSet<EventLog> EventLogs { get; set; }
         public DbSet<Media> Media { get; set; }
 
+        public DbSet<VipMembership> VipMemberships { get; set; }
+        public DbSet<ReferralRecord> ReferralRecords { get; set; }
+        public DbSet<SpaPartner> SpaPartners { get; set; }
+        public DbSet<SpaPartnerPromotion> SpaPartnerPromotions { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
