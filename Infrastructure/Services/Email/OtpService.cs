@@ -1,10 +1,11 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Application.Common;
 using Application.Common.Models.Email;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.Email;
+using Application.Interfaces.Services.Sms;
 using Domain.Entity;
 using Domain.Enum;
 
@@ -17,13 +18,15 @@ namespace Infrastructure.Services.Email
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailQueue _emailQueue;
         private readonly ITemplateEngine _templateEngine;
+        private readonly ISmsService _smsService;
 
         public OtpService(
             IUserRepository userRepository,
             IUserOtpRepository userOtpRepository,
             IUnitOfWork unitOfWork,
             IEmailQueue emailQueue,
-            ITemplateEngine templateEngine
+            ITemplateEngine templateEngine,
+            ISmsService smsService
         )
         {
             _userRepository = userRepository;
@@ -31,6 +34,7 @@ namespace Infrastructure.Services.Email
             _unitOfWork = unitOfWork;
             _emailQueue = emailQueue;
             _templateEngine = templateEngine;
+            _smsService = smsService;
         }
 
         public async Task<OperationResult> SendOtpAsync(
@@ -188,7 +192,8 @@ namespace Infrastructure.Services.Email
 
             if (IsPhone(target))
             {
-                // TODO: Send SMS
+                var smsContent = $"[FIXY] Ma OTP xac thuc cua ban la: {otpCode}. Ma co hieu luc trong 5 phut. Vui long khong chia se ma nay voi ai.";
+                await _smsService.SendSmsAsync(target, smsContent, cancellationToken);
             }
 
             return OperationResult.Success("OTP sent successfully");

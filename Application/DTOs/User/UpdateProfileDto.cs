@@ -10,7 +10,7 @@ namespace Application.DTOs.Profile
         public string? Phone { get; set; }
 
         public DateOnly? DateOfBirth { get; set; }
-
+        public string? Nationality { get; set; }
         public Gender Gender { get; set; }
         public IFormFile? Avatar { get; set; }
     }

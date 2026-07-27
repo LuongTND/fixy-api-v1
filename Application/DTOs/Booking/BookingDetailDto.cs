@@ -18,6 +18,7 @@ namespace Application.DTOs.Booking
         public string Status { get; set; } = string.Empty;
         public string ScheduledType { get; set; } = string.Empty;
         public DateTime? ScheduledAt { get; set; }
+        public int? TotalDurationMinutes { get; set; }
         public long? EstimatedPrice { get; set; }
         public long? FinalPrice { get; set; }
         public string? CancelReason { get; set; }

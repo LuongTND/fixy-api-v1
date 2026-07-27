@@ -30,6 +30,8 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.CancelReason).HasMaxLength(1000);
 
+            builder.Property(x => x.TotalDurationMinutes);
+
             // =========================
             // Relationships
             // =========================

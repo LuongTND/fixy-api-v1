@@ -119,6 +119,7 @@ namespace Infrastructure.Services
 
                 ScheduledType = request.ScheduledType,
                 ScheduledAt = request.ScheduledAt,
+                TotalDurationMinutes = request.TotalDurationMinutes,
 
                 // IMPORTANT:
                 // This MUST be WorkerProfileId
@@ -264,6 +265,7 @@ namespace Infrastructure.Services
 
             existingDraft.ScheduledType = request.ScheduledType;
             existingDraft.ScheduledAt = request.ScheduledAt;
+            existingDraft.TotalDurationMinutes = request.TotalDurationMinutes;
 
             existingDraft.WorkerProfileId = request.WorkerProfileId;
 
@@ -424,6 +426,33 @@ namespace Infrastructure.Services
             }
 
             // =========================
+            // DURATION RESOLUTION
+            // =========================
+
+            int? totalDurationMinutes = draft.TotalDurationMinutes;
+
+            if (!totalDurationMinutes.HasValue && workerProfileId.HasValue)
+            {
+                var workerService = await _workerServiceRepository.FirstOrDefaultAsync(
+                    x => x.WorkerProfileId == workerProfileId.Value && x.CategoryId == draft.CategoryId,
+                    cancellationToken
+                );
+                if (workerService != null && workerService.DurationMinutes > 0)
+                {
+                    totalDurationMinutes = workerService.DurationMinutes;
+                }
+            }
+
+            if (!totalDurationMinutes.HasValue)
+            {
+                var category = await _serviceCategoryRepository.GetByIdAsync(draft.CategoryId, cancellationToken);
+                if (category != null && category.ReferenceDurationMinutes.HasValue)
+                {
+                    totalDurationMinutes = category.ReferenceDurationMinutes;
+                }
+            }
+
+            // =========================
             // CREATE BOOKING
             // =========================
 
@@ -441,6 +470,7 @@ namespace Infrastructure.Services
 
                 ScheduledType = draft.ScheduledType,
                 ScheduledAt = draft.ScheduledAt,
+                TotalDurationMinutes = totalDurationMinutes,
 
                 Status = workerProfileId.HasValue
                     ? BookingStatus.Pending
