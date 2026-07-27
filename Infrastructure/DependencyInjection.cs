@@ -12,6 +12,7 @@ using Application.Interfaces.Services.Email;
 using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.ServiceCategory;
+using Application.Interfaces.Services.Sms;
 using Application.Interfaces.Services.Voucher;
 using Application.Interfaces.Services.Worker;
 using Application.Services;
@@ -28,6 +29,7 @@ using Infrastructure.Services.Chat;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
 using Infrastructure.Services.Notifications;
+using Infrastructure.Services.Sms;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.ServiceCategories;
 using Infrastructure.Services.Support;
@@ -89,6 +91,7 @@ namespace Infrastructure
 
             // Blob Settings
             services.Configure<BlobSettings>(configuration.GetSection("BlobSettings"));
+            services.Configure<SmsSettings>(configuration.GetSection("SmsSettings"));
 
             services.AddSingleton<IEmailQueue, EmailQueue>();
             services.AddHostedService<EmailBackgroundService>();
@@ -172,6 +175,7 @@ namespace Infrastructure
             services.AddScoped<IJwtService, JwtService>();
             services.AddScoped<IOtpService, OtpService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<ISmsService, SmsService>();
             services.AddSingleton<ITemplateEngine, RazorTemplateEngine>();
 
             services.AddScoped<IAuthService, AuthService>();
