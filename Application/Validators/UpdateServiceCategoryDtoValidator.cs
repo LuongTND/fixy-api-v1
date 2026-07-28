@@ -1,4 +1,4 @@
-﻿using Application.DTOs.ServiceCategory;
+using Application.DTOs.ServiceCategory;
 using FluentValidation;
 
 namespace Application.Validators

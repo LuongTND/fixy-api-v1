@@ -8,6 +8,14 @@ namespace Application.Mapping
     {
         public ServiceCategoryProfile()
         {
+            CreateMap<CreateServiceCategoryOptionDto, ServiceCategoryOption>()
+                .ForMember(dest => dest.SortOrder, opt => opt.MapFrom(src => src.SortOrder ?? 0))
+                .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive ?? true));
+
+            CreateMap<UpdateServiceCategoryOptionDto, ServiceCategoryOption>();
+
+            CreateMap<ServiceCategoryOption, ServiceCategoryOptionDto>();
+
             CreateMap<ServiceCategory, ServiceCategoryDto>();
 
             CreateMap<CreateServiceCategoryDto, ServiceCategory>()
@@ -22,7 +30,8 @@ namespace Application.Mapping
                 .ForMember(
                     dest => dest.IsActive,
                     opt => opt.MapFrom(src => src.IsActive ?? true)
-                );
+                )
+                .ForMember(dest => dest.Options, opt => opt.Ignore());
 
             CreateMap<UpdateServiceCategoryDto, ServiceCategory>()
                 .ForMember(
@@ -33,6 +42,7 @@ namespace Application.Mapping
                         opt.MapFrom(src => src.Name!.Trim());
                     }
                 )
+                .ForMember(dest => dest.Options, opt => opt.Ignore())
                 .ForAllMembers(
                     opt => opt.Condition((src, dest, srcMember) => srcMember != null)
                 );

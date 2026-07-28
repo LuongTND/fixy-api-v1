@@ -15,5 +15,6 @@ namespace Application.DTOs.ServiceCategory
         public int? SortOrder { get; set; }
 
         public bool? IsActive { get; set; }
+        public string? Options { get; set; }
     }
 }

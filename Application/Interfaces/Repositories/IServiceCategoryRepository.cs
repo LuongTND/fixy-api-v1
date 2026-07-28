@@ -4,6 +4,7 @@ namespace Application.Interfaces.Repositories
 {
     public interface IServiceCategoryRepository : IRepository<ServiceCategory>
     {
+        Task<ServiceCategory?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> ExistsByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> HasChildrenAsync(Guid parentId, CancellationToken cancellationToken = default);
         Task<string?> GetLastSiblingCodeAsync(Guid? parentId, CancellationToken cancellationToken = default);
