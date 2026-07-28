@@ -409,17 +409,7 @@ namespace Infrastructure.Services
 
             long? estimatedPrice = null;
 
-            if (draft.TotalDurationMinutes.HasValue && categoryEntity?.Options != null)
-            {
-                var matchingOption = categoryEntity.Options
-                    .FirstOrDefault(x => x.IsActive && x.DurationMinutes == draft.TotalDurationMinutes.Value);
-                if (matchingOption != null)
-                {
-                    estimatedPrice = matchingOption.Price;
-                }
-            }
-
-            if (!estimatedPrice.HasValue && workerProfileId.HasValue)
+            if (workerProfileId.HasValue)
             {
                 var workerService = await _workerServiceRepository.FirstOrDefaultAsync(
                     x =>
@@ -428,7 +418,23 @@ namespace Infrastructure.Services
                     cancellationToken
                 );
 
-                estimatedPrice = workerService?.BasePrice;
+                if (workerService != null)
+                {
+                    if (draft.TotalDurationMinutes.HasValue && workerService.Options != null)
+                    {
+                        var matchingOption = workerService.Options
+                            .FirstOrDefault(x => x.IsActive && x.DurationMinutes == draft.TotalDurationMinutes.Value);
+                        if (matchingOption != null)
+                        {
+                            estimatedPrice = matchingOption.Price;
+                        }
+                    }
+
+                    if (!estimatedPrice.HasValue)
+                    {
+                        estimatedPrice = workerService.BasePrice;
+                    }
+                }
             }
 
             if (!estimatedPrice.HasValue)
@@ -438,11 +444,7 @@ namespace Infrastructure.Services
                     cancellationToken
                 );
 
-                var optionMinPrice = categoryEntity?.Options != null && categoryEntity.Options.Any()
-                    ? categoryEntity.Options.Min(x => x.Price)
-                    : (long?)null;
-
-                estimatedPrice = minPrice ?? optionMinPrice;
+                estimatedPrice = minPrice;
             }
 
             // =========================
@@ -457,18 +459,22 @@ namespace Infrastructure.Services
                     x => x.WorkerProfileId == workerProfileId.Value && x.CategoryId == draft.CategoryId,
                     cancellationToken
                 );
-                if (workerService != null && workerService.DurationMinutes > 0)
+                if (workerService != null)
                 {
-                    totalDurationMinutes = workerService.DurationMinutes;
-                }
-            }
+                    if (workerService.Options != null && workerService.Options.Any())
+                    {
+                        totalDurationMinutes = workerService.Options
+                            .Where(x => x.IsActive)
+                            .OrderBy(x => x.SortOrder)
+                            .ThenBy(x => x.DurationMinutes)
+                            .FirstOrDefault()?.DurationMinutes;
+                    }
 
-            if (!totalDurationMinutes.HasValue && categoryEntity?.Options != null && categoryEntity.Options.Any())
-            {
-                totalDurationMinutes = categoryEntity.Options
-                    .OrderBy(x => x.SortOrder)
-                    .ThenBy(x => x.DurationMinutes)
-                    .FirstOrDefault()?.DurationMinutes;
+                    if (!totalDurationMinutes.HasValue && workerService.DurationMinutes > 0)
+                    {
+                        totalDurationMinutes = workerService.DurationMinutes;
+                    }
+                }
             }
 
             // =========================

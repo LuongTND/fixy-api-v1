@@ -45,21 +45,8 @@ namespace API.Controllers
 
         [Authorize(Roles = "ADMIN")]
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] CreateServiceCategoryDto dto,CancellationToken cancellationToken)
+        public async Task<IActionResult> Create([FromForm] CreateServiceCategoryDto dto, CancellationToken cancellationToken)
         {
-            var optionsValues = Request.Form["Options"];
-            if (optionsValues.Count > 0)
-            {
-                if (optionsValues.Count == 1 && optionsValues[0]!.TrimStart().StartsWith("["))
-                {
-                    dto.Options = optionsValues[0];
-                }
-                else
-                {
-                    dto.Options = "[" + string.Join(",", optionsValues!) + "]";
-                }
-            }
-
             var result = await _serviceCategoryService.CreateAsync(dto, cancellationToken);
 
             return HandleResult(result);
@@ -69,19 +56,6 @@ namespace API.Controllers
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateServiceCategoryDto dto, CancellationToken cancellationToken)
         {
-            var optionsValues = Request.Form["Options"];
-            if (optionsValues.Count > 0)
-            {
-                if (optionsValues.Count == 1 && optionsValues[0]!.TrimStart().StartsWith("["))
-                {
-                    dto.Options = optionsValues[0];
-                }
-                else
-                {
-                    dto.Options = "[" + string.Join(",", optionsValues!) + "]";
-                }
-            }
-
             var result = await _serviceCategoryService.UpdateAsync(id, dto, cancellationToken);
 
             return HandleResult(result);

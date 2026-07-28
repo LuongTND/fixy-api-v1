@@ -15,5 +15,6 @@ namespace Domain.Entity
 
         public WorkerProfile? Worker { get; set; }
         public ServiceCategory? Category { get; set; }
+        public ICollection<WorkerServiceOption> Options { get; set; } = new List<WorkerServiceOption>();
     }
 }

@@ -22,6 +22,8 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Address)
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
+                .Include(x => x.Services)
+                    .ThenInclude(s => s.Options)
                 .AsNoTracking();
 
             // Filter category
@@ -108,6 +110,8 @@ namespace Infrastructure.Repositories
                 // Services
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
+                .Include(x => x.Services)
+                    .ThenInclude(s => s.Options)
                 // Reviews
                 .Include(x => x.Reviews)
                 // Schedule
@@ -127,6 +131,8 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Certificates)
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
+                .Include(x => x.Services)
+                    .ThenInclude(s => s.Options)
                 .Include(x => x.Reviews)
                 .FirstOrDefaultAsync(x => x.Id == workerProfileId, cancellationToken);
         }
@@ -157,6 +163,8 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Address)
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Category)
+                .Include(x => x.Services)
+                    .ThenInclude(s => s.Options)
                 .AsNoTracking()
                 .Where(x =>
                     x.Status == Domain.Enum.WorkerStatus.Approved

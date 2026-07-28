@@ -1,4 +1,4 @@
-﻿namespace Application.DTOs.WorkerProfile.WorkerService
+namespace Application.DTOs.WorkerProfile.WorkerService
 {
     public class WorkerServiceDto
     {
@@ -9,5 +9,7 @@
         public string? CategoryName { get; set; }
         public long BasePrice { get; set; }
         public bool IsPrimary { get; set; }
+
+        public List<WorkerServiceOptionDto> Options { get; set; } = new();
     }
 }
