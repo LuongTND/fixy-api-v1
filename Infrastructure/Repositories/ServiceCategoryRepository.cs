@@ -13,9 +13,7 @@ namespace Infrastructure.Repositories
 
         public override async Task<List<ServiceCategory>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            var categories = await _dbSet
-                .Include(x => x.Options)
-                .ToListAsync(cancellationToken);
+            var categories = await _dbSet.ToListAsync(cancellationToken);
 
             return categories
                 .OrderBy(x => x.Code.Split('.').Length) 
@@ -26,15 +24,15 @@ namespace Infrastructure.Repositories
 
         public async Task<ServiceCategory?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await _dbSet.Include(x => x.Options).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            return await _dbSet.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
-        public async Task<bool> ExistsByIdAsync(Guid id,CancellationToken cancellationToken = default)
+        public async Task<bool> ExistsByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _dbSet.AnyAsync(x => x.Id == id, cancellationToken);
         }
 
-        public async Task<bool> HasChildrenAsync(Guid parentId,CancellationToken cancellationToken = default)
+        public async Task<bool> HasChildrenAsync(Guid parentId, CancellationToken cancellationToken = default)
         {
             return await _dbSet.AnyAsync(x => x.ParentId == parentId, cancellationToken);
         }

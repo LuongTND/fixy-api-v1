@@ -18,12 +18,6 @@ namespace Application.DTOs.ServiceCategory
 
         public bool IsActive { get; set; }
 
-        public List<ServiceCategoryOptionDto> Options { get; set; } = new();
-
-        public long? MinPrice => Options != null && Options.Any() ? Options.Min(x => x.Price) : null;
-
-        public long? MaxPrice => Options != null && Options.Any() ? Options.Max(x => x.Price) : null;
-
         public DateTime CreatedDate { get; set; }
 
         public DateTime? UpdatedDate { get; set; }

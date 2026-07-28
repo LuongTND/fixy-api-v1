@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Application.Common;
 using Application.Common.Interfaces;
 using Application.DTOs.ServiceCategory;
@@ -65,7 +64,7 @@ namespace Infrastructure.Services.ServiceCategories
             CancellationToken cancellationToken = default
         )
         {
-            var category = await _serviceCategoryRepository.GetByIdWithDetailsAsync(id,cancellationToken);
+            var category = await _serviceCategoryRepository.GetByIdWithDetailsAsync(id, cancellationToken);
             if (category == null)
             {
                 _logger.LogWarning("Service category not found. Id: {ServiceCategoryId}", id);
@@ -83,8 +82,8 @@ namespace Infrastructure.Services.ServiceCategories
             CancellationToken cancellationToken = default
         )
         {
-            var category = await _serviceCategoryRepository.GetByIdWithDetailsAsync(
-                id,
+            var category = await _serviceCategoryRepository.FirstOrDefaultAsync(
+                x => x.Id == id,
                 cancellationToken
             );
 
@@ -101,13 +100,7 @@ namespace Infrastructure.Services.ServiceCategories
                 cancellationToken
             );
 
-            var optionMinPrice = category.Options.Any() ? category.Options.Min(x => x.Price) : (long?)null;
-            var optionMaxPrice = category.Options.Any() ? category.Options.Max(x => x.Price) : (long?)null;
-
-            var finalMinPrice = minPrice ?? optionMinPrice;
-            var finalMaxPrice = maxPrice ?? optionMaxPrice;
-
-            if (!finalMinPrice.HasValue || !finalMaxPrice.HasValue)
+            if (!minPrice.HasValue || !maxPrice.HasValue)
             {
                 return OperationResult<ServiceCategoryPriceDto>.Failure(
                     "Service category price not found"
@@ -118,8 +111,8 @@ namespace Infrastructure.Services.ServiceCategories
                 new ServiceCategoryPriceDto
                 {
                     CategoryId = id,
-                    MinPrice = finalMinPrice,
-                    MaxPrice = finalMaxPrice,
+                    MinPrice = minPrice,
+                    MaxPrice = maxPrice,
                 },
                 "Service category price retrieved successfully"
             );
@@ -140,39 +133,6 @@ namespace Infrastructure.Services.ServiceCategories
             }
 
             var category = _mapper.Map<ServiceCategory>(dto);
-
-            // Parse Options from JSON string
-            if (!string.IsNullOrWhiteSpace(dto.Options))
-            {
-                try
-                {
-                    var optionsJson = dto.Options.Trim();
-                    _logger.LogInformation("Parsing Options JSON: {OptionsJson}", optionsJson);
-
-                    // Nếu là single object, bọc vào array
-                    if (optionsJson.StartsWith("{"))
-                    {
-                        optionsJson = "[" + optionsJson + "]";
-                    }
-
-                    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var optionDtos = JsonSerializer.Deserialize<List<CreateServiceCategoryOptionDto>>(optionsJson, jsonOptions);
-                    if (optionDtos != null)
-                    {
-                        foreach (var optDto in optionDtos)
-                        {
-                            category.Options.Add(_mapper.Map<ServiceCategoryOption>(optDto));
-                        }
-                    }
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogWarning("Failed to parse Options JSON: {Error}. Raw value: {RawOptions}", ex.Message, dto.Options);
-                    return OperationResult<ServiceCategoryDto>.Failure(
-                        $"Invalid Options JSON format: {ex.Message}"
-                    );
-                }
-            }
 
             if (dto.ImageFile != null)
             {
@@ -201,8 +161,8 @@ namespace Infrastructure.Services.ServiceCategories
             CancellationToken cancellationToken = default
         )
         {
-            var category = await _serviceCategoryRepository.GetByIdWithDetailsAsync(
-                id,
+            var category = await _serviceCategoryRepository.FirstOrDefaultAsync(
+                x => x.Id == id,
                 cancellationToken
             );
 
@@ -223,39 +183,6 @@ namespace Infrastructure.Services.ServiceCategories
 
             var oldParentId = category.ParentId;
             _mapper.Map(dto, category);
-
-            // Parse Options from JSON string
-            if (!string.IsNullOrWhiteSpace(dto.Options))
-            {
-                try
-                {
-                    var optionsJson = dto.Options.Trim();
-
-                    // Nếu là single object, bọc vào array
-                    if (optionsJson.StartsWith("{"))
-                    {
-                        optionsJson = "[" + optionsJson + "]";
-                    }
-
-                    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var optionDtos = JsonSerializer.Deserialize<List<UpdateServiceCategoryOptionDto>>(optionsJson, jsonOptions);
-                    if (optionDtos != null)
-                    {
-                        category.Options.Clear();
-                        foreach (var optDto in optionDtos)
-                        {
-                            category.Options.Add(_mapper.Map<ServiceCategoryOption>(optDto));
-                        }
-                    }
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogWarning("Failed to parse Options JSON: {Error}. Raw value: {RawOptions}", ex.Message, dto.Options);
-                    return OperationResult<ServiceCategoryDto>.Failure(
-                        $"Invalid Options JSON format: {ex.Message}"
-                    );
-                }
-            }
 
             if (dto.ImageFile != null)
             {

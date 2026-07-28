@@ -391,6 +391,26 @@ namespace Infrastructure.Services
                         IsPrimary = service.IsPrimary,
                     };
 
+                    if (service.Options != null && service.Options.Any())
+                    {
+                        var sortOrder = 1;
+                        foreach (var opt in service.Options)
+                        {
+                            workerService.Options.Add(new WorkerServiceOption
+                            {
+                                DurationMinutes = opt.DurationMinutes,
+                                Price = opt.Price,
+                                SortOrder = opt.SortOrder ?? sortOrder++,
+                                IsActive = opt.IsActive ?? true
+                            });
+                        }
+
+                        if (workerService.BasePrice <= 0)
+                        {
+                            workerService.BasePrice = workerService.Options.Min(x => x.Price);
+                        }
+                    }
+
                     await _workerServiceRepository.AddAsync(workerService, cancellationToken);
                 }
                 // Upload Portfolio Images
@@ -640,13 +660,38 @@ namespace Infrastructure.Services
 
             _workerServiceRepository.RemoveRange(workerProfile.Services);
 
-            var newServices = dto.Services.Select(x => new WorkerService
+            var newServices = dto.Services.Select(x =>
             {
-                WorkerProfileId = workerProfile.Id,
-                CategoryId = x.CategoryId,
-                BasePrice = x.BasePrice,
-                IsPrimary = x.IsPrimary,
-            });
+                var ws = new WorkerService
+                {
+                    WorkerProfileId = workerProfile.Id,
+                    CategoryId = x.CategoryId,
+                    BasePrice = x.BasePrice,
+                    IsPrimary = x.IsPrimary,
+                };
+
+                if (x.Options != null && x.Options.Any())
+                {
+                    var sortOrder = 1;
+                    foreach (var opt in x.Options)
+                    {
+                        ws.Options.Add(new WorkerServiceOption
+                        {
+                            DurationMinutes = opt.DurationMinutes,
+                            Price = opt.Price,
+                            SortOrder = opt.SortOrder ?? sortOrder++,
+                            IsActive = opt.IsActive ?? true
+                        });
+                    }
+
+                    if (ws.BasePrice <= 0)
+                    {
+                        ws.BasePrice = ws.Options.Min(o => o.Price);
+                    }
+                }
+
+                return ws;
+            }).ToList();
             if (dto.Avatar != null)
             {
                 string? newAvatarUrl = null;
@@ -1049,6 +1094,15 @@ namespace Infrastructure.Services
                 CategoryName = service.Category?.Name,
                 BasePrice = service.BasePrice,
                 IsPrimary = service.IsPrimary,
+                Options = service.Options != null ? service.Options.Select(x => new WorkerServiceOptionDto
+                {
+                    Id = x.Id,
+                    WorkerServiceId = x.WorkerServiceId,
+                    DurationMinutes = x.DurationMinutes,
+                    Price = x.Price,
+                    SortOrder = x.SortOrder,
+                    IsActive = x.IsActive
+                }).ToList() : new List<WorkerServiceOptionDto>()
             };
         }
 
