@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Repositories;
+using Application.Interfaces.Repositories;
 using Domain.Entity;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +13,20 @@ namespace Infrastructure.Repositories
 
         public override async Task<List<ServiceCategory>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            var categories = await _dbSet.ToListAsync(cancellationToken);
+            var categories = await _dbSet
+                .Include(x => x.Options)
+                .ToListAsync(cancellationToken);
 
             return categories
                 .OrderBy(x => x.Code.Split('.').Length) 
                 .ThenBy(x => x.ParentId)                 
                 .ThenBy(x => x.SortOrder)                
                 .ToList();
+        }
+
+        public async Task<ServiceCategory?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.Include(x => x.Options).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
         public async Task<bool> ExistsByIdAsync(Guid id,CancellationToken cancellationToken = default)

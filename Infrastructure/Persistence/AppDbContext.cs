@@ -32,6 +32,7 @@ namespace Infrastructure.Persistence
         public DbSet<Address> Addresses { get; set; }
 
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
+        public DbSet<ServiceCategoryOption> ServiceCategoryOptions { get; set; }
 
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<WorkerMatchingQueue> WorkerMatchingQueues { get; set; }

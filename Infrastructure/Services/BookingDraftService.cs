@@ -402,9 +402,24 @@ namespace Infrastructure.Services
             // ESTIMATED PRICE
             // =========================
 
+            var categoryEntity = await _serviceCategoryRepository.GetByIdWithDetailsAsync(
+                draft.CategoryId,
+                cancellationToken
+            );
+
             long? estimatedPrice = null;
 
-            if (workerProfileId.HasValue)
+            if (draft.TotalDurationMinutes.HasValue && categoryEntity?.Options != null)
+            {
+                var matchingOption = categoryEntity.Options
+                    .FirstOrDefault(x => x.IsActive && x.DurationMinutes == draft.TotalDurationMinutes.Value);
+                if (matchingOption != null)
+                {
+                    estimatedPrice = matchingOption.Price;
+                }
+            }
+
+            if (!estimatedPrice.HasValue && workerProfileId.HasValue)
             {
                 var workerService = await _workerServiceRepository.FirstOrDefaultAsync(
                     x =>
@@ -415,14 +430,19 @@ namespace Infrastructure.Services
 
                 estimatedPrice = workerService?.BasePrice;
             }
-            else
+
+            if (!estimatedPrice.HasValue)
             {
                 var (minPrice, _) = await _workerServiceRepository.GetPriceRangeAsync(
                     draft.CategoryId,
                     cancellationToken
                 );
 
-                estimatedPrice = minPrice;
+                var optionMinPrice = categoryEntity?.Options != null && categoryEntity.Options.Any()
+                    ? categoryEntity.Options.Min(x => x.Price)
+                    : (long?)null;
+
+                estimatedPrice = minPrice ?? optionMinPrice;
             }
 
             // =========================
@@ -443,13 +463,12 @@ namespace Infrastructure.Services
                 }
             }
 
-            if (!totalDurationMinutes.HasValue)
+            if (!totalDurationMinutes.HasValue && categoryEntity?.Options != null && categoryEntity.Options.Any())
             {
-                var category = await _serviceCategoryRepository.GetByIdAsync(draft.CategoryId, cancellationToken);
-                if (category != null && category.ReferenceDurationMinutes.HasValue)
-                {
-                    totalDurationMinutes = category.ReferenceDurationMinutes;
-                }
+                totalDurationMinutes = categoryEntity.Options
+                    .OrderBy(x => x.SortOrder)
+                    .ThenBy(x => x.DurationMinutes)
+                    .FirstOrDefault()?.DurationMinutes;
             }
 
             // =========================
