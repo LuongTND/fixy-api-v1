@@ -8,6 +8,7 @@ namespace Application.DTOs.WorkerProfile
     public class WorkerRegisterRequestDto
     {
         public string? Target { get; set; }
+        public string? Phone { get; set; }
         public string? Bio { get; set; }
         public int ExperienceYears { get; set; }
         public int MaxDistanceKm { get; set; }

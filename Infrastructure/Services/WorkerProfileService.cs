@@ -309,25 +309,31 @@ namespace Infrastructure.Services
                 return OperationResult.Failure("User not found");
             }
 
+            if (!string.IsNullOrWhiteSpace(dto.Phone))
+            {
+                user.Phone = dto.Phone.Trim();
+            }
+
             if (!string.IsNullOrWhiteSpace(dto.Target))
             {
-                if (dto.Target.Contains('@'))
+                var targetStr = dto.Target.Trim();
+                if (targetStr.Contains('@'))
                 {
-                    if (user.Email != dto.Target)
+                    if (string.IsNullOrWhiteSpace(user.Email) || user.Email != targetStr)
                     {
-                        user.Email = dto.Target;
-                        _userRepository.Update(user);
+                        user.Email = targetStr;
                     }
                 }
                 else
                 {
-                    if (user.Phone != dto.Target)
+                    if (string.IsNullOrWhiteSpace(user.Phone))
                     {
-                        user.Phone = dto.Target;
-                        _userRepository.Update(user);
+                        user.Phone = targetStr;
                     }
                 }
             }
+
+            _userRepository.Update(user);
             var existingWorker = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
                 user.Id,
                 cancellationToken
@@ -461,6 +467,9 @@ namespace Infrastructure.Services
                         WorkerProfileId = workerProfile.Id,
                         Title = certificate.Title,
                         IssuedBy = certificate.IssuedBy,
+                        IssuedAt = certificate.IssuedAt.HasValue
+                            ? DateOnly.FromDateTime(certificate.IssuedAt.Value)
+                            : null,
                     };
 
                     await _workerCertificateRepository.AddAsync(

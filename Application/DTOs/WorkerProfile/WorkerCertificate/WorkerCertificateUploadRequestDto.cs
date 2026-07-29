@@ -6,6 +6,7 @@ namespace Application.DTOs.WorkerProfile.WorkerCertificate
     {
         public string Title { get; set; } = string.Empty;
         public string? IssuedBy { get; set; }
+        public DateTime? IssuedAt { get; set; }
         public List<IFormFile> MediaUploads { get; set; } = new List<IFormFile>();
     }
 }
