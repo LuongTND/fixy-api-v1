@@ -93,7 +93,7 @@ namespace Infrastructure.Repositories
             return await _dbSet
                 .Include(x => x.User)
                 .Include(x => x.Address)
-                .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+                .FirstOrDefaultAsync(x => x.UserId == userId || x.Id == userId, cancellationToken);
         }
 
         public async Task<WorkerProfile?> GetWorkerProfileDetailByUserIdAsync(
@@ -117,7 +117,7 @@ namespace Infrastructure.Repositories
                 // Schedule
                 .Include(x => x.WeeklySchedules)
                 .Include(x => x.ScheduleExceptions)
-                .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+                .FirstOrDefaultAsync(x => x.UserId == userId || x.Id == userId, cancellationToken);
         }
 
         public async Task<WorkerProfile?> GetDetailByIdAsync(
@@ -134,7 +134,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Services)
                     .ThenInclude(s => s.Options)
                 .Include(x => x.Reviews)
-                .FirstOrDefaultAsync(x => x.Id == workerProfileId, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Id == workerProfileId || x.UserId == workerProfileId, cancellationToken);
         }
 
         public async Task<bool> IsApprovedWorkerAsync(

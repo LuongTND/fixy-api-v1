@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Media;
 using Application.DTOs.Review;
 using Application.Interfaces;
@@ -315,7 +315,8 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            var worker = await _workerRepository.GetByIdAsync(workerProfileId, cancellationToken);
+            var worker = await _workerRepository.GetByIdAsync(workerProfileId, cancellationToken)
+                ?? await _workerRepository.GetWorkerProfileDetailByUserIdAsync(workerProfileId, cancellationToken);
 
             if (worker == null)
             {
@@ -323,7 +324,7 @@ namespace Infrastructure.Services
             }
 
             var (reviews, totalCount) = await _reviewRepository.GetWorkerReviewsPagedAsync(
-                workerProfileId,
+                worker.Id,
                 query,
                 cancellationToken
             );

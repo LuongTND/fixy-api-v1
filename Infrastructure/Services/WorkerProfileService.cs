@@ -30,6 +30,7 @@ namespace Infrastructure.Services
 
         private readonly IBlobService _blobService;
         private readonly IWorkerWeeklyScheduleService _workerWeeklyScheduleService;
+        private readonly IGoongService _goongService;
 
         public WorkerProfileService(
             IUserRepository userRepository,
@@ -42,7 +43,8 @@ namespace Infrastructure.Services
             IUnitOfWork unitOfWork,
             IBlobService blobService,
             IWorkerWeeklyScheduleService workerWeeklyScheduleService,
-            ICurrentUserService currentUserService
+            ICurrentUserService currentUserService,
+            IGoongService goongService
         )
         {
             _userRepository = userRepository;
@@ -56,6 +58,7 @@ namespace Infrastructure.Services
             _blobService = blobService;
             _workerWeeklyScheduleService = workerWeeklyScheduleService;
             _currentUserService = currentUserService;
+            _goongService = goongService;
         }
 
         public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
@@ -384,6 +387,18 @@ namespace Infrastructure.Services
                     Lng = dto.CreateAddressRequestDto.Lng,
                     IsDefault = true,
                 };
+
+                if ((!workerAddress.Lat.HasValue || workerAddress.Lat == 0) && _goongService != null)
+                {
+                    var fullAddr = $"{workerAddress.Detail}, {workerAddress.Ward}, {workerAddress.City}";
+                    var (lat, lng) = await _goongService.GeocodeAddressAsync(fullAddr);
+                    if (lat.HasValue && lng.HasValue)
+                    {
+                        workerAddress.Lat = lat;
+                        workerAddress.Lng = lng;
+                    }
+                }
+
                 await _addressRepository.AddAsync(workerAddress, cancellationToken);
                 // Create Worker Services
 
@@ -660,6 +675,17 @@ namespace Infrastructure.Services
             address.Detail = dto.Address.Detail;
             address.Lat = dto.Address.Lat;
             address.Lng = dto.Address.Lng;
+
+            if ((!address.Lat.HasValue || address.Lat == 0) && _goongService != null)
+            {
+                var fullAddr = $"{address.Detail}, {address.Ward}, {address.City}";
+                var (lat, lng) = await _goongService.GeocodeAddressAsync(fullAddr);
+                if (lat.HasValue && lng.HasValue)
+                {
+                    address.Lat = lat;
+                    address.Lng = lng;
+                }
+            }
 
             _addressRepository.Update(address);
 
@@ -1068,12 +1094,16 @@ namespace Infrastructure.Services
                         Gender = worker.User?.Gender.ToString(),
                         Status = worker.Status.ToString(),
                         ExperienceYears = worker.ExperienceYears,
+                        Badge = worker.Badge,
                         RatingAvg = worker.RatingAvg,
                         TotalReviews = worker.TotalReviews,
                         TotalOrders = worker.TotalOrders,
                         IsOnline = worker.IsOnline,
                         IsBusy = worker.IsBusy,
                         DistanceKm = distance.HasValue ? Math.Round(distance.Value, 2) : null,
+                        EstimatedArrivalMinutes = distance.HasValue
+                            ? (int)Math.Round(distance.Value * 2.5 + 10)
+                            : null,
                         City = worker.Address?.City,
                         Services = worker.Services.Select(MapWorkerService).ToList(),
                     }

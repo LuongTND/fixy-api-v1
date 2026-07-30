@@ -189,6 +189,7 @@ namespace Infrastructure
             services.AddScoped<IBookingHubService, BookingHubService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IWorkerLocationService, WorkerLocationService>();
+            services.AddScoped<IGoongService, GoongService>();
             services.AddScoped<IBookingDraftService, BookingDraftService>();
             services.AddScoped<IWorkerMatchingService, WorkerMatchingService>();
             services.AddScoped<IWorkerPayoutAccountService, WorkerPayoutAccountService>();
