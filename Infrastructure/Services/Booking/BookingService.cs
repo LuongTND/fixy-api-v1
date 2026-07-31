@@ -395,6 +395,17 @@ namespace Infrastructure.Services.Booking
                             }
                             else
                             {
+                                // Cash payments stay Pending until the service is completed.
+                                // Now that the booking is done, mark Cash as Paid.
+                                if (booking.PaymentOrder.Method == PaymentMethod.Cash
+                                    && booking.PaymentOrder.Status == PaymentStatus.Pending)
+                                {
+                                    booking.PaymentOrder.Status = PaymentStatus.Paid;
+                                    booking.PaymentOrder.PaidAt = DateTime.UtcNow;
+                                    var paymentOrderRepo = _serviceProvider.GetRequiredService<IPaymentOrderRepository>();
+                                    paymentOrderRepo.Update(booking.PaymentOrder);
+                                }
+
                                 if (booking.PaymentOrder.Status == PaymentStatus.Paid)
                                 {
                                     var workerUserId = booking.WorkerProfile.UserId;
