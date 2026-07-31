@@ -171,6 +171,22 @@ namespace Infrastructure.Services.Payment
                 await _paymentOrderRepository.AddAsync(order, cancellationToken);
             }
 
+            // Cash payments don't go through an online gateway.
+            // The order stays Pending until cash is actually collected after the service.
+            if (method == PaymentMethod.Cash)
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                if (order.BookingId.HasValue)
+                {
+                    await _bookingService.ConfirmPaymentAsync(
+                        order.BookingId.Value,
+                        cancellationToken
+                    );
+                }
+
+                return OperationResult<string>.Success(string.Empty);
+            }
+
             var gateway = _paymentGatewayFactory.Get(method);
 
             var paymentUrl = await gateway.CreatePaymentUrlAsync(order, cancellationToken);
