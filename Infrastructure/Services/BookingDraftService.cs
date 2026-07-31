@@ -110,7 +110,6 @@ namespace Infrastructure.Services
                 UserId = userId,
 
                 CategoryId = request.CategoryId,
-                Description = request.Description,
 
                 AddressId = request.AddressId,
                 Address = request.Address,
@@ -126,8 +125,6 @@ namespace Infrastructure.Services
                 WorkerProfileId = request.WorkerProfileId,
 
                 AutoMatch = request.AutoMatch,
-
-                MediaIds = request.MediaIds,
 
                 CreatedAt = now,
                 ExpiresAt = expiresAt,
@@ -256,7 +253,6 @@ namespace Infrastructure.Services
             var expiresAt = _dateTimeProvider.UtcNow.AddHours(ttlHours);
 
             existingDraft.CategoryId = request.CategoryId;
-            existingDraft.Description = request.Description;
 
             existingDraft.AddressId = request.AddressId;
             existingDraft.Address = request.Address;
@@ -270,7 +266,6 @@ namespace Infrastructure.Services
             existingDraft.WorkerProfileId = request.WorkerProfileId;
 
             existingDraft.AutoMatch = request.AutoMatch;
-            existingDraft.MediaIds = request.MediaIds;
 
             existingDraft.ExpiresAt = expiresAt;
 
@@ -402,11 +397,6 @@ namespace Infrastructure.Services
             // ESTIMATED PRICE
             // =========================
 
-            var categoryEntity = await _serviceCategoryRepository.GetByIdWithDetailsAsync(
-                draft.CategoryId,
-                cancellationToken
-            );
-
             long? estimatedPrice = null;
 
             if (workerProfileId.HasValue)
@@ -487,7 +477,6 @@ namespace Infrastructure.Services
                 WorkerProfileId = workerProfileId,
 
                 CategoryId = draft.CategoryId,
-                Description = draft.Description,
 
                 Address = addressText,
                 Lat = lat.Value,
@@ -497,33 +486,16 @@ namespace Infrastructure.Services
                 ScheduledAt = draft.ScheduledAt,
                 TotalDurationMinutes = totalDurationMinutes,
 
-                Status = workerProfileId.HasValue
-                    ? BookingStatus.Pending
-                    : (draft.AutoMatch ? BookingStatus.Matching : BookingStatus.Pending),
+                Status = BookingStatus.PendingPayment,
                 EstimatedPrice = estimatedPrice,
+                FinalPrice = estimatedPrice,
             };
 
             await _bookingRepository.AddAsync(booking, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await AttachMediaAsync(booking.Id, userId, draft.MediaIds, cancellationToken);
-
             await RemoveDraftAsync(userId, draftId, cancellationToken);
-
-            // Trigger auto-matching or direct assignment
-            if (workerProfileId.HasValue)
-            {
-                await _workerMatchingService.ProcessDirectAssignAsync(
-                    booking.Id,
-                    workerProfileId.Value,
-                    cancellationToken
-                );
-            }
-            else if (draft.AutoMatch)
-            {
-                await _workerMatchingService.ProcessAutoMatchAsync(booking.Id, cancellationToken);
-            }
 
             return OperationResult<BookingDraftConfirmedDto>.Success(
                 new BookingDraftConfirmedDto { BookingId = booking.Id },

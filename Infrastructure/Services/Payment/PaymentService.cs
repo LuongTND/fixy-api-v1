@@ -123,6 +123,8 @@ namespace Infrastructure.Services.Payment
                 return OperationResult<string>.Failure("Invalid booking price");
             }
 
+
+
             var existedOrder = await _paymentOrderRepository.GetBookingPaymentOrderAsync(
                 bookingId,
                 cancellationToken

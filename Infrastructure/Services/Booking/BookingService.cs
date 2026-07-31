@@ -34,14 +34,15 @@ namespace Infrastructure.Services.Booking
         private readonly ILogger<BookingService> _logger;
         private readonly IServiceProvider _serviceProvider;
 
-        private static readonly Dictionary<BookingStatus, BookingStatus> AllowedTransitions = new()
+        private static readonly Dictionary<BookingStatus, List<BookingStatus>> AllowedTransitions = new()
         {
-            { BookingStatus.Pending, BookingStatus.PendingPayment },
-            { BookingStatus.PendingPayment, BookingStatus.Confirmed },
-            { BookingStatus.Confirmed, BookingStatus.Traveling },
-            { BookingStatus.Traveling, BookingStatus.Arrived },
-            { BookingStatus.Arrived, BookingStatus.InProgress },
-            { BookingStatus.InProgress, BookingStatus.Completed },
+            { BookingStatus.PendingPayment, new List<BookingStatus> { BookingStatus.Pending, BookingStatus.Matching } },
+            { BookingStatus.Pending, new List<BookingStatus> { BookingStatus.Confirmed } },
+            { BookingStatus.Matching, new List<BookingStatus> { BookingStatus.Confirmed } },
+            { BookingStatus.Confirmed, new List<BookingStatus> { BookingStatus.Traveling } },
+            { BookingStatus.Traveling, new List<BookingStatus> { BookingStatus.Arrived } },
+            { BookingStatus.Arrived, new List<BookingStatus> { BookingStatus.InProgress } },
+            { BookingStatus.InProgress, new List<BookingStatus> { BookingStatus.Completed } },
         };
 
         public BookingService(
@@ -189,15 +190,31 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("Worker profile not found");
             }
 
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+
+            if (booking == null)
+            {
+                return OperationResult.Failure("Booking not found");
+            }
+
+            BookingStatus expectedStatus = booking.Status;
+            if (expectedStatus != BookingStatus.Pending && expectedStatus != BookingStatus.Matching)
+            {
+                return OperationResult.Failure($"Invalid status transition. Current status: {booking.Status}");
+            }
+
             return await TransitionStatusAsync(
                 bookingId,
-                BookingStatus.Pending,
-                BookingStatus.PendingPayment,
-                "Worker accepted the booking. Awaiting payment.",
+                expectedStatus,
+                BookingStatus.Confirmed,
+                "Kỹ thuật viên đã xác nhận đơn hàng. Đặt lịch đã được chốt.",
                 async (booking) =>
                 {
                     booking.WorkerProfileId = workerProfile.Id;
-                    booking.FinalPrice = booking.EstimatedPrice;
+                    if (!booking.FinalPrice.HasValue || booking.FinalPrice <= 0)
+                    {
+                        booking.FinalPrice = booking.EstimatedPrice;
+                    }
 
                     // Update matching queue entry to Accepted to prevent timeout false-positive
                     var queueEntry = await _matchingQueueRepository.GetOfferedEntryAsync(
@@ -225,14 +242,42 @@ namespace Infrastructure.Services.Booking
             CancellationToken cancellationToken = default
         )
         {
-            return await TransitionStatusAsync(
+            var booking = await _bookingRepository.GetByIdAsync(bookingId, cancellationToken);
+            if (booking == null)
+            {
+                return OperationResult.Failure("Booking not found");
+            }
+
+            BookingStatus targetStatus = booking.WorkerProfileId.HasValue
+                ? BookingStatus.Pending
+                : BookingStatus.Matching;
+
+            var transitionResult = await TransitionStatusAsync(
                 bookingId,
                 BookingStatus.PendingPayment,
-                BookingStatus.Confirmed,
-                "Payment successful. Booking confirmed.",
+                targetStatus,
+                "Thanh toán thành công. Đang chờ Kỹ thuật viên xác nhận.",
                 null,
                 cancellationToken
             );
+
+            if (transitionResult.IsSuccess)
+            {
+                if (booking.WorkerProfileId.HasValue)
+                {
+                    await _workerMatchingService.ProcessDirectAssignAsync(
+                        booking.Id,
+                        booking.WorkerProfileId.Value,
+                        cancellationToken
+                    );
+                }
+                else
+                {
+                    await _workerMatchingService.ProcessAutoMatchAsync(booking.Id, cancellationToken);
+                }
+            }
+
+            return transitionResult;
         }
 
         // =========================================================
@@ -477,9 +522,6 @@ namespace Infrastructure.Services.Booking
                 return OperationResult.Failure("Forbidden");
             }
 
-            booking.WorkerProposedPrice = request.ProposedPrice;
-            booking.WorkerProposedTime = request.ProposedTime;
-            booking.WorkerProposedNote = request.ProposedNote;
             booking.UpdatedDate = DateTime.UtcNow;
 
             _bookingRepository.Update(booking);
@@ -521,19 +563,12 @@ namespace Infrastructure.Services.Booking
 
             if (request.Accept)
             {
-                booking.FinalPrice = booking.WorkerProposedPrice ?? booking.EstimatedPrice;
-
-                booking.ScheduledAt = booking.WorkerProposedTime ?? booking.ScheduledAt;
-
+                booking.FinalPrice = booking.EstimatedPrice;
                 booking.Status = BookingStatus.PendingPayment;
             }
             else
             {
                 booking.WorkerProfileId = null;
-
-                booking.WorkerProposedPrice = null;
-                booking.WorkerProposedTime = null;
-                booking.WorkerProposedNote = null;
 
                 booking.Status = BookingStatus.Matching;
             }
@@ -824,8 +859,8 @@ namespace Infrastructure.Services.Booking
             }
 
             if (
-                !AllowedTransitions.TryGetValue(expectedCurrentStatus, out var allowedNext)
-                || allowedNext != newStatus
+                !AllowedTransitions.TryGetValue(expectedCurrentStatus, out var allowedNextList)
+                || !allowedNextList.Contains(newStatus)
             )
             {
                 return OperationResult.Failure("Transition is not allowed");
@@ -1117,7 +1152,6 @@ namespace Infrastructure.Services.Booking
                     CustomerProfileId = customerProfile.Id,
                     WorkerProfileId = workerProfileId,
                     CategoryId = originalBooking.CategoryId,
-                    Description = originalBooking.Description,
                     Address = originalBooking.Address,
                     Lat = originalBooking.Lat,
                     Lng = originalBooking.Lng,
