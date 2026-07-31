@@ -477,7 +477,6 @@ namespace Infrastructure.Services.Booking
                     serviceName = categoryName,
                     address = booking.Address,
                     scheduledAt = booking.ScheduledAt,
-                    description = booking.Description,
                     images = images.Select(m => m.FileUrl).ToList()
                 };
 

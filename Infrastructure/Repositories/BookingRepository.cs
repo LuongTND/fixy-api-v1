@@ -79,7 +79,7 @@ namespace Infrastructure.Repositories
                 var search = query.SearchTerm.Trim().ToLower();
 
                 dbQuery = dbQuery.Where(x =>
-                    x.Description.ToLower().Contains(search) || x.Address.ToLower().Contains(search)
+                    x.Address.ToLower().Contains(search)
                 );
             }
 
@@ -118,7 +118,7 @@ namespace Infrastructure.Repositories
                 var search = query.SearchTerm.Trim().ToLower();
 
                 dbQuery = dbQuery.Where(x =>
-                    x.Description.ToLower().Contains(search) || x.Address.ToLower().Contains(search)
+                    x.Address.ToLower().Contains(search)
                 );
             }
 
@@ -175,7 +175,7 @@ namespace Infrastructure.Repositories
             {
                 var search = query.SearchTerm.Trim().ToLower();
                 dbQuery = dbQuery.Where(x =>
-                    x.Description.ToLower().Contains(search) || x.Address.ToLower().Contains(search)
+                    x.Address.ToLower().Contains(search)
                 );
             }
 
@@ -226,7 +226,7 @@ namespace Infrastructure.Repositories
             {
                 var search = query.SearchTerm.Trim().ToLower();
                 dbQuery = dbQuery.Where(x =>
-                    x.Description.ToLower().Contains(search) || x.Address.ToLower().Contains(search)
+                    x.Address.ToLower().Contains(search)
                 );
             }
 

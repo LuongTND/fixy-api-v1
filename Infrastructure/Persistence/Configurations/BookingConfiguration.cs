@@ -22,11 +22,8 @@ namespace Infrastructure.Persistence.Configurations
             // Properties
             // =========================
 
-            builder.Property(x => x.Description).HasMaxLength(2000).IsRequired();
 
             builder.Property(x => x.Address).HasMaxLength(500).IsRequired();
-
-            builder.Property(x => x.WorkerProposedNote).HasMaxLength(1000);
 
             builder.Property(x => x.CancelReason).HasMaxLength(1000);
 

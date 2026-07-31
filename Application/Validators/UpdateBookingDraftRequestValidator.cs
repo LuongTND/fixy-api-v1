@@ -10,12 +10,6 @@ namespace Application.Validators
         {
             RuleFor(x => x.CategoryId).NotEmpty();
 
-            RuleFor(x => x.Description).NotEmpty();
-
-            RuleFor(x => x.MediaIds)
-                .Must(list => list.Count <= 5)
-                .WithMessage("Maximum 5 media items allowed");
-
             RuleFor(x => x.ScheduledAt)
                 .NotNull()
                 .When(x => x.ScheduledType == BookingScheduledType.Scheduled);

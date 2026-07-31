@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Services.Payment;
+using Application.Interfaces.Services.Payment;
 using Domain.Enum;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -18,11 +18,10 @@ namespace Infrastructure.Services.Payment
             return method switch
             {
                 PaymentMethod.Vnpay => _serviceProvider.GetRequiredService<VnPayService>(),
-
                 PaymentMethod.Momo => _serviceProvider.GetRequiredService<MoMoService>(),
                 PaymentMethod.PayOS => _serviceProvider.GetRequiredService<PayOSService>(),
-
-                _ => throw new Exception("Payment method not supported"),
+                PaymentMethod.Card => _serviceProvider.GetRequiredService<PayOSService>(),
+                _ => _serviceProvider.GetRequiredService<PayOSService>(),
             };
         }
     }

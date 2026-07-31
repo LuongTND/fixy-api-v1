@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers
 {
     [AllowAnonymous]
+    [Route("api/enums")]
     public class EnumController : ApiController
     {
         private readonly IEnumService _enumService;

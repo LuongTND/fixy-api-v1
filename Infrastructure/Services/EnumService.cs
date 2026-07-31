@@ -29,7 +29,9 @@ namespace Infrastructure.Services
         public Task<OperationResult<List<EnumValueDto>>> GetEnumValuesAsync(string enumName, CancellationToken cancellationToken)
         {
             var enums = EnsureEnumsLoaded();
-            if (enums.TryGetValue(enumName.ToLowerInvariant(), out var values))
+            var normalizedKey = enumName.Replace("-", "").Replace("_", "").ToLowerInvariant();
+
+            if (enums.TryGetValue(normalizedKey, out var values))
             {
                 return Task.FromResult(OperationResult<List<EnumValueDto>>.Success(values, $"Get enum '{enumName}' values successfully"));
             }
@@ -76,8 +78,8 @@ namespace Infrastructure.Services
                         });
                     }
 
-                    // Key in lowercase for case-insensitive lookup
-                    result[type.Name.ToLowerInvariant()] = values;
+                    // Key in normalized lowercase for flexible lookup
+                    result[type.Name.Replace("-", "").Replace("_", "").ToLowerInvariant()] = values;
                 }
 
                 _cachedEnums = result;

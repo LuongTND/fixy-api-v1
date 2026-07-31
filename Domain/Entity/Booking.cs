@@ -19,8 +19,6 @@ namespace Domain.Entity
 
         public Guid CategoryId { get; set; }
 
-        public string Description { get; set; } = string.Empty;
-
         public string Address { get; set; } = string.Empty;
 
         public double Lat { get; set; }
@@ -42,12 +40,6 @@ namespace Domain.Entity
         public long? EstimatedPrice { get; set; }
 
         public long? FinalPrice { get; set; }
-
-        public long? WorkerProposedPrice { get; set; }
-
-        public DateTime? WorkerProposedTime { get; set; }
-
-        public string? WorkerProposedNote { get; set; }
 
         // =========================
         // Cancellation
