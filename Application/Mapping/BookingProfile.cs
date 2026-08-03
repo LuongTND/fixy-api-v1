@@ -35,6 +35,33 @@ namespace Application.Mapping
                                 ? src.WorkerProfile.User.Phone
                                 : null
                         )
+                )
+                .ForMember(
+                    dest => dest.CustomerName,
+                    opt =>
+                        opt.MapFrom(src =>
+                            src.CustomerProfile != null && src.CustomerProfile.User != null
+                                ? src.CustomerProfile.User.FullName
+                                : null
+                        )
+                )
+                .ForMember(
+                    dest => dest.CustomerPhone,
+                    opt =>
+                        opt.MapFrom(src =>
+                            src.CustomerProfile != null && src.CustomerProfile.User != null
+                                ? src.CustomerProfile.User.Phone
+                                : null
+                        )
+                )
+                .ForMember(
+                    dest => dest.CustomerAvatarUrl,
+                    opt =>
+                        opt.MapFrom(src =>
+                            src.CustomerProfile != null && src.CustomerProfile.User != null
+                                ? src.CustomerProfile.User.AvatarUrl
+                                : null
+                        )
                 );
         }
     }
