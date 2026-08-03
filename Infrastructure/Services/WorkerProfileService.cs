@@ -205,6 +205,8 @@ namespace Infrastructure.Services
 
                     FullName = data.WorkerProfile.User!.FullName,
 
+                    AvatarUrl = data.WorkerProfile.User?.AvatarUrl,
+
                     Email = data.WorkerProfile.User.Email!,
 
                     Phone = data.WorkerProfile.User.Phone!,
@@ -606,18 +608,6 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            if (dto.Services.Count is < 1 or > 5)
-            {
-                return OperationResult.Failure(
-                    "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
-                );
-            }
-
-            if (dto.Services.Count(x => x.IsPrimary) != 1)
-            {
-                return OperationResult.Failure("Worker must have exactly one primary service.");
-            }
-
             var workerProfile = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
                 workerId,
                 cancellationToken
@@ -635,98 +625,124 @@ namespace Infrastructure.Services
                 return OperationResult.Failure("User not found");
             }
 
-            // =========================
-            // Update User
-            // =========================
+            // Only validate & replace Services if Services are explicitly supplied in DTO
+            if (dto.Services != null && dto.Services.Count > 0)
+            {
+                if (dto.Services.Count is < 1 or > 5)
+                {
+                    return OperationResult.Failure(
+                        "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
+                    );
+                }
 
-            user.Phone = dto.Phone;
+                if (dto.Services.Count(x => x.IsPrimary) != 1)
+                {
+                    return OperationResult.Failure("Worker must have exactly one primary service.");
+                }
+            }
 
-            _userRepository.Update(user);
+            // =========================
+            // Update User Phone
+            // =========================
+            if (!string.IsNullOrWhiteSpace(dto.Phone))
+            {
+                user.Phone = dto.Phone;
+                _userRepository.Update(user);
+            }
 
             // =========================
             // Update Worker Profile
             // =========================
-
-            workerProfile.Bio = dto.Bio;
-            workerProfile.ExperienceYears = dto.ExperienceYears;
-            workerProfile.MaxDistanceKm = dto.MaxDistanceKm;
-            workerProfile.RejectReason = null;
-            // pending lại cần admin duyệt lại
-            workerProfile.Status = WorkerStatus.Pending;
+            if (dto.Bio != null)
+            {
+                workerProfile.Bio = dto.Bio;
+            }
+            if (dto.ExperienceYears.HasValue && dto.ExperienceYears.Value > 0)
+            {
+                workerProfile.ExperienceYears = dto.ExperienceYears.Value;
+            }
+            if (dto.MaxDistanceKm.HasValue && dto.MaxDistanceKm.Value > 0)
+            {
+                workerProfile.MaxDistanceKm = dto.MaxDistanceKm.Value;
+            }
 
             _workerProfileRepository.Update(workerProfile);
 
             // =========================
             // Update Address
             // =========================
-
-            var address = await _addressRepository.GetWorkerAddressAsync(
-                workerProfile.Id,
-                cancellationToken
-            );
-
-            if (address == null)
+            if (dto.Address != null && (!string.IsNullOrWhiteSpace(dto.Address.City) || !string.IsNullOrWhiteSpace(dto.Address.Detail)))
             {
-                return OperationResult.Failure("Address not found");
-            }
+                var address = await _addressRepository.GetWorkerAddressAsync(
+                    workerProfile.Id,
+                    cancellationToken
+                );
 
-            address.City = dto.Address.City;
-            address.Ward = dto.Address.Ward;
-            address.Detail = dto.Address.Detail;
-            address.Lat = dto.Address.Lat;
-            address.Lng = dto.Address.Lng;
-
-            if ((!address.Lat.HasValue || address.Lat == 0) && _goongService != null)
-            {
-                var fullAddr = $"{address.Detail}, {address.Ward}, {address.City}";
-                var (lat, lng) = await _goongService.GeocodeAddressAsync(fullAddr);
-                if (lat.HasValue && lng.HasValue)
+                if (address != null)
                 {
-                    address.Lat = lat;
-                    address.Lng = lng;
+                    if (!string.IsNullOrWhiteSpace(dto.Address.City)) address.City = dto.Address.City;
+                    if (!string.IsNullOrWhiteSpace(dto.Address.Ward)) address.Ward = dto.Address.Ward;
+                    if (!string.IsNullOrWhiteSpace(dto.Address.Detail)) address.Detail = dto.Address.Detail;
+                    if (dto.Address.Lat != 0) address.Lat = dto.Address.Lat;
+                    if (dto.Address.Lng != 0) address.Lng = dto.Address.Lng;
+
+                    if ((!address.Lat.HasValue || address.Lat == 0) && _goongService != null)
+                    {
+                        var fullAddr = $"{address.Detail}, {address.Ward}, {address.City}";
+                        var (lat, lng) = await _goongService.GeocodeAddressAsync(fullAddr);
+                        if (lat.HasValue && lng.HasValue)
+                        {
+                            address.Lat = lat;
+                            address.Lng = lng;
+                        }
+                    }
+
+                    _addressRepository.Update(address);
                 }
             }
-
-            _addressRepository.Update(address);
 
             // =========================
             // Replace Services
             // =========================
-
-            _workerServiceRepository.RemoveRange(workerProfile.Services);
-
-            var newServices = dto.Services.Select(x =>
+            if (dto.Services != null && dto.Services.Count > 0)
             {
-                var ws = new WorkerService
-                {
-                    WorkerProfileId = workerProfile.Id,
-                    CategoryId = x.CategoryId,
-                    BasePrice = x.BasePrice,
-                    IsPrimary = x.IsPrimary,
-                };
+                _workerServiceRepository.RemoveRange(workerProfile.Services);
 
-                if (x.Options != null && x.Options.Any())
+                var newServices = dto.Services.Select(x =>
                 {
-                    var sortOrder = 1;
-                    foreach (var opt in x.Options)
+                    var ws = new WorkerService
                     {
-                        ws.Options.Add(new WorkerServiceOption
+                        WorkerProfileId = workerProfile.Id,
+                        CategoryId = x.CategoryId,
+                        BasePrice = x.BasePrice,
+                        IsPrimary = x.IsPrimary,
+                    };
+
+                    if (x.Options != null && x.Options.Any())
+                    {
+                        var sortOrder = 1;
+                        foreach (var opt in x.Options)
                         {
-                            DurationMinutes = opt.DurationMinutes,
-                            Price = opt.Price,
-                            SortOrder = opt.SortOrder ?? sortOrder++,
-                            IsActive = opt.IsActive ?? true
-                        });
+                            ws.Options.Add(new WorkerServiceOption
+                            {
+                                DurationMinutes = opt.DurationMinutes,
+                                Price = opt.Price,
+                                SortOrder = opt.SortOrder ?? sortOrder++,
+                                IsActive = opt.IsActive ?? true
+                            });
+                        }
+
+                        if (ws.BasePrice <= 0)
+                        {
+                            ws.BasePrice = ws.Options.Min(o => o.Price);
+                        }
                     }
 
-                    if (ws.BasePrice <= 0)
-                    {
-                        ws.BasePrice = ws.Options.Min(o => o.Price);
-                    }
-                }
+                    return ws;
+                }).ToList();
 
-                return ws;
-            }).ToList();
+                await _workerServiceRepository.AddRangeAsync(newServices, cancellationToken);
+            }
             if (dto.Avatar != null)
             {
                 string? newAvatarUrl = null;
@@ -769,6 +785,7 @@ namespace Infrastructure.Services
 
                     // update user avatar
                     user.AvatarUrl = newAvatarUrl;
+                    _userRepository.Update(user);
                 }
                 catch
                 {
@@ -780,8 +797,6 @@ namespace Infrastructure.Services
                     throw;
                 }
             }
-
-            await _workerServiceRepository.AddRangeAsync(newServices, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

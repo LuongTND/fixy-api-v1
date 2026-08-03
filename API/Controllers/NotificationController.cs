@@ -60,6 +60,28 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Delete a single notification by ID.
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteNotification(Guid id, CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+            var result = await _notificationService.DeleteNotificationAsync(userId, id, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// Delete all notifications for the current user.
+        /// </summary>
+        [HttpDelete("clear-all")]
+        public async Task<IActionResult> ClearAllNotifications(CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+            var result = await _notificationService.DeleteAllNotificationsAsync(userId, cancellationToken);
+            return HandleResult(result);
+        }
+
+        /// <summary>
         /// Get notification settings for the current user.
         /// </summary>
         [HttpGet("settings")]

@@ -234,6 +234,39 @@ namespace Infrastructure.Services.Notifications
             return OperationResult.Success($"{unreadNotifications.Count} notifications marked as read");
         }
 
+        public async Task<OperationResult> DeleteNotificationAsync(
+            Guid userId,
+            Guid notificationId,
+            CancellationToken cancellationToken = default)
+        {
+            var notification = await _notificationRepository.FirstOrDefaultAsync(
+                n => n.Id == notificationId && n.UserId == userId, cancellationToken);
+
+            if (notification == null)
+                return OperationResult.Failure("Notification not found");
+
+            _notificationRepository.Remove(notification);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult.Success("Notification deleted successfully");
+        }
+
+        public async Task<OperationResult> DeleteAllNotificationsAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            var userNotifications = await _notificationRepository.FindAsync(
+                n => n.UserId == userId, cancellationToken);
+
+            if (userNotifications.Count > 0)
+            {
+                _notificationRepository.RemoveRange(userNotifications);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            return OperationResult.Success("All notifications deleted successfully");
+        }
+
         public async Task<OperationResult<NotificationSettingsDto>> GetSettingsAsync(
             Guid userId,
             CancellationToken cancellationToken = default)

@@ -62,6 +62,14 @@ namespace Application.Mapping
                                 ? src.CustomerProfile.User.AvatarUrl
                                 : null
                         )
+                )
+                .ForMember(
+                    dest => dest.PaymentMethod,
+                    opt => opt.MapFrom(src => src.PaymentOrder != null ? (Domain.Enum.PaymentMethod?)src.PaymentOrder.Method : null)
+                )
+                .ForMember(
+                    dest => dest.PaymentMethodName,
+                    opt => opt.MapFrom(src => src.PaymentOrder != null ? src.PaymentOrder.Method.ToString() : null)
                 );
         }
     }

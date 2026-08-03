@@ -24,6 +24,10 @@ namespace Application.Interfaces.Services
 
         Task<OperationResult> MarkAllAsReadAsync(Guid userId,CancellationToken cancellationToken = default);
 
+        Task<OperationResult> DeleteNotificationAsync(Guid userId, Guid notificationId, CancellationToken cancellationToken = default);
+
+        Task<OperationResult> DeleteAllNotificationsAsync(Guid userId, CancellationToken cancellationToken = default);
+
         Task<OperationResult<NotificationSettingsDto>> GetSettingsAsync(Guid userId,CancellationToken cancellationToken = default);
 
         Task<OperationResult<NotificationSettingsDto>> UpdateSettingsAsync(Guid userId,UpdateNotificationSettingsDto dto,CancellationToken cancellationToken = default);

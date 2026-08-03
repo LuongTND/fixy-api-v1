@@ -67,6 +67,7 @@ namespace Infrastructure.Repositories
                     .ThenInclude(x => x!.User)
                 .Include(x => x.WorkerProfile)
                     .ThenInclude(x => x!.User)
+                .Include(x => x.PaymentOrder)
                 .Where(x => x.WorkerProfileId == workerProfileId);
 
             if (query.Status.HasValue)
@@ -106,6 +107,7 @@ namespace Infrastructure.Repositories
                     .ThenInclude(x => x!.User)
                 .Include(x => x.WorkerProfile)
                     .ThenInclude(x => x!.User)
+                .Include(x => x.PaymentOrder)
                 .Where(x => x.CustomerProfileId == customerProfileId);
 
             if (query.Status.HasValue)
@@ -144,6 +146,7 @@ namespace Infrastructure.Repositories
                     .ThenInclude(x => x!.User)
                 .Include(x => x.WorkerProfile)
                     .ThenInclude(x => x!.User)
+                .Include(x => x.PaymentOrder)
                 .AsQueryable();
 
             if (query.Status.HasValue)
