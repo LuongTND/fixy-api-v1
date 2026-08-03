@@ -10,6 +10,7 @@ namespace Application.DTOs.Booking
         public Guid? WorkerProfileId { get; set; }
         public string? WorkerName { get; set; }
         public string? WorkerPhone { get; set; }
+        public string? WorkerAvatarUrl { get; set; }
         public string? CustomerName { get; set; }
         public string? CustomerPhone { get; set; }
         public string? CustomerAvatarUrl { get; set; }

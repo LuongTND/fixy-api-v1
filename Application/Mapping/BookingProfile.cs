@@ -37,6 +37,15 @@ namespace Application.Mapping
                         )
                 )
                 .ForMember(
+                    dest => dest.WorkerAvatarUrl,
+                    opt =>
+                        opt.MapFrom(src =>
+                            src.WorkerProfile != null && src.WorkerProfile.User != null
+                                ? src.WorkerProfile.User.AvatarUrl
+                                : null
+                        )
+                )
+                .ForMember(
                     dest => dest.CustomerName,
                     opt =>
                         opt.MapFrom(src =>
