@@ -10,6 +10,9 @@ namespace Application.DTOs.Booking
         public Guid? WorkerProfileId { get; set; }
         public string? WorkerName { get; set; }
         public string? WorkerPhone { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerPhone { get; set; }
+        public string? CustomerAvatarUrl { get; set; }
         public Guid CategoryId { get; set; }
         public string Address { get; set; } = string.Empty;
         public double Lat { get; set; }
