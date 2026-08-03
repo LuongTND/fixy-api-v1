@@ -158,6 +158,11 @@ namespace Infrastructure.Services.Chat
                 return OperationResult<ChatMessageDto>.Failure("Booking not found.");
             }
 
+            if (booking.Status == Domain.Enum.BookingStatus.Completed || booking.Status == Domain.Enum.BookingStatus.Cancelled)
+            {
+                return OperationResult<ChatMessageDto>.Failure("Cuộc trò chuyện đã đóng vì đơn hàng đã hoàn thành hoặc đã bị hủy.");
+            }
+
             var customerProfile = await _customerProfileRepository.FirstOrDefaultAsync(
                 x => x.UserId == currentUserId,
                 cancellationToken
