@@ -1,4 +1,4 @@
-﻿using Application.DTOs.Address;
+using Application.DTOs.Address;
 using Application.DTOs.Media;
 using Application.DTOs.WorkerProfile.WorkerCertificate;
 using Application.DTOs.WorkerProfile.WorkerService;
@@ -10,6 +10,8 @@ public class WorkerAdminAndOwnerDetailDto
     public Guid UserId { get; set; }
 
     public string FullName { get; set; } = string.Empty;
+
+    public string? AvatarUrl { get; set; }
 
     public string Email { get; set; } = string.Empty;
 

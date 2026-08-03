@@ -21,6 +21,8 @@ namespace Application.DTOs.Booking
         public string ScheduledType { get; set; } = string.Empty;
         public DateTime? ScheduledAt { get; set; }
         public int? TotalDurationMinutes { get; set; }
+        public PaymentMethod? PaymentMethod { get; set; }
+        public string? PaymentMethodName { get; set; }
         public long? EstimatedPrice { get; set; }
         public long? FinalPrice { get; set; }
         public string? CancelReason { get; set; }
