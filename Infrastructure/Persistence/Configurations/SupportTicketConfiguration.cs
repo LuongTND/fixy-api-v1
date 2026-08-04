@@ -14,6 +14,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.Priority).HasConversion<string>();
             builder.Property(x => x.Status).HasConversion<string>();
             builder.Property(x => x.Subject).IsRequired();
+            builder.Property(x => x.Description).IsRequired();
             builder.HasIndex(x => new { x.Status, x.Priority, x.CreatedDate }).HasDatabaseName("idx_ticket_queue");
             builder.HasIndex(x => x.ReporterId).HasDatabaseName("idx_ticket_reporter");
 

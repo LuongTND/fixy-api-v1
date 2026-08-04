@@ -114,18 +114,10 @@ namespace Infrastructure.Services.Support
                 ReporterType = reporterType,
                 Category = request.Category,
                 Subject = request.Subject,
+                Description = request.Description,
                 Priority = request.Priority,
                 Status = SupportStatus.Open,
-                CreatedDate = DateTime.UtcNow,
-                Messages = new List<SupportMessage>
-                {
-                    new SupportMessage
-                    {
-                        SenderId = reporterId,
-                        Content = request.Description,
-                        CreatedDate = DateTime.UtcNow
-                    }
-                }
+                CreatedDate = DateTime.UtcNow
             };
 
             await _supportTicketRepository.AddAsync(ticket, cancellationToken);

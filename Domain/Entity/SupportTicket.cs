@@ -10,6 +10,7 @@ namespace Domain.Entity
         public SupportReporterType ReporterType { get; set; }
         public SupportCategory? Category { get; set; }
         public string Subject { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public SupportPriority Priority { get; set; } = SupportPriority.Normal;
         public SupportStatus Status { get; set; } = SupportStatus.Open;
         public Guid? AssignedToId { get; set; }

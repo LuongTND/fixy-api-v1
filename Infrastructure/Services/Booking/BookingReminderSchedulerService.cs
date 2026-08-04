@@ -117,7 +117,7 @@ namespace Infrastructure.Services.Booking
                             };
 
                             var title = "Nhắc nhở lịch hẹn dịch vụ";
-                            var body = $"Lịch hẹn dịch vụ {serviceName} của bạn sẽ bắt đầu vào lúc {timeStr} (khoảng 1 giờ nữa). Vui lòng chuẩn bị đón thợ.";
+                            var body = $"Lịch hẹn dịch vụ {serviceName} của bạn sẽ bắt đầu vào lúc {timeStr} (khoảng 1 giờ nữa). Vui lòng chuẩn bị đón kỹ thuật viên.";
                             var deepLink = $"/customer/bookings/{booking.Id}";
 
                             await notificationService.SendNotificationAsync(
@@ -157,7 +157,7 @@ namespace Infrastructure.Services.Booking
                                 };
 
                                 var title = "Nhắc nhở lịch hẹn công việc";
-                                var body = $"Bạn có lịch hẹn sửa chữa dịch vụ {serviceName} lúc {timeStr} (khoảng 1 giờ nữa). Vui lòng chuẩn bị di chuyển đến địa chỉ khách hàng.";
+                                var body = $"Bạn có lịch hẹn thực hiện dịch vụ {serviceName} lúc {timeStr} (khoảng 1 giờ nữa). Vui lòng chuẩn bị di chuyển đến địa chỉ khách hàng.";
                                 var deepLink = $"/worker/bookings/{booking.Id}";
 
                                 await notificationService.SendNotificationAsync(
