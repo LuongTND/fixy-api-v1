@@ -9,6 +9,7 @@ namespace Application.DTOs.Support
         public Guid? BookingId { get; set; }
         public string Category { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public string Priority { get; set; } = SupportPriority.Normal.ToString();
         public string Status { get; set; } = SupportStatus.Open.ToString();
         public DateTime CreatedDate { get; set; }

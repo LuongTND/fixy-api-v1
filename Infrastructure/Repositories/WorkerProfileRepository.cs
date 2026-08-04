@@ -396,8 +396,18 @@ namespace Infrastructure.Repositories
                         )),
             });
 
-            // 14. Sắp xếp theo điểm tổng hợp giảm dần
-            var orderedQuery = scoredQuery.OrderByDescending(x => x.RankingScore);
+            // 14. Sắp xếp theo điểm tổng hợp hoặc thuộc tính được chọn
+            IOrderedQueryable<WorkerSearchProjection> orderedQuery;
+            if (sortBy == "popular")
+            {
+                orderedQuery = scoredQuery.OrderByDescending(x => x.Worker.TotalOrders)
+                                          .ThenByDescending(x => x.Worker.TotalReviews)
+                                          .ThenByDescending(x => x.RankingScore);
+            }
+            else
+            {
+                orderedQuery = scoredQuery.OrderByDescending(x => x.RankingScore);
+            }
 
             var totalCount = await typedQuery.CountAsync(cancellationToken);
 

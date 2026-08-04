@@ -10,16 +10,19 @@ namespace Infrastructure.Services
     {
         private readonly IWorkerScheduleExceptionRepository _workerScheduleExceptionRepository;
         private readonly IWorkerWeeklyScheduleRepository _workerWeeklyScheduleRepository;
+        private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public WorkerScheduleExceptionService(
             IWorkerScheduleExceptionRepository workerScheduleExceptionRepository,
             IWorkerWeeklyScheduleRepository workerWeeklyScheduleRepository,
+            IWorkerProfileRepository workerProfileRepository,
             IUnitOfWork unitOfWork
         )
         {
             _workerScheduleExceptionRepository = workerScheduleExceptionRepository;
             _workerWeeklyScheduleRepository = workerWeeklyScheduleRepository;
+            _workerProfileRepository = workerProfileRepository;
             _unitOfWork = unitOfWork;
         }
 
@@ -44,7 +47,7 @@ namespace Infrastructure.Services
         public async Task<OperationResult> AddDayOffAsync(
             Guid workerProfileId,
             DateOnly date,
-            string? reason,
+            string? reason = null,
             CancellationToken cancellationToken = default
         )
         {
@@ -88,6 +91,16 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken = default
         )
         {
+            // 0. Priority 1 (Realtime Working Status override)
+            var worker = await _workerProfileRepository.GetByIdAsync(workerProfileId, cancellationToken);
+            if (worker == null)
+            {
+                return OperationResult<bool>.Failure("Worker profile not found");
+            }
+            if (!worker.IsOnline || !worker.IsAcceptingJobs)
+            {
+                return OperationResult<bool>.Success(false, "Kỹ thuật viên hiện đang tắt trạng thái nhận việc.");
+            }
             // Convert bookingTime to local Vietnam time (+07:00) before extracting date and time
             var utcTime = bookingTime.ToUniversalTime();
             var localZone = TimeZoneInfo.FindSystemTimeZoneById(

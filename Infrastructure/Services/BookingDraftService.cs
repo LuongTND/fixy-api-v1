@@ -32,6 +32,7 @@ namespace Infrastructure.Services
         private readonly IWorkerProfileRepository _workerProfileRepository;
         private readonly IWorkerServiceRepository _workerServiceRepository;
         private readonly IWorkerMatchingService _workerMatchingService;
+        private readonly IWorkerScheduleExceptionService _workerScheduleExceptionService;
         private readonly IUnitOfWork _unitOfWork;
 
         public BookingDraftService(
@@ -48,6 +49,7 @@ namespace Infrastructure.Services
             IWorkerProfileRepository workerProfileRepository,
             IWorkerServiceRepository workerServiceRepository,
             IWorkerMatchingService workerMatchingService,
+            IWorkerScheduleExceptionService workerScheduleExceptionService,
             IUnitOfWork unitOfWork
         )
         {
@@ -77,6 +79,9 @@ namespace Infrastructure.Services
             _workerMatchingService =
                 workerMatchingService
                 ?? throw new ArgumentNullException(nameof(workerMatchingService));
+            _workerScheduleExceptionService =
+                workerScheduleExceptionService
+                ?? throw new ArgumentNullException(nameof(workerScheduleExceptionService));
             _customerProfileRepository =
                 customerProfileRepository
                 ?? throw new ArgumentNullException(nameof(customerProfileRepository));
@@ -386,11 +391,31 @@ namespace Infrastructure.Services
                 if (workerProfile == null)
                 {
                     return OperationResult<BookingDraftConfirmedDto>.Failure(
-                        "Worker profile not found"
+                        "Kỹ thuật viên không tồn tại"
+                    );
+                }
+
+                var scheduledTime = draft.ScheduledAt ?? DateTime.UtcNow;
+                var availabilityResult = await _workerScheduleExceptionService.IsWorkerAvailableAsync(
+                    workerProfile.Id,
+                    scheduledTime,
+                    cancellationToken
+                );
+
+                if (!availabilityResult.IsSuccess || !availabilityResult.Data)
+                {
+                    return OperationResult<BookingDraftConfirmedDto>.Failure(
+                        availabilityResult.Message ?? "Kỹ thuật viên không khả dụng vào thời gian này"
                     );
                 }
 
                 workerProfileId = workerProfile.Id;
+            }
+            else
+            {
+                return OperationResult<BookingDraftConfirmedDto>.Failure(
+                    "Vui lòng chọn Kỹ thuật viên để thực hiện dịch vụ"
+                );
             }
 
             // =========================

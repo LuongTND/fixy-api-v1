@@ -926,12 +926,12 @@ namespace Infrastructure.Services.Booking
                 // Build notification title based on status
                 var (title, body) = newStatus switch
                 {
-                    BookingStatus.PendingPayment => ("Thợ đã nhận đơn của bạn", "Vui lòng thanh toán để xác nhận đặt lịch."),
-                    BookingStatus.Confirmed => ("Đơn đặt lịch đã được xác nhận", "Thanh toán thành công. Thợ sẽ liên hệ bạn sớm."),
-                    BookingStatus.Traveling => ("Thợ đang di chuyển đến", "Thợ đang trên đường đến địa chỉ của bạn."),
-                    BookingStatus.Arrived => ("Thợ đã đến nơi", "Thợ đã có mặt tại địa chỉ của bạn."),
-                    BookingStatus.InProgress => ("Đang tiến hành sửa chữa", "Thợ đang thực hiện dịch vụ."),
-                    BookingStatus.Completed => ("Đơn hàng đã hoàn thành", "Dịch vụ đã hoàn tất. Hãy để lại đánh giá cho thợ nhé!"),
+                    BookingStatus.PendingPayment => ("Kỹ thuật viên đã nhận đơn của bạn", "Vui lòng thanh toán để xác nhận đặt lịch."),
+                    BookingStatus.Confirmed => ("Đơn đặt lịch đã được xác nhận", "Thanh toán thành công. Kỹ thuật viên sẽ liên hệ bạn sớm."),
+                    BookingStatus.Traveling => ("Kỹ thuật viên đang di chuyển đến", "Kỹ thuật viên đang trên đường đến địa chỉ của bạn."),
+                    BookingStatus.Arrived => ("Kỹ thuật viên đã đến nơi", "Kỹ thuật viên đã có mặt tại địa chỉ của bạn."),
+                    BookingStatus.InProgress => ("Đang tiến hành dịch vụ", "Kỹ thuật viên đang thực hiện dịch vụ."),
+                    BookingStatus.Completed => ("Đơn hàng đã hoàn thành", "Dịch vụ đã hoàn tất. Hãy để lại đánh giá cho kỹ thuật viên nhé!"),
                     _ => ((string?)null, (string?)null)
                 };
 
@@ -1002,7 +1002,7 @@ namespace Infrastructure.Services.Booking
                 // Worker chỉ được phép hủy lịch hẹn khi ở trạng thái Pending
                 if (booking.Status != BookingStatus.Pending && booking.Status != BookingStatus.Matching)
                 {
-                    return OperationResult.Failure($"Thợ sửa chữa không thể hủy lịch hẹn ở trạng thái hiện tại: {booking.Status}");
+                    return OperationResult.Failure($"Kỹ thuật viên không thể hủy lịch hẹn ở trạng thái hiện tại: {booking.Status}");
                 }
             }
 
@@ -1092,8 +1092,8 @@ namespace Infrastructure.Services.Booking
                     await _notificationService.SendNotificationAsync(
                         booking.CustomerProfile.UserId,
                         NotificationType.Booking,
-                        "Thợ đã hủy lịch hẹn",
-                        $"Thợ sửa chữa đã hủy lịch hẹn #{booking.Id.ToString()[..8]}. Chúng tôi sẽ tìm thợ khác cho bạn.",
+                        "Kỹ thuật viên đã hủy lịch hẹn",
+                        $"Kỹ thuật viên đã hủy lịch hẹn #{booking.Id.ToString()[..8]}. Chúng tôi sẽ tìm kỹ thuật viên khác cho bạn.",
                         $"/customer/bookings/{bookingId}",
                         new { bookingId = bookingId, status = BookingStatus.Cancelled.ToString() },
                         cancellationToken: cancellationToken
@@ -1141,7 +1141,7 @@ namespace Infrastructure.Services.Booking
             var workerProfile = await _workerProfileRepository.GetByIdAsync(workerProfileId, cancellationToken);
             if (workerProfile == null || workerProfile.Status != WorkerStatus.Approved)
             {
-                return OperationResult<BookingDetailDto>.Failure("Thợ sửa chữa hiện không hoạt động hoặc chưa được duyệt");
+                return OperationResult<BookingDetailDto>.Failure("Kỹ thuật viên hiện không hoạt động hoặc chưa được duyệt");
             }
 
             var workerServiceRepository = _serviceProvider.GetRequiredService<IWorkerServiceRepository>();
@@ -1152,7 +1152,7 @@ namespace Infrastructure.Services.Booking
 
             if (workerService == null)
             {
-                return OperationResult<BookingDetailDto>.Failure("Thợ sửa chữa này hiện không còn cung cấp dịch vụ thuộc danh mục này");
+                return OperationResult<BookingDetailDto>.Failure("Kỹ thuật viên này hiện không còn cung cấp dịch vụ thuộc danh mục này");
             }
 
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
