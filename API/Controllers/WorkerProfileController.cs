@@ -170,6 +170,24 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "WORKER")]
+        [HttpPatch("me/working-status")]
+        public async Task<IActionResult> UpdateWorkingStatus(
+            [FromBody] UpdateWorkingStatusRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.UpdateWorkingStatusAsync(
+                workerId,
+                dto,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
         [HttpPost("me/portfolio-images")]
         public async Task<IActionResult> UploadPortfolioImages(
             [FromForm] UploadPortfolioImagesRequestDto dto,

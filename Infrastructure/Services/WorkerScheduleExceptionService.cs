@@ -97,16 +97,34 @@ namespace Infrastructure.Services
             {
                 return OperationResult<bool>.Failure("Worker profile not found");
             }
+            if (worker.IsBusy)
+            {
+                return OperationResult<bool>.Success(false, "Kỹ thuật viên hiện đang bận trong ca làm việc khác.");
+            }
+
             if (!worker.IsOnline || !worker.IsAcceptingJobs)
             {
-                return OperationResult<bool>.Success(false, "Kỹ thuật viên hiện đang tắt trạng thái nhận việc.");
+                // If worker profile is approved but IsOnline and IsAcceptingJobs were uninitialized (both false), auto-enable them
+                if (worker.Status == WorkerStatus.Approved && !worker.IsOnline && !worker.IsAcceptingJobs)
+                {
+                    worker.IsOnline = true;
+                    worker.IsAcceptingJobs = true;
+                    _workerProfileRepository.Update(worker);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    return OperationResult<bool>.Success(false, "Kỹ thuật viên hiện đang tắt trạng thái nhận việc.");
+                }
             }
             // Convert bookingTime to local Vietnam time (+07:00) before extracting date and time
-            var utcTime = bookingTime.ToUniversalTime();
+            var bookingTimeUtc = bookingTime.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(bookingTime, DateTimeKind.Utc)
+                : bookingTime.ToUniversalTime();
             var localZone = TimeZoneInfo.FindSystemTimeZoneById(
                 System.OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"
             );
-            var localTime = TimeZoneInfo.ConvertTimeFromUtc(utcTime, localZone);
+            var localTime = TimeZoneInfo.ConvertTimeFromUtc(bookingTimeUtc, localZone);
 
             var date = DateOnly.FromDateTime(localTime);
 
@@ -121,7 +139,7 @@ namespace Infrastructure.Services
             {
                 if (exception.IsDayOff)
                 {
-                    return OperationResult<bool>.Success(false, "Worker is on day off");
+                    return OperationResult<bool>.Success(false, "Kỹ thuật viên nghỉ làm vào ngày này");
                 }
 
                 // custom giờ riêng
@@ -135,8 +153,8 @@ namespace Infrastructure.Services
                     return OperationResult<bool>.Success(
                         isAvailableEx,
                         isAvailableEx
-                            ? "Worker is available"
-                            : "Worker is outside custom working hours"
+                            ? "Kỹ thuật viên khả dụng"
+                            : "Kỹ thuật viên đang ngoài khung giờ làm việc đặc biệt"
                     );
                 }
             }
@@ -160,17 +178,17 @@ namespace Infrastructure.Services
 
             if (schedule == null)
             {
-                return OperationResult<bool>.Failure("Schedule not found");
+                return OperationResult<bool>.Failure("Chưa thiết lập lịch làm việc cho Kỹ thuật viên");
             }
 
             if (!schedule.IsActive)
             {
-                return OperationResult<bool>.Success(false, "Worker is not working this day");
+                return OperationResult<bool>.Success(false, "Kỹ thuật viên không làm việc vào ngày này");
             }
 
             if (schedule.StartTime == null || schedule.EndTime == null)
             {
-                return OperationResult<bool>.Failure("Schedule time is invalid");
+                return OperationResult<bool>.Failure("Khung giờ làm việc không hợp lệ");
             }
 
             var currentTime = TimeOnly.FromDateTime(localTime);
@@ -179,7 +197,7 @@ namespace Infrastructure.Services
 
             return OperationResult<bool>.Success(
                 isAvailable,
-                isAvailable ? "Worker is available" : "Worker is outside working hours"
+                isAvailable ? "Kỹ thuật viên khả dụng" : "Kỹ thuật viên đang ngoài khung giờ làm việc"
             );
         }
 

@@ -880,6 +880,24 @@ namespace Infrastructure.Services.Booking
             booking.Status = newStatus;
             booking.UpdatedDate = DateTime.UtcNow;
 
+            if (booking.WorkerProfileId.HasValue)
+            {
+                var workerProfile = await _workerProfileRepository.GetByIdAsync(booking.WorkerProfileId.Value, cancellationToken);
+                if (workerProfile != null)
+                {
+                    if (newStatus == BookingStatus.Confirmed || newStatus == BookingStatus.Traveling || newStatus == BookingStatus.Arrived || newStatus == BookingStatus.InProgress)
+                    {
+                        workerProfile.IsBusy = true;
+                        _workerProfileRepository.Update(workerProfile);
+                    }
+                    else if (newStatus == BookingStatus.Completed || newStatus == BookingStatus.Cancelled)
+                    {
+                        workerProfile.IsBusy = false;
+                        _workerProfileRepository.Update(workerProfile);
+                    }
+                }
+            }
+
             if (onTransition != null)
             {
                 await onTransition(booking);
@@ -1016,6 +1034,16 @@ namespace Infrastructure.Services.Booking
                 booking.CancelledAt = DateTime.UtcNow;
                 booking.CancelReason = request.Reason;
                 booking.UpdatedDate = DateTime.UtcNow;
+
+                if (booking.WorkerProfileId.HasValue)
+                {
+                    var workerProfile = await _workerProfileRepository.GetByIdAsync(booking.WorkerProfileId.Value, cancellationToken);
+                    if (workerProfile != null)
+                    {
+                        workerProfile.IsBusy = false;
+                        _workerProfileRepository.Update(workerProfile);
+                    }
+                }
 
                 _bookingRepository.Update(booking);
 

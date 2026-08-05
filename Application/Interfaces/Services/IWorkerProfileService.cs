@@ -70,5 +70,11 @@ namespace Application.Interfaces.Services
             CustomerWorkerSearchQuery query,
             CancellationToken cancellationToken
         );
+
+        Task<OperationResult> UpdateWorkingStatusAsync(
+            Guid workerId,
+            UpdateWorkingStatusRequestDto dto,
+            CancellationToken cancellationToken
+        );
     }
 }

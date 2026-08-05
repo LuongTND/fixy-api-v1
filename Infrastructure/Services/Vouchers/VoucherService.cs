@@ -10,6 +10,9 @@ using Domain.Entity;
 using Domain.Enum;
 using Microsoft.Extensions.Logging;
 
+using Application.Interfaces.Services.Booking;
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Infrastructure.Services.Vouchers
 {
     public class VoucherService : IVoucherService
@@ -23,6 +26,7 @@ namespace Infrastructure.Services.Vouchers
         private readonly ILogger<VoucherService> _logger;
         private readonly ICurrentUserService _currentUserService;
         private readonly INotificationService _notificationService;
+        private readonly IServiceProvider _serviceProvider;
 
         public VoucherService(
             IVoucherRepository voucherRepository,
@@ -33,7 +37,8 @@ namespace Infrastructure.Services.Vouchers
             IMapper mapper,
             ILogger<VoucherService> logger,
             ICurrentUserService currentUserService,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IServiceProvider serviceProvider)
         {
             _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
             _usageHistoryRepository = usageHistoryRepository ?? throw new ArgumentNullException(nameof(usageHistoryRepository));
@@ -44,6 +49,7 @@ namespace Infrastructure.Services.Vouchers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
         // =============================================
@@ -349,28 +355,89 @@ namespace Infrastructure.Services.Vouchers
                 return OperationResult<ApplyVoucherResponse>.Failure("Voucher not found");
             }
 
-            // 2. Find booking
-            var booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
+            // 2. Find booking or draft
+            Domain.Entity.Booking? booking = null;
+            bool isDraft = false;
+            long orderValue = 0;
+
+            if (request.BookingId != Guid.Empty)
+            {
+                booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
+            }
+
+            if (booking != null)
+            {
+                orderValue = booking.FinalPrice ?? booking.EstimatedPrice ?? 0;
+            }
+            else if (request.BookingId != Guid.Empty)
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var draftService = scope.ServiceProvider.GetService<IBookingDraftService>();
+                if (draftService != null)
+                {
+                    var draftResult = await draftService.GetByIdAsync(request.BookingId, cancellationToken);
+                    if (draftResult.IsSuccess && draftResult.Data != null)
+                    {
+                        var draft = draftResult.Data;
+                        long draftPrice = 0;
+                        var workerServiceRepo = scope.ServiceProvider.GetService<IWorkerServiceRepository>();
+                        if (workerServiceRepo != null)
+                        {
+                            var workerService = draft.WorkerProfileId.HasValue
+                                ? await workerServiceRepo.FirstOrDefaultAsync(
+                                    ws => ws.WorkerProfileId == draft.WorkerProfileId.Value && ws.CategoryId == draft.CategoryId,
+                                    cancellationToken)
+                                : await workerServiceRepo.FirstOrDefaultAsync(
+                                    ws => ws.CategoryId == draft.CategoryId,
+                                    cancellationToken);
+
+                            if (workerService != null)
+                            {
+                                var opt = workerService.Options.FirstOrDefault(o => o.DurationMinutes == (draft.TotalDurationMinutes ?? 60));
+                                draftPrice = opt?.Price ?? workerService.BasePrice;
+                            }
+                        }
+
+                        booking = new Domain.Entity.Booking
+                        {
+                            Id = draft.DraftId,
+                            CategoryId = draft.CategoryId,
+                            Address = draft.Address ?? string.Empty,
+                            Lat = draft.Lat ?? 0,
+                            Lng = draft.Lng ?? 0,
+                            EstimatedPrice = draftPrice,
+                            FinalPrice = draftPrice
+                        };
+                        orderValue = draftPrice;
+                        isDraft = true;
+                    }
+                }
+            }
+
             if (booking == null)
             {
                 return OperationResult<ApplyVoucherResponse>.Failure("Booking not found");
             }
 
-            // 3. Check if booking already has a voucher
-            var existingBv = await _bookingVoucherRepository.GetByBookingIdAsync(request.BookingId, cancellationToken);
-            if (existingBv != null)
+            // 3. Check if booking already has a voucher (only for SQL booking)
+            if (!isDraft)
             {
-                return OperationResult<ApplyVoucherResponse>.Failure("This booking already has a voucher applied");
+                var existingBv = await _bookingVoucherRepository.GetByBookingIdAsync(request.BookingId, cancellationToken);
+                if (existingBv != null)
+                {
+                    return OperationResult<ApplyVoucherResponse>.Failure("This booking already has a voucher applied");
+                }
             }
-
-            var orderValue = booking.FinalPrice ?? booking.EstimatedPrice ?? 0;
 
             // 4. Validate voucher (including structural restrictions)
             var validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking, cancellationToken);
             if (validationError != null)
             {
-                await LogUsageAsync(voucher.Id, userId, request.BookingId, 0, false, validationError, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                if (!isDraft)
+                {
+                    await LogUsageAsync(voucher.Id, userId, request.BookingId, 0, false, validationError, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
                 return OperationResult<ApplyVoucherResponse>.Failure(validationError);
             }
 
@@ -378,7 +445,20 @@ namespace Infrastructure.Services.Vouchers
             long discountAmount = CalculateDiscount(voucher, orderValue);
             long finalPrice = Math.Max(0, orderValue - discountAmount);
 
-            // 6. Execute in transaction
+            if (isDraft)
+            {
+                return OperationResult<ApplyVoucherResponse>.Success(
+                    new ApplyVoucherResponse
+                    {
+                        Code = voucher.Code,
+                        DiscountAmount = discountAmount,
+                        OriginalPrice = orderValue,
+                        FinalPrice = finalPrice,
+                    },
+                    "Voucher preview applied for draft");
+            }
+
+            // 6. Execute in transaction for confirmed SQL booking
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
@@ -494,50 +574,106 @@ namespace Infrastructure.Services.Vouchers
             Guid userId,
             CancellationToken cancellationToken = default)
         {
-            // 1. Find booking
-            var booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
-            if (booking == null)
+            Domain.Entity.Booking? booking = null;
+            long orderValue = 0;
+
+            if (request.BookingId != Guid.Empty)
             {
-                return OperationResult<List<EligibleVoucherDto>>.Failure("Booking not found");
+                booking = await _bookingRepository.GetByIdAsync(request.BookingId, cancellationToken);
             }
 
-            var orderValue = booking.FinalPrice ?? booking.EstimatedPrice ?? 0;
-
-            // 2. Fetch all active vouchers
-            var activeVouchers = await _voucherRepository.GetActiveVouchersAsync(cancellationToken);
-
-            var resultList = new List<EligibleVoucherDto>();
-
-            // 3. Evaluate each voucher
-            foreach (var voucher in activeVouchers)
+            if (booking != null)
             {
-                var validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking, cancellationToken);
-                var isEligible = validationError == null;
-                
-                if (isEligible)
+                orderValue = booking.FinalPrice ?? booking.EstimatedPrice ?? 0;
+            }
+            else if (request.BookingId != Guid.Empty)
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var draftService = scope.ServiceProvider.GetService<IBookingDraftService>();
+                if (draftService != null)
                 {
-                    long calculatedDiscount = CalculateDiscount(voucher, orderValue);
-
-                    resultList.Add(new EligibleVoucherDto
+                    var draftResult = await draftService.GetByIdAsync(request.BookingId, cancellationToken);
+                    if (draftResult.IsSuccess && draftResult.Data != null)
                     {
-                        Id = voucher.Id,
-                        Code = voucher.Code,
-                        Type = voucher.Type,
-                        Value = voucher.Value,
-                        MinOrderValue = voucher.MinOrderValue,
-                        MaxDiscount = voucher.MaxDiscount,
-                        ExpiresAt = voucher.ExpiresAt,
-                        Description = voucher.Description ?? string.Empty,
-                        IsEligible = true,
-                        IneligibleReason = string.Empty,
-                        CalculatedDiscount = calculatedDiscount
-                    });
+                        var draft = draftResult.Data;
+                        long draftPrice = 0;
+                        var workerServiceRepo = scope.ServiceProvider.GetService<IWorkerServiceRepository>();
+                        if (workerServiceRepo != null)
+                        {
+                            var workerService = draft.WorkerProfileId.HasValue
+                                ? await workerServiceRepo.FirstOrDefaultAsync(
+                                    ws => ws.WorkerProfileId == draft.WorkerProfileId.Value && ws.CategoryId == draft.CategoryId,
+                                    cancellationToken)
+                                : await workerServiceRepo.FirstOrDefaultAsync(
+                                    ws => ws.CategoryId == draft.CategoryId,
+                                    cancellationToken);
+
+                            if (workerService != null)
+                            {
+                                var opt = workerService.Options.FirstOrDefault(o => o.DurationMinutes == (draft.TotalDurationMinutes ?? 60));
+                                draftPrice = opt?.Price ?? workerService.BasePrice;
+                            }
+                        }
+
+                        booking = new Domain.Entity.Booking
+                        {
+                            Id = draft.DraftId,
+                            CategoryId = draft.CategoryId,
+                            Address = draft.Address ?? string.Empty,
+                            Lat = draft.Lat ?? 0,
+                            Lng = draft.Lng ?? 0,
+                            EstimatedPrice = draftPrice,
+                            FinalPrice = draftPrice
+                        };
+                        orderValue = draftPrice;
+                    }
                 }
             }
 
-            // 4. Sort: Highest discount first, then by code alphabetically
+            // Fetch all active vouchers
+            var activeVouchers = await _voucherRepository.GetActiveVouchersAsync(cancellationToken);
+            var resultList = new List<EligibleVoucherDto>();
+
+            // Evaluate each voucher
+            foreach (var voucher in activeVouchers)
+            {
+                string? validationError = null;
+                if (booking != null)
+                {
+                    validationError = await ValidateVoucherAsync(voucher, userId, orderValue, booking, cancellationToken);
+                }
+                else
+                {
+                    var now = DateTime.UtcNow.AddHours(7);
+                    if (voucher.Status != VoucherStatus.Active) validationError = "Voucher is not active";
+                    else if (now < voucher.StartsAt) validationError = "Voucher has not started yet";
+                    else if (now > voucher.ExpiresAt) validationError = "Voucher has expired";
+                    else if (voucher.Quota != null && voucher.Quota.MaxUsage.HasValue && voucher.Quota.UsedCount >= voucher.Quota.MaxUsage.Value) validationError = "Voucher is out of stock";
+                }
+
+                var isEligible = validationError == null;
+                long calculatedDiscount = isEligible ? CalculateDiscount(voucher, orderValue) : 0;
+
+                resultList.Add(new EligibleVoucherDto
+                {
+                    Id = voucher.Id,
+                    Code = voucher.Code,
+                    Type = voucher.Type,
+                    Value = voucher.Value,
+                    MinOrderValue = voucher.MinOrderValue,
+                    MaxDiscount = voucher.MaxDiscount,
+                    ExpiresAt = voucher.ExpiresAt,
+                    Description = voucher.Description ?? string.Empty,
+                    IsEligible = isEligible,
+                    IneligibleReason = validationError ?? string.Empty,
+                    CalculatedDiscount = calculatedDiscount
+                });
+            }
+
+            // Sort: Eligible vouchers first, highest discount first, then by code alphabetically
             var sortedResult = resultList
-                .OrderByDescending(v => v.CalculatedDiscount)
+                .OrderByDescending(v => v.IsEligible)
+                .ThenByDescending(v => v.CalculatedDiscount)
                 .ThenBy(v => v.Code)
                 .ToList();
 
@@ -557,7 +693,7 @@ namespace Infrastructure.Services.Vouchers
         {
             // Step 1: Check status
             if (voucher.Status != VoucherStatus.Active)
-                return "Voucher is not active";
+                return "Mã giảm giá hiện không hoạt động";
 
             var now = DateTime.UtcNow.AddHours(7); // Vietnamese Time (GMT+7)
 
@@ -569,17 +705,17 @@ namespace Infrastructure.Services.Vouchers
                 // 1. Check campaign status
                 if (campaign.Status != CampaignStatus.Active)
                 {
-                    return $"This voucher belongs to a campaign that is currently {campaign.Status.ToString().ToLower()}";
+                    return "Mã giảm giá thuộc chương trình khuyến mãi hiện không khả dụng";
                 }
 
                 // 2. Check campaign validity period
                 if (now < campaign.StartsAt)
                 {
-                    return "The promotion campaign has not started yet";
+                    return "Chương trình khuyến mãi chưa bắt đầu";
                 }
                 if (now > campaign.ExpiresAt)
                 {
-                    return "The promotion campaign has ended";
+                    return "Chương trình khuyến mãi đã kết thúc";
                 }
 
                 // 3. Check campaign budget limit
@@ -588,7 +724,7 @@ namespace Infrastructure.Services.Vouchers
                     var estimatedDiscount = CalculateDiscount(voucher, orderValue);
                     if ((campaign.BudgetUsed + estimatedDiscount) > campaign.BudgetLimit.Value)
                     {
-                        return "The promotion campaign budget has been fully spent";
+                        return "Ngân sách chương trình khuyến mãi đã được sử dụng hết";
                     }
                 }
 
@@ -604,11 +740,11 @@ namespace Infrastructure.Services.Vouchers
 
                             if (completedCountForFirst < 1)
                             {
-                                return "This promotion is only available after completing your first booking";
+                                return "Khuyến mãi chỉ áp dụng sau khi hoàn thành đơn hàng đầu tiên";
                             }
                             if (completedCountForFirst > 1)
                             {
-                                return "This promotion was only available immediately after your first booking completed";
+                                return "Khuyến mãi chỉ áp dụng ngay sau khi hoàn thành đơn hàng đầu tiên";
                             }
                             break;
                     }
@@ -617,19 +753,19 @@ namespace Infrastructure.Services.Vouchers
 
             // Step 2: Check start date
             if (now < voucher.StartsAt)
-                return "Voucher has not started yet";
+                return "Mã giảm giá chưa đến thời gian sử dụng";
 
             // Step 3: Check expiry
             if (now > voucher.ExpiresAt)
-                return "Voucher has expired";
+                return "Mã giảm giá đã hết hạn sử dụng";
 
             // Step 4: Check system-wide usage limit
             if (voucher.Quota != null && voucher.Quota.MaxUsage.HasValue && voucher.Quota.UsedCount >= voucher.Quota.MaxUsage.Value)
-                return "Voucher is out of stock";
+                return "Mã giảm giá đã hết lượt sử dụng";
 
             // Step 5: Check minimum order value
             if (orderValue < voucher.MinOrderValue)
-                return $"Order value must be at least {voucher.MinOrderValue}";
+                return $"Đơn hàng phải có giá trị tối thiểu từ {voucher.MinOrderValue:N0}đ";
 
             // Step 6: Check per-user usage limit
             if (voucher.Quota != null && voucher.Quota.MaxUsagePerUser.HasValue)
@@ -638,7 +774,7 @@ namespace Infrastructure.Services.Vouchers
                     voucher.Id, userId, cancellationToken);
 
                 if (userUsageCount >= voucher.Quota.MaxUsagePerUser.Value)
-                    return "You have already used this voucher the maximum number of times";
+                    return "Bạn đã sử dụng tối đa số lần cho phép của mã giảm giá này";
             }
 
             // Step 7: Apply dynamic Voucher Restrictions
@@ -650,7 +786,7 @@ namespace Infrastructure.Services.Vouchers
                         if (Guid.TryParse(restriction.Value, out var allowedCatId))
                         {
                             if (booking.CategoryId != allowedCatId)
-                                return "This voucher is not applicable to the selected service category";
+                                return "Mã giảm giá không áp dụng cho danh mục dịch vụ này";
                         }
                         break;
 
@@ -659,7 +795,7 @@ namespace Infrastructure.Services.Vouchers
                         {
                             if (!booking.Address.Contains(restriction.Value, StringComparison.OrdinalIgnoreCase))
                             {
-                                return $"This voucher is only applicable to orders in {restriction.Value}";
+                                return $"Mã giảm giá chỉ áp dụng cho đơn hàng tại {restriction.Value}";
                             }
                         }
                         break;
@@ -671,7 +807,7 @@ namespace Infrastructure.Services.Vouchers
 
                         if (hasCompletedBooking)
                         {
-                            return "This voucher is only applicable to your first order";
+                            return "Mã giảm giá chỉ áp dụng cho đơn hàng đầu tiên";
                         }
                         break;
                 }

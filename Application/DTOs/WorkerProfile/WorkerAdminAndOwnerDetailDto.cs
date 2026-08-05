@@ -23,6 +23,10 @@ public class WorkerAdminAndOwnerDetailDto
 
     public WorkerStatus Status { get; set; }
 
+    public bool IsOnline { get; set; }
+    public bool IsAcceptingJobs { get; set; }
+    public bool IsBusy { get; set; }
+
     public string? Bio { get; set; }
 
     public int ExperienceYears { get; set; }
