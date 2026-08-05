@@ -217,6 +217,10 @@ namespace Infrastructure.Services
 
                     Status = data.WorkerProfile.Status,
 
+                    IsOnline = data.WorkerProfile.IsOnline,
+                    IsAcceptingJobs = data.WorkerProfile.IsAcceptingJobs,
+                    IsBusy = data.WorkerProfile.IsBusy,
+
                     Bio = data.WorkerProfile.Bio,
 
                     ExperienceYears = data.WorkerProfile.ExperienceYears,
@@ -548,6 +552,8 @@ namespace Infrastructure.Services
 
             workerRegisterRequest.Status = WorkerStatus.Approved;
             workerRegisterRequest.ApprovedById = userId;
+            workerRegisterRequest.IsOnline = true;
+            workerRegisterRequest.IsAcceptingJobs = true;
 
             if (workerRegisterRequest.User != null)
             {
@@ -1230,6 +1236,37 @@ namespace Infrastructure.Services
                 identificationImages,
                 workerCertificateImages.ToLookup(x => x.OwnerId)
             );
+        }
+
+        public async Task<OperationResult> UpdateWorkingStatusAsync(
+            Guid workerUserId,
+            UpdateWorkingStatusRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var worker = await _workerProfileRepository.FirstOrDefaultAsync(
+                x => x.UserId == workerUserId,
+                cancellationToken
+            );
+            if (worker == null)
+            {
+                return OperationResult.Failure("Worker profile not found.");
+            }
+
+            if (dto.IsAcceptingJobs.HasValue)
+            {
+                worker.IsAcceptingJobs = dto.IsAcceptingJobs.Value;
+                worker.IsOnline = dto.IsAcceptingJobs.Value;
+            }
+            if (dto.IsOnline.HasValue)
+            {
+                worker.IsOnline = dto.IsOnline.Value;
+            }
+
+            _workerProfileRepository.Update(worker);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult.Success("Update working status successfully.");
         }
     }
 }
