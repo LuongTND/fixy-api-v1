@@ -13,6 +13,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.Name).HasMaxLength(250).IsRequired();
             builder.Property(x => x.Phone).HasMaxLength(50);
             builder.Property(x => x.Email).HasMaxLength(100);
+            builder.Property(x => x.City).HasMaxLength(100);
+            builder.Property(x => x.OpeningHours).HasMaxLength(100);
         }
     }
 }
+

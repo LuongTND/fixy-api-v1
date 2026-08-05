@@ -22,6 +22,16 @@ namespace Domain.Entity
 
         public string? Email { get; set; }
 
+        public string? City { get; set; }
+
+        public string? OpeningHours { get; set; }
+
+        public double RatingAvg { get; set; }
+
+        public int TotalReviews { get; set; }
+
+        public int SortOrder { get; set; }
+
         public bool IsActive { get; set; } = true;
 
         public bool IsDeleted { get; set; }
@@ -32,5 +42,15 @@ namespace Domain.Entity
 
         public ICollection<SpaPartnerPromotion> Promotions { get; set; } =
             new List<SpaPartnerPromotion>();
+
+        public ICollection<SpaPartnerService> Services { get; set; } =
+            new List<SpaPartnerService>();
+
+        public ICollection<SpaPartnerReview> Reviews { get; set; } =
+            new List<SpaPartnerReview>();
+
+        public ICollection<SpaPartnerGallery> Gallery { get; set; } =
+            new List<SpaPartnerGallery>();
     }
 }
+

@@ -70,6 +70,10 @@ namespace Infrastructure.Persistence
         public DbSet<ReferralRecord> ReferralRecords { get; set; }
         public DbSet<SpaPartner> SpaPartners { get; set; }
         public DbSet<SpaPartnerPromotion> SpaPartnerPromotions { get; set; }
+        public DbSet<SpaServiceCategory> SpaServiceCategories { get; set; }
+        public DbSet<SpaPartnerService> SpaPartnerServices { get; set; }
+        public DbSet<SpaPartnerReview> SpaPartnerReviews { get; set; }
+        public DbSet<SpaPartnerGallery> SpaPartnerGalleries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
