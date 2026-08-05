@@ -1,0 +1,21 @@
+namespace Application.DTOs.SpaPartner
+{
+    public class SpaServiceCategoryDto
+    {
+        public Guid Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+
+        public string? ImageUrl { get; set; }
+
+        public string Code { get; set; } = string.Empty;
+
+        public int SortOrder { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public int SpaCount { get; set; }
+    }
+}

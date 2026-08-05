@@ -13,6 +13,7 @@ using Application.Interfaces.Services.Media;
 using Application.Interfaces.Services.Payment;
 using Application.Interfaces.Services.ServiceCategory;
 using Application.Interfaces.Services.Sms;
+using Application.Interfaces.Services.SpaPartner;
 using Application.Interfaces.Services.Voucher;
 using Application.Interfaces.Services.Worker;
 using Application.Services;
@@ -32,6 +33,7 @@ using Infrastructure.Services.Notifications;
 using Infrastructure.Services.Sms;
 using Infrastructure.Services.Payment;
 using Infrastructure.Services.ServiceCategories;
+using Infrastructure.Services.SpaPartner;
 using Infrastructure.Services.Support;
 using Infrastructure.Services.Vouchers;
 using Infrastructure.Services.Worker;
@@ -163,10 +165,11 @@ namespace Infrastructure
             services.AddScoped<IVoucherUsageHistoryRepository, VoucherUsageHistoryRepository>();
             services.AddScoped<IBookingVoucherRepository, BookingVoucherRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped(
                 typeof(IRepository<NotificationSetting>),
                 typeof(Repository<NotificationSetting>)
-            );
+            );  
             services.AddScoped(typeof(IRepository<UserFcmToken>), typeof(Repository<UserFcmToken>));
             // Firebase Cloud Messaging - Singleton vì FirebaseApp là global singleton
             services.AddSingleton<IFcmService, FcmService>();
@@ -209,6 +212,12 @@ namespace Infrastructure
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<ISupportTicketService, SupportTicketService>();
             services.AddScoped<ISupportHubService, SupportHubService>();
+
+            // Spa Partner Services
+            services.AddScoped<ISpaPartnerRepository, SpaPartnerRepository>();
+            services.AddScoped<ISpaServiceCategoryRepository, SpaServiceCategoryRepository>();
+            services.AddScoped<ISpaServiceCategoryService, SpaServiceCategoryService>();
+            services.AddScoped<ISpaPartnerService, Infrastructure.Services.SpaPartner.SpaPartnerService>();
 
             // Unit Of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
