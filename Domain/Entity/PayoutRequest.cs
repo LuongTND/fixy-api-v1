@@ -13,6 +13,11 @@ namespace Domain.Entity
         public string? RejectReason { get; set; }
         public DateTime? TransferredAt { get; set; }
 
+        // --- Phase 2: SePay Auto-Reconciliation Fields ---
+        public string PayoutCode { get; set; } = string.Empty;       // Unique withdrawal code (e.g. WD1008A2)
+        public string? GatewayTransactionRef { get; set; }          // Bank transaction reference from SePay (e.g. FT260810998)
+        public string? VietQrUrl { get; set; }                      // Dynamic VietQR image URL for admin to scan
+
         public WorkerProfile? WorkerProfile { get; set; }
         public WorkerPayoutAccount? PayoutAccount { get; set; }
         public User? ReviewedBy { get; set; }

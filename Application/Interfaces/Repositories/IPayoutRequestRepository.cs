@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Domain.Entity;
 using Domain.Enum;
 
@@ -16,6 +16,7 @@ namespace Application.Interfaces.Repositories
         );
 
         Task<bool> ExistsPendingRequestAsync(Guid workerId, CancellationToken cancellationToken);
+        Task<PayoutRequest?> GetByPayoutCodeWithDetailsAsync(string payoutCode, CancellationToken cancellationToken);
         Task<(List<PayoutRequest>, int)> GetPagedAsync(
             PagedQuery query,
             CancellationToken cancellationToken

@@ -384,12 +384,10 @@ namespace Infrastructure.Services.Vouchers
                         if (workerServiceRepo != null)
                         {
                             var workerService = draft.WorkerProfileId.HasValue
-                                ? await workerServiceRepo.FirstOrDefaultAsync(
-                                    ws => ws.WorkerProfileId == draft.WorkerProfileId.Value && ws.CategoryId == draft.CategoryId,
-                                    cancellationToken)
-                                : await workerServiceRepo.FirstOrDefaultAsync(
-                                    ws => ws.CategoryId == draft.CategoryId,
-                                    cancellationToken);
+                                ? await workerServiceRepo.GetByWorkerAndCategoryWithOptionsAsync(
+                                    draft.WorkerProfileId.Value, draft.CategoryId, cancellationToken)
+                                : await workerServiceRepo.GetByCategoryWithOptionsAsync(
+                                    draft.CategoryId, cancellationToken);
 
                             if (workerService != null)
                             {
@@ -601,12 +599,10 @@ namespace Infrastructure.Services.Vouchers
                         if (workerServiceRepo != null)
                         {
                             var workerService = draft.WorkerProfileId.HasValue
-                                ? await workerServiceRepo.FirstOrDefaultAsync(
-                                    ws => ws.WorkerProfileId == draft.WorkerProfileId.Value && ws.CategoryId == draft.CategoryId,
-                                    cancellationToken)
-                                : await workerServiceRepo.FirstOrDefaultAsync(
-                                    ws => ws.CategoryId == draft.CategoryId,
-                                    cancellationToken);
+                                ? await workerServiceRepo.GetByWorkerAndCategoryWithOptionsAsync(
+                                    draft.WorkerProfileId.Value, draft.CategoryId, cancellationToken)
+                                : await workerServiceRepo.GetByCategoryWithOptionsAsync(
+                                    draft.CategoryId, cancellationToken);
 
                             if (workerService != null)
                             {

@@ -1,11 +1,17 @@
-﻿using Application.Common;
+using System.Text.RegularExpressions;
+using Application.Common;
 using Application.DTOs.Payout;
+using Application.DTOs.Payment;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entity;
 using Domain.Enum;
+using Infrastructure.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services
 {
@@ -17,6 +23,12 @@ namespace Infrastructure.Services
         private readonly IWorkerPayoutAccountRepository _workerPayoutAccountRepository;
         private readonly IWalletTransactionRepository _walletTransactionRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly INotificationService _notificationService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<PayoutService> _logger;
+
+        private static readonly Regex PayoutCodeRegex = new(@"WD[A-Z0-9]{4,8}", RegexOptions.Compiled);
 
         public PayoutService(
             IWorkerProfileRepository workerProfileRepository,
@@ -24,7 +36,11 @@ namespace Infrastructure.Services
             IPayoutRequestRepository payoutRequestRepository,
             IWorkerPayoutAccountRepository workerPayoutAccountRepository,
             IWalletTransactionRepository walletTransactionRepository,
-            IUnitOfWork unitOfWork
+            IUnitOfWork unitOfWork,
+            INotificationService notificationService,
+            IHubContext<NotificationHub> hubContext,
+            IConfiguration configuration,
+            ILogger<PayoutService> logger
         )
         {
             _workerProfileRepository = workerProfileRepository;
@@ -33,6 +49,10 @@ namespace Infrastructure.Services
             _workerPayoutAccountRepository = workerPayoutAccountRepository;
             _walletTransactionRepository = walletTransactionRepository;
             _unitOfWork = unitOfWork;
+            _notificationService = notificationService;
+            _hubContext = hubContext;
+            _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<OperationResult<PayoutRequestDto>> CreateRequestAsync(
@@ -101,12 +121,26 @@ namespace Infrastructure.Services
                 // HOLD MONEY
                 wallet.Balance -= amount;
 
+                // Generate unique PayoutCode (WD + 6 random alphanumeric chars)
+                var payoutCode = await GenerateUniquePayoutCodeAsync(cancellationToken);
+
+                // Generate VietQR Dynamic URL
+                var vietQrUrl = GenerateVietQrUrl(
+                    payoutAccount.BankCode ?? "",
+                    payoutAccount.AccountNumber,
+                    amount,
+                    payoutCode,
+                    payoutAccount.AccountName
+                );
+
                 var request = new PayoutRequest
                 {
                     WorkerProfileId = workerProfile.Id,
                     PayoutAccountId = payoutAccountId,
                     Amount = amount,
                     Status = PayoutRequestStatus.Pending,
+                    PayoutCode = payoutCode,
+                    VietQrUrl = vietQrUrl,
                 };
 
                 await _payoutRequestRepository.AddAsync(request, cancellationToken);
@@ -142,14 +176,17 @@ namespace Infrastructure.Services
                     new PayoutRequestDto
                     {
                         Id = request.Id,
+                        PayoutCode = request.PayoutCode,
                         AccountName = payoutAccount.AccountName,
                         AccountNumber = payoutAccount.AccountNumber,
                         BankName = payoutAccount.BankName,
+                        BankCode = payoutAccount.BankCode,
                         Amount = request.Amount,
                         CreatedDate = request.CreatedDate,
                         RejectReason = request.RejectReason,
                         Status = request.Status.ToString(),
                         TransferredAt = request.TransferredAt,
+                        VietQrUrl = request.VietQrUrl,
                     },
                     "Payout request created successfully"
                 );
@@ -325,9 +362,12 @@ namespace Infrastructure.Services
                         .Item1.Select(x => new PayoutRequestDto
                         {
                             Id = x.Id,
+                            PayoutCode = x.PayoutCode,
                             Amount = x.Amount,
                             Status = x.Status.ToString(),
                             RejectReason = x.RejectReason,
+                            GatewayTransactionRef = x.GatewayTransactionRef,
+                            VietQrUrl = x.VietQrUrl,
                             CreatedDate = x.CreatedDate,
                             TransferredAt = x.TransferredAt,
 
@@ -336,6 +376,8 @@ namespace Infrastructure.Services
                             AccountName = x.PayoutAccount.AccountName,
 
                             BankName = x.PayoutAccount.BankName,
+
+                            BankCode = x.PayoutAccount.BankCode,
                         })
                         .ToList(),
 
@@ -367,9 +409,12 @@ namespace Infrastructure.Services
                         .Item1.Select(x => new PayoutRequestDto
                         {
                             Id = x.Id,
+                            PayoutCode = x.PayoutCode,
                             Amount = x.Amount,
                             Status = x.Status.ToString(),
                             RejectReason = x.RejectReason,
+                            GatewayTransactionRef = x.GatewayTransactionRef,
+                            VietQrUrl = x.VietQrUrl,
                             CreatedDate = x.CreatedDate,
                             TransferredAt = x.TransferredAt,
 
@@ -378,6 +423,8 @@ namespace Infrastructure.Services
                             AccountName = x.PayoutAccount.AccountName,
 
                             BankName = x.PayoutAccount.BankName,
+
+                            BankCode = x.PayoutAccount.BankCode,
                         })
                         .ToList(),
 
@@ -388,6 +435,199 @@ namespace Infrastructure.Services
                     PageSize = query.PageSize,
                 }
             );
+        }
+
+        public async Task<OperationResult> ProcessSePayWebhookAsync(
+            SePayWebhookDto webhook,
+            string? authorizationHeader,
+            CancellationToken cancellationToken
+        )
+        {
+            // 1. Validate secret token
+            var expectedToken = _configuration["SePay:WebhookToken"];
+            if (!string.IsNullOrEmpty(expectedToken))
+            {
+                var receivedToken = authorizationHeader?.Replace("Apikey ", "", StringComparison.OrdinalIgnoreCase).Trim();
+                if (!string.Equals(receivedToken, expectedToken, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning("SePay webhook received with invalid secret token.");
+                    return OperationResult.Failure("Unauthorized");
+                }
+            }
+
+            // 2. Only process outbound transfers (money out)
+            if (!string.Equals(webhook.TransferType, "out", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation(
+                    "SePay webhook ignored: TransferType={TransferType} (not 'out')",
+                    webhook.TransferType
+                );
+                return OperationResult.Success("Ignored: not an outbound transfer");
+            }
+
+            // 3. Extract PayoutCode from transfer content using Regex
+            var match = PayoutCodeRegex.Match(webhook.Content?.ToUpperInvariant() ?? "");
+            if (!match.Success)
+            {
+                _logger.LogInformation(
+                    "SePay webhook ignored: No PayoutCode found in content '{Content}'",
+                    webhook.Content
+                );
+                return OperationResult.Success("Ignored: no matching payout code found");
+            }
+
+            var payoutCode = match.Value;
+
+            // 4. Find the PayoutRequest by PayoutCode
+            var request = await _payoutRequestRepository.GetByPayoutCodeWithDetailsAsync(
+                payoutCode,
+                cancellationToken
+            );
+
+            if (request == null)
+            {
+                _logger.LogWarning(
+                    "SePay webhook: PayoutRequest not found for code '{PayoutCode}'",
+                    payoutCode
+                );
+                return OperationResult.Failure($"PayoutRequest not found for code {payoutCode}");
+            }
+
+            // 5. Idempotency check: already approved -> return success
+            if (request.Status == PayoutRequestStatus.Approved)
+            {
+                _logger.LogInformation(
+                    "SePay webhook: PayoutRequest '{PayoutCode}' already approved (idempotency)",
+                    payoutCode
+                );
+                return OperationResult.Success("Already processed");
+            }
+
+            if (request.Status != PayoutRequestStatus.Pending)
+            {
+                _logger.LogWarning(
+                    "SePay webhook: PayoutRequest '{PayoutCode}' status is {Status}, cannot process",
+                    payoutCode,
+                    request.Status
+                );
+                return OperationResult.Failure("Payout request is not in Pending status");
+            }
+
+            // 6. Update PayoutRequest status
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                request.WorkerProfile!.UserId,
+                WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null)
+            {
+                return OperationResult.Failure("Worker wallet not found");
+            }
+
+            request.Status = PayoutRequestStatus.Approved;
+            request.TransferredAt = DateTime.UtcNow;
+            request.GatewayTransactionRef = webhook.ReferenceCode ?? webhook.Id.ToString();
+
+            wallet.LifetimeSpent += request.Amount;
+            _walletRepository.Update(wallet);
+
+            var tx = request.WalletTransactions.FirstOrDefault(x =>
+                x.Type == WalletTransactionType.Withdrawal
+            );
+            if (tx != null)
+            {
+                tx.Status = TransactionStatus.Success;
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "SePay webhook: PayoutRequest '{PayoutCode}' approved. GatewayRef={GatewayRef}, Amount={Amount}",
+                payoutCode,
+                request.GatewayTransactionRef,
+                request.Amount
+            );
+
+            // 7. Send real-time notifications
+            try
+            {
+                // Notify KTV via FCM + SignalR
+                await _notificationService.SendNotificationAsync(
+                    request.WorkerProfile.UserId,
+                    NotificationType.Payment,
+                    "Rút tiền thành công! 💸",
+                    $"{request.Amount:N0}đ đã về tài khoản. Mã ngân hàng: {request.GatewayTransactionRef}",
+                    deepLink: null,
+                    meta: new { payoutRequestId = request.Id, payoutCode = request.PayoutCode },
+                    code: null,
+                    cancellationToken
+                );
+
+                // Broadcast to Web Admin dashboard via SignalR
+                await _hubContext.Clients.All.SendAsync(
+                    "PayoutApproved",
+                    new
+                    {
+                        payoutRequestId = request.Id,
+                        payoutCode = request.PayoutCode,
+                        gatewayTransactionRef = request.GatewayTransactionRef,
+                        amount = request.Amount,
+                        status = request.Status.ToString(),
+                    },
+                    cancellationToken
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "SePay webhook: Failed to send notifications for PayoutCode '{PayoutCode}'",
+                    payoutCode
+                );
+                // Don't fail the webhook response due to notification errors
+            }
+
+            return OperationResult.Success("Payout approved via SePay webhook");
+        }
+
+        // --- Helper Methods ---
+
+        private async Task<string> GenerateUniquePayoutCodeAsync(CancellationToken cancellationToken)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                var code = "WD" + new string(Enumerable.Range(0, 6).Select(_ => chars[random.Next(chars.Length)]).ToArray());
+
+                var existing = await _payoutRequestRepository.FirstOrDefaultAsync(
+                    x => x.PayoutCode == code,
+                    cancellationToken
+                );
+
+                if (existing == null)
+                {
+                    return code;
+                }
+            }
+
+            // Fallback: use timestamp-based code
+            return "WD" + DateTime.UtcNow.ToString("HHmmss");
+        }
+
+        private static string GenerateVietQrUrl(
+            string bankCode,
+            string accountNumber,
+            long amount,
+            string payoutCode,
+            string accountName
+        )
+        {
+            var addInfo = Uri.EscapeDataString($"FIXY RUT {payoutCode}");
+            var encodedAccountName = Uri.EscapeDataString(accountName);
+            return $"https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.png?amount={amount}&addInfo={addInfo}&accountName={encodedAccountName}";
         }
     }
 }
