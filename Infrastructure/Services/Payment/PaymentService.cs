@@ -8,6 +8,10 @@ using Application.Interfaces.Services.Booking;
 using Application.Interfaces.Services.Payment;
 using Domain.Entity;
 using Domain.Enum;
+using Infrastructure.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Net.payOS.Types;
 
 namespace Infrastructure.Services.Payment
 {
@@ -27,6 +31,12 @@ namespace Infrastructure.Services.Payment
 
         private readonly IBookingService _bookingService;
 
+        private readonly INotificationService _notificationService;
+
+        private readonly IHubContext<NotificationHub> _hubContext;
+
+        private readonly ILogger<PaymentService> _logger;
+
         public PaymentService(
             IPaymentOrderRepository paymentOrderRepository,
             ICustomerProfileRepository customerProfileRepository,
@@ -34,7 +44,10 @@ namespace Infrastructure.Services.Payment
             IBookingRepository bookingRepository,
             IWalletService walletService,
             IUnitOfWork unitOfWork,
-            IBookingService bookingService
+            IBookingService bookingService,
+            INotificationService notificationService,
+            IHubContext<NotificationHub> hubContext,
+            ILogger<PaymentService> logger
         )
         {
             _paymentOrderRepository = paymentOrderRepository;
@@ -50,6 +63,12 @@ namespace Infrastructure.Services.Payment
             _unitOfWork = unitOfWork;
 
             _bookingService = bookingService;
+
+            _notificationService = notificationService;
+
+            _hubContext = hubContext;
+
+            _logger = logger;
         }
 
         public async Task<OperationResult<string>> CreateTopUpPaymentUrlAsync(
@@ -334,6 +353,32 @@ namespace Infrastructure.Services.Payment
             if (data == null || data.OrderCode <= 0)
                 return OperationResult<bool>.Failure("Invalid callback");
 
+            // 1. Verify Webhook Signature using PayOS SDK (chống giả mạo request)
+            try
+            {
+                var payosService = _paymentGatewayFactory.Get(PaymentMethod.PayOS) as PayOSService;
+                if (payosService != null)
+                {
+                    var jsonString = JsonSerializer.Serialize(callback);
+                    var webhookBody = JsonSerializer.Deserialize<WebhookType>(jsonString, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (webhookBody != null)
+                    {
+                        payosService.VerifyWebhookData(webhookBody);
+                        _logger.LogInformation("PayOS webhook signature verified for OrderCode: {OrderCode}", data.OrderCode);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "PayOS webhook signature verification failed for OrderCode: {OrderCode}", data.OrderCode);
+                return OperationResult<bool>.Failure("Invalid PayOS webhook signature");
+            }
+
+            // 2. Lookup the payment order
             var order = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
                 data.OrderCode,
                 cancellationToken
@@ -342,6 +387,7 @@ namespace Infrastructure.Services.Payment
             if (order == null)
                 return OperationResult<bool>.Failure("Payment order not found");
 
+            // 3. Idempotency check — already processed
             if (order.Status == PaymentStatus.Paid)
                 return OperationResult<bool>.Success(true, "Already processed");
 
@@ -359,17 +405,86 @@ namespace Infrastructure.Services.Payment
                 return OperationResult<bool>.Failure("Payment failed");
             }
 
+            // 4. Mark as Paid
             order.Status = PaymentStatus.Paid;
             order.PaidAt = DateTime.UtcNow;
             order.ExternalTransactionId = data.OrderCode.ToString();
 
+            // Store the bank reference code for audit trail
+            if (!string.IsNullOrEmpty(data.Reference))
+            {
+                order.GatewayRef = data.Reference;
+            }
+
             _paymentOrderRepository.Update(order);
+
+            // 5. Process business logic (TopUp wallet or Confirm booking)
+            //    IMPORTANT: Do this BEFORE SaveChangesAsync so both PaymentOrder update
+            //    and Booking status change are committed atomically.
+            await ProcessSuccessfulPaymentAsync(order, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await ProcessSuccessfulPaymentAsync(order, CancellationToken.None);
+            // 6. Send real-time notification to Mobile App via SignalR
+            try
+            {
+                await _hubContext.Clients
+                    .User(order.UserId.ToString())
+                    .SendAsync("PaymentCompleted", new
+                    {
+                        OrderId = order.Id,
+                        BookingId = order.BookingId,
+                        Amount = order.FinalAmount,
+                        Status = "Paid",
+                        Reference = data.Reference
+                    }, cancellationToken);
+
+                _logger.LogInformation(
+                    "SignalR PaymentCompleted sent to user {UserId} for OrderCode {OrderCode}",
+                    order.UserId, data.OrderCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to send SignalR PaymentCompleted to user {UserId}",
+                    order.UserId);
+            }
+
+            // 7. Send Push Notification (Firebase FCM) + save to notification DB
+            try
+            {
+                var notifTitle = order.Type == PaymentOrderType.WalletTopUp
+                    ? "Nạp ví thành công!"
+                    : "Thanh toán thành công!";
+
+                var notifBody = order.Type == PaymentOrderType.WalletTopUp
+                    ? $"Bạn đã nạp thành công {order.FinalAmount:N0}đ vào Ví Fixy qua PayOS."
+                    : $"Đơn dịch vụ của bạn đã được thanh toán {order.FinalAmount:N0}đ và đang chờ Kỹ thuật viên tiếp nhận.";
+
+                var deepLink = order.BookingId.HasValue
+                    ? $"/booking-detail?bookingId={order.BookingId.Value}"
+                    : "/wallet";
+
+                await _notificationService.SendNotificationAsync(
+                    order.UserId,
+                    NotificationType.Payment,
+                    notifTitle,
+                    notifBody,
+                    deepLink,
+                    new { orderId = order.Id, bookingId = order.BookingId, amount = order.FinalAmount },
+                    null,
+                    cancellationToken
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to send payment notification for OrderCode {OrderCode}",
+                    data.OrderCode);
+            }
 
             return OperationResult<bool>.Success(true, "Payment success");
         }
     }
 }
+

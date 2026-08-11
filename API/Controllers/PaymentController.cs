@@ -1,5 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Application.DTOs.Payment;
+using Application.Interfaces.Services;
 using Application.Interfaces.Services.Payment;
 using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
@@ -12,10 +13,12 @@ namespace API.Controllers
     public class PaymentController : ApiController
     {
         private readonly IPaymentService _paymentService;
+        private readonly IPayoutService _payoutService;
 
-        public PaymentController(IPaymentService paymentService)
+        public PaymentController(IPaymentService paymentService, IPayoutService payoutService)
         {
             _paymentService = paymentService;
+            _payoutService = payoutService;
         }
 
         [Authorize(Roles = "CUSTOMER")]
@@ -89,6 +92,22 @@ namespace API.Controllers
         {
             var result = await _paymentService.HandlePayOSCallbackAsync(
                 callback,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [HttpPost("webhook/sepay")]
+        public async Task<IActionResult> HandleSePayWebhook(
+            [FromBody] SePayWebhookDto webhook,
+            [FromHeader(Name = "Authorization")] string? authorizationHeader,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _payoutService.ProcessSePayWebhookAsync(
+                webhook,
+                authorizationHeader,
                 cancellationToken
             );
 

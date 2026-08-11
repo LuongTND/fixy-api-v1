@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.Interfaces.Repositories;
 using Domain.Entity;
 using Domain.Enum;
@@ -58,6 +58,18 @@ namespace Infrastructure.Repositories
                 x => x.WorkerProfileId == workerId && x.Status == PayoutRequestStatus.Pending,
                 cancellationToken
             );
+        }
+
+        public async Task<PayoutRequest?> GetByPayoutCodeWithDetailsAsync(
+            string payoutCode,
+            CancellationToken cancellationToken
+        )
+        {
+            return await _dbSet
+                .Include(x => x.PayoutAccount)
+                .Include(x => x.WorkerProfile)
+                .Include(x => x.WalletTransactions)
+                .FirstOrDefaultAsync(x => x.PayoutCode == payoutCode, cancellationToken);
         }
 
         public async Task<(List<PayoutRequest>, int)> GetPagedAsync(

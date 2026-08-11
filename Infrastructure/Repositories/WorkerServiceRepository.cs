@@ -10,6 +10,33 @@ namespace Infrastructure.Repositories
         public WorkerServiceRepository(AppDbContext context)
             : base(context) { }
 
+        public async Task<WorkerService?> GetByWorkerAndCategoryWithOptionsAsync(
+            Guid workerProfileId,
+            Guid categoryId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _dbSet
+                .Include(x => x.Options)
+                .FirstOrDefaultAsync(
+                    x => x.WorkerProfileId == workerProfileId && x.CategoryId == categoryId,
+                    cancellationToken
+                );
+        }
+
+        public async Task<WorkerService?> GetByCategoryWithOptionsAsync(
+            Guid categoryId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            return await _dbSet
+                .Include(x => x.Options)
+                .FirstOrDefaultAsync(
+                    x => x.CategoryId == categoryId,
+                    cancellationToken
+                );
+        }
+
         public async Task<(long? MinPrice, long? MaxPrice)> GetPriceRangeAsync(
             Guid categoryId,
             CancellationToken cancellationToken = default
@@ -32,3 +59,4 @@ namespace Infrastructure.Repositories
         }
     }
 }
+

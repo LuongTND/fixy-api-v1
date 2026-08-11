@@ -1,5 +1,6 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Payout;
+using Application.DTOs.Payment;
 
 namespace Application.Interfaces.Services
 {
@@ -31,6 +32,12 @@ namespace Application.Interfaces.Services
         Task<OperationResult<PagedResponse<PayoutRequestDto>>> GetMyRequestsAsync(
             Guid workerId,
             PagedQuery query,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult> ProcessSePayWebhookAsync(
+            SePayWebhookDto webhook,
+            string? authorizationHeader,
             CancellationToken cancellationToken
         );
     }

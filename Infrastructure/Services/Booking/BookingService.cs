@@ -944,8 +944,8 @@ namespace Infrastructure.Services.Booking
                 // Build notification title based on status
                 var (title, body) = newStatus switch
                 {
-                    BookingStatus.PendingPayment => ("Kỹ thuật viên đã nhận đơn của bạn", "Vui lòng thanh toán để xác nhận đặt lịch."),
-                    BookingStatus.Confirmed => ("Đơn đặt lịch đã được xác nhận", "Thanh toán thành công. Kỹ thuật viên sẽ liên hệ bạn sớm."),
+                    BookingStatus.PendingPayment => ("Vui lòng thanh toán đơn hàng", "Đơn dịch vụ đã được tạo. Vui lòng hoàn tất thanh toán để xác nhận đặt lịch."),
+                    BookingStatus.Confirmed => ("Kỹ thuật viên đã tiếp nhận đơn", "Kỹ thuật viên đã xác nhận đơn hàng và sẽ liên hệ với bạn sớm."),
                     BookingStatus.Traveling => ("Kỹ thuật viên đang di chuyển đến", "Kỹ thuật viên đang trên đường đến địa chỉ của bạn."),
                     BookingStatus.Arrived => ("Kỹ thuật viên đã đến nơi", "Kỹ thuật viên đã có mặt tại địa chỉ của bạn."),
                     BookingStatus.InProgress => ("Đang tiến hành dịch vụ", "Kỹ thuật viên đang thực hiện dịch vụ."),

@@ -1,4 +1,4 @@
-﻿using Application.Interfaces.Services.Payment;
+using Application.Interfaces.Services.Payment;
 using Application.Settings;
 using Domain.Entity;
 using Microsoft.Extensions.Options;
@@ -48,8 +48,20 @@ public class PayOSService : IPaymentGateway
         return response.checkoutUrl;
     }
 
+    /// <summary>
+    /// Verify the PayOS webhook signature using the SDK's built-in checksum verification.
+    /// Throws an exception if the signature is invalid.
+    /// </summary>
+    public WebhookData VerifyWebhookData(WebhookType webhookBody)
+    {
+        return _payOS.verifyPaymentWebhookData(webhookBody);
+    }
+
     public bool VerifySignature(Dictionary<string, string> response)
     {
+        // PayOS uses webhook-based verification via VerifyWebhookData(),
+        // not the query-string approach used by VNPay/MoMo.
         return true;
     }
 }
+

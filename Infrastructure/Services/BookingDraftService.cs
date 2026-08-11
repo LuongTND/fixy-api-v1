@@ -426,10 +426,9 @@ namespace Infrastructure.Services
 
             if (workerProfileId.HasValue)
             {
-                var workerService = await _workerServiceRepository.FirstOrDefaultAsync(
-                    x =>
-                        x.WorkerProfileId == workerProfileId.Value
-                        && x.CategoryId == draft.CategoryId,
+                var workerService = await _workerServiceRepository.GetByWorkerAndCategoryWithOptionsAsync(
+                    workerProfileId.Value,
+                    draft.CategoryId,
                     cancellationToken
                 );
 
@@ -470,8 +469,9 @@ namespace Infrastructure.Services
 
             if (!totalDurationMinutes.HasValue && workerProfileId.HasValue)
             {
-                var workerService = await _workerServiceRepository.FirstOrDefaultAsync(
-                    x => x.WorkerProfileId == workerProfileId.Value && x.CategoryId == draft.CategoryId,
+                var workerService = await _workerServiceRepository.GetByWorkerAndCategoryWithOptionsAsync(
+                    workerProfileId.Value,
+                    draft.CategoryId,
                     cancellationToken
                 );
                 if (workerService != null)
