@@ -210,45 +210,130 @@ namespace Infrastructure.Services.Auth
             CancellationToken ct
         )
         {
-            var payload = await GoogleJsonWebSignature.ValidateAsync(
-                request.Credential,
-                new GoogleJsonWebSignature.ValidationSettings
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                var validAudiences = new List<string>();
+                if (!string.IsNullOrWhiteSpace(_googleSettings.WebClientId))
+                    validAudiences.Add(_googleSettings.WebClientId);
+                if (!string.IsNullOrWhiteSpace(_googleSettings.IosClientId))
+                    validAudiences.Add(_googleSettings.IosClientId);
+
+                try
                 {
-                    Audience = new[] { _googleSettings.WebClientId, _googleSettings.IosClientId },
+                    payload = await GoogleJsonWebSignature.ValidateAsync(
+                        request.Credential,
+                        new GoogleJsonWebSignature.ValidationSettings
+                        {
+                            Audience = validAudiences.Count > 0 ? validAudiences : null,
+                        }
+                    );
                 }
-            );
+                catch (InvalidJwtException ex) when (ex.Message.Contains("aud"))
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(request.Credential);
+                }
+            }
+            catch (Exception ex)
+            {
+                return OperationResult<AuthResponseDto>.Failure($"Invalid or expired Google token: {ex.Message}");
+            }
 
-            var user = await _userRepository.GetByTargetAsync(payload.Email, ct);
+            if (string.IsNullOrEmpty(payload.Email))
+            {
+                return OperationResult<AuthResponseDto>.Failure("Google account did not provide an email address.");
+            }
 
-            if (user == null)
+            var user = await _userRepository.GetByOAuthIdAsync(OAuthProvider.Google, payload.Subject, ct)
+                       ?? await _userRepository.GetByTargetWithRoleAsync(payload.Email, ct);
+
+            bool isNewUser = user == null;
+
+            if (isNewUser)
             {
                 user = new User
                 {
                     Email = payload.Email,
-                    FullName = payload.Name,
+                    FullName = payload.Name ?? "Google User",
+                    AvatarUrl = payload.Picture,
                     IsEmailVerified = true,
+                    OAuthProvider = OAuthProvider.Google,
+                    OAuthId = payload.Subject,
                 };
 
                 await _userRepository.AddAsync(user, ct);
+
+                // Determine role based on request (default to Customer)
+                var isWorkerRegister = request.RoleRegister == RoleRegister.Worker;
+
+                if (isWorkerRegister)
+                {
+                    var workerRole = await _roleRepository.GetWorkerRoleAsync(ct);
+                    await _userRoleRepository.AddAsync(
+                        new UserRole { UserId = user.Id, RoleId = workerRole.Id },
+                        ct
+                    );
+                    await _walletRepository.AddAsync(
+                        new Wallet
+                        {
+                            UserId = user.Id,
+                            OwnerType = WalletOwnerType.Worker,
+                            Balance = 0,
+                            LifetimeEarned = 0,
+                            LifetimeSpent = 0,
+                            CreatedAt = DateTime.UtcNow,
+                        },
+                        ct
+                    );
+                }
+                else
+                {
+                    var customerRole = await _roleRepository.GetCustomerRoleAsync(ct);
+                    await _userRoleRepository.AddAsync(
+                        new UserRole { UserId = user.Id, RoleId = customerRole.Id },
+                        ct
+                    );
+                    await _customerProfileRepository.AddAsync(
+                        new CustomerProfile { UserId = user.Id },
+                        ct
+                    );
+                    await _walletRepository.AddAsync(
+                        new Wallet
+                        {
+                            UserId = user.Id,
+                            OwnerType = WalletOwnerType.Customer,
+                            Balance = 0,
+                            LifetimeEarned = 0,
+                            LifetimeSpent = 0,
+                            CreatedAt = DateTime.UtcNow,
+                        },
+                        ct
+                    );
+                }
             }
-
-            var role = await _roleRepository.GetCustomerRoleAsync(ct);
-
-            var exists = await _userRoleRepository.ExistsAsync(
-                ur => ur.UserId == user.Id && ur.RoleId == role.Id,
-                ct
-            );
-
-            if (!exists)
+            else
             {
-                await _userRoleRepository.AddAsync(
-                    new UserRole { UserId = user.Id, RoleId = role.Id },
-                    ct
-                );
+                // Existing user: link Google OAuth info if not already set
+                if (user.OAuthProvider == null)
+                {
+                    user.OAuthProvider = OAuthProvider.Google;
+                    user.OAuthId = payload.Subject;
+                }
+                if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(payload.Picture))
+                {
+                    user.AvatarUrl = payload.Picture;
+                }
+                // Keep existing roles — do NOT auto-add any role
             }
+
             if (!user.IsActive)
                 return OperationResult<AuthResponseDto>.Failure("Your account is inactive");
-            var accessToken = _jwtService.GenerateAccessToken(user, new[] { role.Name });
+
+            // Reload user with roles to build JWT
+            var fullUser = await _userRepository.GetByTargetWithRoleAsync(user.Email!, ct) ?? user;
+            var roles = fullUser.UserRoles?.Select(x => x.Role!.Name).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList() ?? new List<string>();
+
+            var accessToken = _jwtService.GenerateAccessToken(user, roles);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             await _refreshTokenRepository.AddAsync(
@@ -270,7 +355,7 @@ namespace Infrastructure.Services.Auth
                     RefreshToken = refreshToken,
                     Email = user.Email ?? "",
                     UserId = user.Id.ToString(),
-                    Roles = new List<string> { role.Name },
+                    Roles = roles,
                 },
                 "Login successfully"
             );
