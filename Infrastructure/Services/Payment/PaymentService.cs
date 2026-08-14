@@ -351,7 +351,10 @@ namespace Infrastructure.Services.Payment
             var data = callback.Data;
 
             if (data == null || data.OrderCode <= 0)
-                return OperationResult<bool>.Failure("Invalid callback");
+            {
+                _logger.LogInformation("PayOS webhook received empty/invalid data payload. Acknowledging as test ping.");
+                return OperationResult<bool>.Success(true, "Callback acknowledged");
+            }
 
             // 1. Verify Webhook Signature using PayOS SDK (chống giả mạo request)
             try
@@ -375,6 +378,18 @@ namespace Infrastructure.Services.Payment
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "PayOS webhook signature verification failed for OrderCode: {OrderCode}", data.OrderCode);
+
+                // Check if this is a test webhook (order code not found in DB)
+                var testCheckOrder = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
+                    data.OrderCode,
+                    cancellationToken
+                );
+                if (testCheckOrder == null)
+                {
+                    _logger.LogInformation("PayOS test webhook ping detected (order {OrderCode} not found). Returning 200 OK.", data.OrderCode);
+                    return OperationResult<bool>.Success(true, "Test webhook acknowledged");
+                }
+
                 return OperationResult<bool>.Failure("Invalid PayOS webhook signature");
             }
 
@@ -385,7 +400,10 @@ namespace Infrastructure.Services.Payment
             );
 
             if (order == null)
-                return OperationResult<bool>.Failure("Payment order not found");
+            {
+                _logger.LogInformation("PayOS webhook: Payment order not found for OrderCode {OrderCode}. Returning 200 OK for test request.", data.OrderCode);
+                return OperationResult<bool>.Success(true, "Order not found, test request acknowledged");
+            }
 
             // 3. Idempotency check — already processed
             if (order.Status == PaymentStatus.Paid)
@@ -402,7 +420,7 @@ namespace Infrastructure.Services.Payment
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return OperationResult<bool>.Failure("Payment failed");
+                return OperationResult<bool>.Success(false, "Payment failed status recorded");
             }
 
             // 4. Mark as Paid
