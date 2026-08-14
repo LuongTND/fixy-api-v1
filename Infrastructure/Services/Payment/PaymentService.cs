@@ -348,80 +348,82 @@ namespace Infrastructure.Services.Payment
             CancellationToken cancellationToken
         )
         {
-            var data = callback.Data;
-
-            if (data == null || data.OrderCode <= 0)
-            {
-                _logger.LogInformation("PayOS webhook received empty/invalid data payload. Acknowledging as test ping.");
-                return OperationResult<bool>.Success(true, "Callback acknowledged");
-            }
-
-            // 1. Verify Webhook Signature using PayOS SDK (chống giả mạo request)
             try
             {
-                var payosService = _paymentGatewayFactory.Get(PaymentMethod.PayOS) as PayOSService;
-                if (payosService != null)
+                if (callback == null || callback.Data == null || callback.Data.OrderCode <= 0)
                 {
-                    var jsonString = JsonSerializer.Serialize(callback);
-                    var webhookBody = JsonSerializer.Deserialize<WebhookType>(jsonString, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                    _logger.LogInformation("PayOS webhook received empty/null callback or data payload. Acknowledging as test ping.");
+                    return OperationResult<bool>.Success(true, "Callback acknowledged");
+                }
 
-                    if (webhookBody != null)
+                var data = callback.Data;
+
+                // 1. Verify Webhook Signature using PayOS SDK (chống giả mạo request)
+                try
+                {
+                    var payosService = _paymentGatewayFactory.Get(PaymentMethod.PayOS) as PayOSService;
+                    if (payosService != null)
                     {
-                        payosService.VerifyWebhookData(webhookBody);
-                        _logger.LogInformation("PayOS webhook signature verified for OrderCode: {OrderCode}", data.OrderCode);
+                        var jsonString = JsonSerializer.Serialize(callback);
+                        var webhookBody = JsonSerializer.Deserialize<WebhookType>(jsonString, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (webhookBody != null)
+                        {
+                            payosService.VerifyWebhookData(webhookBody);
+                            _logger.LogInformation("PayOS webhook signature verified for OrderCode: {OrderCode}", data.OrderCode);
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "PayOS webhook signature verification failed for OrderCode: {OrderCode}", data.OrderCode);
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "PayOS webhook signature verification failed for OrderCode: {OrderCode}", data.OrderCode);
 
-                // Check if this is a test webhook (order code not found in DB)
-                var testCheckOrder = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
+                    // Check if this is a test webhook (order code not found in DB)
+                    var testCheckOrder = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
+                        data.OrderCode,
+                        cancellationToken
+                    );
+                    if (testCheckOrder == null)
+                    {
+                        _logger.LogInformation("PayOS test webhook ping detected (order {OrderCode} not found). Returning 200 OK.", data.OrderCode);
+                        return OperationResult<bool>.Success(true, "Test webhook acknowledged");
+                    }
+
+                    return OperationResult<bool>.Failure("Invalid PayOS webhook signature");
+                }
+
+                // 2. Lookup the payment order
+                var order = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
                     data.OrderCode,
                     cancellationToken
                 );
-                if (testCheckOrder == null)
+
+                if (order == null)
                 {
-                    _logger.LogInformation("PayOS test webhook ping detected (order {OrderCode} not found). Returning 200 OK.", data.OrderCode);
-                    return OperationResult<bool>.Success(true, "Test webhook acknowledged");
+                    _logger.LogInformation("PayOS webhook: Payment order not found for OrderCode {OrderCode}. Returning 200 OK for test request.", data.OrderCode);
+                    return OperationResult<bool>.Success(true, "Order not found, test request acknowledged");
                 }
 
-                return OperationResult<bool>.Failure("Invalid PayOS webhook signature");
-            }
+                // 3. Idempotency check — already processed
+                if (order.Status == PaymentStatus.Paid)
+                    return OperationResult<bool>.Success(true, "Already processed");
 
-            // 2. Lookup the payment order
-            var order = await _paymentOrderRepository.GetByGatewayOrderCodeAsync(
-                data.OrderCode,
-                cancellationToken
-            );
+                var isSuccess = data.Code == "00";
 
-            if (order == null)
-            {
-                _logger.LogInformation("PayOS webhook: Payment order not found for OrderCode {OrderCode}. Returning 200 OK for test request.", data.OrderCode);
-                return OperationResult<bool>.Success(true, "Order not found, test request acknowledged");
-            }
+                order.GatewayResponse = JsonSerializer.Serialize(callback);
 
-            // 3. Idempotency check — already processed
-            if (order.Status == PaymentStatus.Paid)
-                return OperationResult<bool>.Success(true, "Already processed");
+                if (!isSuccess)
+                {
+                    order.Status = PaymentStatus.Failed;
+                    _paymentOrderRepository.Update(order);
 
-            var isSuccess = data.Code == "00";
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            order.GatewayResponse = JsonSerializer.Serialize(callback);
-
-            if (!isSuccess)
-            {
-                order.Status = PaymentStatus.Failed;
-                _paymentOrderRepository.Update(order);
-
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                return OperationResult<bool>.Success(false, "Payment failed status recorded");
-            }
+                    return OperationResult<bool>.Success(false, "Payment failed status recorded");
+                }
 
             // 4. Mark as Paid
             order.Status = PaymentStatus.Paid;
@@ -502,6 +504,12 @@ namespace Infrastructure.Services.Payment
             }
 
             return OperationResult<bool>.Success(true, "Payment success");
+            }
+            catch (Exception outerEx)
+            {
+                _logger.LogError(outerEx, "Unhandled exception in HandlePayOSCallbackAsync. Returning 200 OK to prevent webhook error 500.");
+                return OperationResult<bool>.Success(true, "Handled outer exception in webhook");
+            }
         }
     }
 }
