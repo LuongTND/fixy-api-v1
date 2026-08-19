@@ -275,31 +275,36 @@ namespace Infrastructure.Services
             CancellationToken cancellationToken
         )
         {
-            if (dto.WorkerService.Count is < 1 or > 5)
+            if (dto.WorkerService.Count is < 1 or > 10)
             {
                 return OperationResult.Failure(
-                    "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
+                    "Kĩ thuật viên chỉ được chọn từ 1 đến tối đa 10 dịch vụ."
                 );
             }
             if (dto.CreateAddressRequestDto == null)
             {
-                return OperationResult.Failure("Worker need to provice address.");
+                return OperationResult.Failure("Vui lòng cung cấp đầy đủ thông tin địa chỉ hoạt động.");
             }
             if (dto.PortfolioUploads.Count > 10)
             {
                 return OperationResult.Failure(
-                    "Worker is only allowed to upload a maximum of 10 image portlio."
+                    "Chỉ được tải lên tối đa 10 hình ảnh hoạt động (Portfolio)."
                 );
             }
 
             if (dto.IdentificationUploads.Count != 2)
             {
-                return OperationResult.Failure("Workers need to upload front and back of ID card");
+                return OperationResult.Failure("Vui lòng tải đủ 2 mặt (Mặt trước và Mặt sau) của CCCD.");
             }
 
             if (dto.WorkerService.Count(x => x.IsPrimary) != 1)
             {
-                return OperationResult.Failure("Worker must have exactly one primary service");
+                return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.CitizenIdNumber))
+            {
+                return OperationResult.Failure("Vui lòng cung cấp số CCCD định danh.");
             }
 
             User? user = null;
@@ -350,8 +355,18 @@ namespace Infrastructure.Services
 
             if (existingWorker != null)
             {
-                return OperationResult.Failure("User already registered as worker");
+                return OperationResult.Failure("Tài khoản này đã đăng ký hồ sơ kỹ thuật viên trước đó.");
             }
+
+            var isCitizenIdDuplicate = await _userRepository.ExistsAsync(
+                u => u.CitizenIdNumber == dto.CitizenIdNumber && u.Id != user.Id,
+                cancellationToken
+            );
+            if (isCitizenIdDuplicate)
+            {
+                return OperationResult.Failure("Số CCCD này đã được đăng ký bởi một tài khoản khác.");
+            }
+
             user.CitizenIdNumber = dto.CitizenIdNumber;
             user.CitizenIdIssueDate = dto.CitizenIdIssueDate;
             user.CitizenIdIssuePlace = dto.CitizenIdIssuePlace;
@@ -477,6 +492,17 @@ namespace Infrastructure.Services
                     };
 
                     await _mediaRepository.AddAsync(media, cancellationToken);
+                }
+
+                if (dto.FaceSelfieUpload != null)
+                {
+                    var faceUrl = await _blobService.UploadImageAsync(dto.FaceSelfieUpload);
+                    uploadedUrls.Add(faceUrl);
+
+                    user.FaceImageUrl = faceUrl;
+                    user.IsFaceMatched = true;
+                    user.FaceMatchScore = dto.FaceMatchScore;
+                    user.FaceVerifiedAt = DateTime.UtcNow;
                 }
 
                 // Create Certificates
@@ -911,14 +937,28 @@ namespace Infrastructure.Services
 
             if (workerProfile == null)
             {
-                return OperationResult.Failure("Worker register request not found");
+                return OperationResult.Failure("Không tìm thấy hồ sơ kỹ thuật viên.");
             }
             if (dto.Images.Count != 2)
             {
                 return OperationResult.Failure(
-                    "Identification must include front and back images."
+                    "Vui lòng tải đủ 2 mặt (Mặt trước và Mặt sau) của CCCD."
                 );
             }
+            if (string.IsNullOrWhiteSpace(dto.CitizenIdNumber))
+            {
+                return OperationResult.Failure("Vui lòng cung cấp số CCCD định danh.");
+            }
+
+            var isCitizenIdDuplicate = await _userRepository.ExistsAsync(
+                u => u.CitizenIdNumber == dto.CitizenIdNumber && u.Id != workerProfile.UserId,
+                cancellationToken
+            );
+            if (isCitizenIdDuplicate)
+            {
+                return OperationResult.Failure("Số CCCD này đã được đăng ký bởi một tài khoản khác.");
+            }
+
             workerProfile.Status = WorkerStatus.Pending;
             if (workerProfile.User != null)
             {
@@ -971,6 +1011,17 @@ namespace Infrastructure.Services
                 foreach (var media in newMedias)
                 {
                     await _mediaRepository.AddAsync(media, cancellationToken);
+                }
+
+                if (dto.FaceSelfie != null && workerProfile.User != null)
+                {
+                    var faceUrl = await _blobService.UploadImageAsync(dto.FaceSelfie);
+                    uploadedUrls.Add(faceUrl);
+
+                    workerProfile.User.FaceImageUrl = faceUrl;
+                    workerProfile.User.IsFaceMatched = true;
+                    workerProfile.User.FaceMatchScore = dto.FaceMatchScore;
+                    workerProfile.User.FaceVerifiedAt = DateTime.UtcNow;
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
