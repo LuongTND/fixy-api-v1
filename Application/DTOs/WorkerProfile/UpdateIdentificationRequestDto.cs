@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.DTOs.WorkerProfile
 {
@@ -10,5 +10,7 @@ namespace Application.DTOs.WorkerProfile
 
         public string CitizenIdIssuePlace { get; set; } = default!;
         public List<IFormFile> Images { get; set; } = [];
+        public IFormFile? FaceSelfie { get; set; }
+        public double? FaceMatchScore { get; set; }
     }
 }

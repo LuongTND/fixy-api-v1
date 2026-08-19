@@ -53,6 +53,14 @@ namespace Domain.Entity
 
         public DateTime? CitizenIdVerifiedAt { get; set; }
 
+        public string? FaceImageUrl { get; set; }
+
+        public bool IsFaceMatched { get; set; } = false;
+
+        public double? FaceMatchScore { get; set; }
+
+        public DateTime? FaceVerifiedAt { get; set; }
+
         // =========================
         // OAuth
         // =========================
