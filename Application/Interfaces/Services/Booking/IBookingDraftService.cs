@@ -10,6 +10,6 @@ namespace Application.Interfaces.Services.Booking
         Task<OperationResult<BookingDraftDto>> GetByIdAsync(Guid draftId,CancellationToken cancellationToken = default);
         Task<OperationResult> UpdateAsync(Guid draftId,UpdateBookingDraftRequest request,CancellationToken cancellationToken = default);
         Task<OperationResult> DeleteAsync(Guid draftId,CancellationToken cancellationToken = default);
-        Task<OperationResult<BookingDraftConfirmedDto>> ConfirmAsync(Guid draftId,CancellationToken cancellationToken = default);
+        Task<OperationResult<BookingDraftConfirmedDto>> ConfirmAsync(Guid draftId, ConfirmBookingDraftRequest request, CancellationToken cancellationToken = default);
     }
 }

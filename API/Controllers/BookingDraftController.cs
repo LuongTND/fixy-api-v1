@@ -55,9 +55,9 @@ namespace API.Controllers
         }
 
         [HttpPost("{draftId:guid}/confirm")]
-        public async Task<IActionResult> Confirm(Guid draftId, CancellationToken cancellationToken)
+        public async Task<IActionResult> Confirm(Guid draftId, [FromBody] ConfirmBookingDraftRequest request, CancellationToken cancellationToken)
         {
-            var result = await _bookingDraftService.ConfirmAsync(draftId, cancellationToken);
+            var result = await _bookingDraftService.ConfirmAsync(draftId, request, cancellationToken);
             return HandleResult(result);
         }
     }
