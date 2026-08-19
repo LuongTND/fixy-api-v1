@@ -42,6 +42,14 @@ namespace Domain.Entity
         public long? FinalPrice { get; set; }
 
         // =========================
+        // E-Contract Terms
+        // =========================
+
+        public bool AcceptedTerms { get; set; }
+
+        public DateTime? TermsAcceptedAt { get; set; }
+
+        // =========================
         // Cancellation
         // =========================
 

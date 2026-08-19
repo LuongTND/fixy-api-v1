@@ -306,6 +306,7 @@ namespace Infrastructure.Services
 
         public async Task<OperationResult<BookingDraftConfirmedDto>> ConfirmAsync(
             Guid draftId,
+            ConfirmBookingDraftRequest request,
             CancellationToken cancellationToken = default
         )
         {
@@ -316,6 +317,17 @@ namespace Infrastructure.Services
             {
                 return OperationResult<BookingDraftConfirmedDto>.Failure(
                     "User ID not found in token"
+                );
+            }
+
+            // =========================
+            // E-CONTRACT TERMS VALIDATION
+            // =========================
+
+            if (!request.AcceptedTerms)
+            {
+                return OperationResult<BookingDraftConfirmedDto>.Failure(
+                    "Quý khách cần đồng ý với Hợp đồng dịch vụ điện tử và Điều khoản sử dụng trước khi tiếp tục."
                 );
             }
 
@@ -514,6 +526,10 @@ namespace Infrastructure.Services
                 Status = BookingStatus.PendingPayment,
                 EstimatedPrice = estimatedPrice,
                 FinalPrice = estimatedPrice,
+
+                // E-Contract Terms Audit Trail
+                AcceptedTerms = true,
+                TermsAcceptedAt = _dateTimeProvider.UtcNow,
             };
 
             await _bookingRepository.AddAsync(booking, cancellationToken);
