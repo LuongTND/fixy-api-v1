@@ -299,7 +299,7 @@ namespace Infrastructure.Services
 
             if (dto.WorkerService.Count(x => x.IsPrimary) != 1)
             {
-                return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
+                return OperationResult.Failure("");
             }
 
             if (string.IsNullOrWhiteSpace(dto.CitizenIdNumber))
@@ -344,6 +344,30 @@ namespace Infrastructure.Services
                     {
                         user.Phone = targetStr;
                     }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.Phone))
+            {
+                var isPhoneDuplicate = await _userRepository.ExistsAsync(
+                    u => u.Phone == user.Phone && u.Id != user.Id,
+                    cancellationToken
+                );
+                if (isPhoneDuplicate)
+                {
+                    return OperationResult.Failure("Số điện thoại này đã được sử dụng bởi một tài khoản khác.");
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.Email))
+            {
+                var isEmailDuplicate = await _userRepository.ExistsAsync(
+                    u => u.Email == user.Email && u.Id != user.Id,
+                    cancellationToken
+                );
+                if (isEmailDuplicate)
+                {
+                    return OperationResult.Failure("Email này đã được sử dụng bởi một tài khoản khác.");
                 }
             }
 
@@ -660,16 +684,16 @@ namespace Infrastructure.Services
             // Only validate & replace Services if Services are explicitly supplied in DTO
             if (dto.Services != null && dto.Services.Count > 0)
             {
-                if (dto.Services.Count is < 1 or > 5)
+                if (dto.Services.Count is < 1 or > 10)
                 {
                     return OperationResult.Failure(
-                        "Worker is only allowed to perform a maximum of 5 services and a minimum of 1 service."
+                        "Kĩ thuật viên chỉ được chọn từ 1 đến tối đa 10 dịch vụ."
                     );
                 }
 
                 if (dto.Services.Count(x => x.IsPrimary) != 1)
                 {
-                    return OperationResult.Failure("Worker must have exactly one primary service.");
+                    return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
                 }
             }
 

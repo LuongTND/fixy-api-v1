@@ -12,10 +12,15 @@ namespace API.Controllers
     public class WorkerProfileController : ApiController
     {
         private readonly IWorkerProfileService _workerProfileService;
+        private readonly IFaceRecognitionService _faceRecognitionService;
 
-        public WorkerProfileController(IWorkerProfileService workerProfileService)
+        public WorkerProfileController(
+            IWorkerProfileService workerProfileService,
+            IFaceRecognitionService faceRecognitionService
+        )
         {
             _workerProfileService = workerProfileService;
+            _faceRecognitionService = faceRecognitionService;
         }
 
         [Authorize(Roles = "WORKER")]
@@ -257,6 +262,35 @@ namespace API.Controllers
             );
 
             return HandleResult(result);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("verify-face")]
+        public async Task<IActionResult> VerifyFace(
+            [FromForm] VerifyFaceRequestDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            if (dto.CardFrontImage == null || dto.CardFrontImage.Length == 0)
+            {
+                return BadRequest(Application.Common.OperationResult<FaceMatchResultDto>.Failure("Ảnh mặt trước CCCD không hợp lệ."));
+            }
+
+            if (dto.SelfieImage == null || dto.SelfieImage.Length == 0)
+            {
+                return BadRequest(Application.Common.OperationResult<FaceMatchResultDto>.Failure("Ảnh chân dung (Selfie) không hợp lệ."));
+            }
+
+            using var cardStream = dto.CardFrontImage.OpenReadStream();
+            using var selfieStream = dto.SelfieImage.OpenReadStream();
+
+            var result = await _faceRecognitionService.CompareFacesAsync(
+                cardStream,
+                selfieStream,
+                cancellationToken
+            );
+
+            return Ok(Application.Common.OperationResult<FaceMatchResultDto>.Success(result));
         }
     }
 }

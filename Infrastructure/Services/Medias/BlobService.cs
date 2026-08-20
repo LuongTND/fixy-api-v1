@@ -1,4 +1,4 @@
-﻿using Application.Common.Settings;
+using Application.Common.Settings;
 using Application.Interfaces.Services.Media;
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Http;
@@ -36,6 +36,8 @@ public class BlobService : IBlobService
         var extension = Path.GetExtension(file.FileName).ToLower();
 
         var fileName = $"{Guid.NewGuid()}{extension}";
+
+        await _containerClient.CreateIfNotExistsAsync(Azure.Storage.Blobs.Models.PublicAccessType.Blob);
 
         var blobClient = _containerClient.GetBlobClient(fileName);
 
