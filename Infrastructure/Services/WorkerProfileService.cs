@@ -299,7 +299,7 @@ namespace Infrastructure.Services
 
             if (dto.WorkerService.Count(x => x.IsPrimary) != 1)
             {
-                return OperationResult.Failure("");
+                return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
             }
 
             if (string.IsNullOrWhiteSpace(dto.CitizenIdNumber))
@@ -693,7 +693,7 @@ namespace Infrastructure.Services
 
                 if (dto.Services.Count(x => x.IsPrimary) != 1)
                 {
-                    return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
+                    return OperationResult.Failure("facial authentication\r\n");
                 }
             }
 
