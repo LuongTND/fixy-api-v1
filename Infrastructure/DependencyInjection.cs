@@ -29,6 +29,7 @@ using Infrastructure.Services.Booking;
 using Infrastructure.Services.Chat;
 using Infrastructure.Services.Email;
 using Infrastructure.Services.Medias;
+using Infrastructure.Services.FaceRecognition;
 using Infrastructure.Services.Notifications;
 using Infrastructure.Services.Sms;
 using Infrastructure.Services.Payment;
@@ -180,6 +181,7 @@ namespace Infrastructure
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ISmsService, SmsService>();
             services.AddSingleton<ITemplateEngine, RazorTemplateEngine>();
+            services.AddSingleton<IFaceRecognitionService, OnnxFaceRecognitionService>();
 
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAddressService, AddressService>();
