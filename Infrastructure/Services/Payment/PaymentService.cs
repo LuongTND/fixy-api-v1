@@ -154,6 +154,16 @@ namespace Infrastructure.Services.Payment
                 return OperationResult<string>.Failure("Booking already paid");
             }
 
+            // When retrying an online payment (MoMo, VnPay, PayOS), gateways reject
+            
+            if (existedOrder != null && existedOrder.Status != PaymentStatus.Paid
+                && method != PaymentMethod.Cash)
+            {
+                _paymentOrderRepository.Remove(existedOrder);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                existedOrder = null;
+            }
+
             PaymentOrder order;
 
             if (existedOrder != null)

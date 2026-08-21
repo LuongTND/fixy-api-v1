@@ -84,6 +84,27 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [HttpPost("callback/momo")]
+        public async Task<IActionResult> HandleMoMoIpn(
+            [FromBody] JsonElement jsonBody,
+            CancellationToken cancellationToken
+        )
+        {
+            var response = new Dictionary<string, string>();
+            foreach (var prop in jsonBody.EnumerateObject())
+            {
+                response[prop.Name] = prop.Value.ToString();
+            }
+
+            var result = await _paymentService.HandleCallbackAsync(
+                PaymentMethod.Momo,
+                response,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
         [HttpPost("callback/payos")]
         public async Task<IActionResult> HandlePayOSCallback(
             [FromBody] PayOSCallbackDto callback,

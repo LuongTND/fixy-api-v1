@@ -22,6 +22,7 @@ namespace Infrastructure.Repositories
                     .ThenInclude(x => x!.User)
                 .Include(x => x.WorkerProfile)
                     .ThenInclude(x => x!.User)
+                .Include(x => x.PaymentOrder)
                 .FirstOrDefaultAsync(x => x.Id == bookingId, ct);
         }
 
