@@ -1,9 +1,10 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Application.Interfaces.Services.Payment;
 using Application.Settings;
 using Domain.Entity;
 using Infrastructure.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Payment
@@ -11,10 +12,12 @@ namespace Infrastructure.Services.Payment
     public class MoMoService : IPaymentGateway
     {
         private readonly MoMoSettings _settings;
+        private readonly ILogger<MoMoService> _logger;
 
-        public MoMoService(IOptions<MoMoSettings> settings)
+        public MoMoService(IOptions<MoMoSettings> settings, ILogger<MoMoService> logger)
         {
             _settings = settings.Value;
+            _logger = logger;
         }
 
         public async Task<string> CreatePaymentUrlAsync(
@@ -24,13 +27,14 @@ namespace Infrastructure.Services.Payment
         {
             var requestId = Guid.NewGuid().ToString("N");
             var orderId = order.Id.ToString("N");
-            var amount = order.FinalAmount.ToString();
-            var orderInfo = $"Topup {orderId}";
+            var amountValue = order.FinalAmount;
+            var amountStr = amountValue.ToString();
+            var orderInfo = $"Thanh toan don hang Fixy {orderId}";
             var extraData = "";
 
             var rawSignature =
                 $"accessKey={_settings.AccessKey}"
-                + $"&amount={amount}"
+                + $"&amount={amountStr}"
                 + $"&extraData={extraData}"
                 + $"&ipnUrl={_settings.NotifyUrl}"
                 + $"&orderId={orderId}"
@@ -48,7 +52,7 @@ namespace Infrastructure.Services.Payment
                 partnerName = "Fixy",
                 storeId = "FixyStore",
                 requestId,
-                amount,
+                amount = amountValue,
                 orderId,
                 orderInfo,
                 redirectUrl = _settings.ReturnUrl,
@@ -67,7 +71,8 @@ namespace Infrastructure.Services.Payment
 
             if (!json.TryGetProperty("payUrl", out var payUrl))
             {
-                throw new Exception($"MoMo Error Response: {responseContent}");
+                _logger.LogError("MoMo payment creation failed. OrderId: {OrderId}, Response: {Response}", orderId, responseContent);
+                throw new InvalidOperationException($"MoMo không thể tạo thanh toán. Vui lòng thử lại sau.");
             }
             return payUrl.GetString()!;
         }
