@@ -693,7 +693,7 @@ namespace Infrastructure.Services
 
                 if (dto.Services.Count(x => x.IsPrimary) != 1)
                 {
-                    return OperationResult.Failure("facial authentication\r\n");
+                    return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
                 }
             }
 
