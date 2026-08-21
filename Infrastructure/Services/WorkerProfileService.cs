@@ -299,7 +299,7 @@ namespace Infrastructure.Services
 
             if (dto.WorkerService.Count(x => x.IsPrimary) != 1)
             {
-                return OperationResult.Failure("");
+                return OperationResult.Failure("Vui lòng chọn đúng 1 dịch vụ chính.");
             }
 
             if (string.IsNullOrWhiteSpace(dto.CitizenIdNumber))
