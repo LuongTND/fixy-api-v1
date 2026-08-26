@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Domain.Entity;
 using Domain.Enum;
 
@@ -12,6 +12,7 @@ namespace Application.Interfaces.Services
         );
         Task<OperationResult> CreateDefaultScheduleAsync(
             Guid workerProfileId,
+            bool saveChanges = true,
             CancellationToken cancellationToken = default
         );
 

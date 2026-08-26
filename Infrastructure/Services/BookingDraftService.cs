@@ -407,6 +407,27 @@ namespace Infrastructure.Services
                     );
                 }
 
+                if (workerProfile.Status != WorkerStatus.Approved)
+                {
+                    return OperationResult<BookingDraftConfirmedDto>.Failure(
+                        "Hồ sơ Kỹ thuật viên chưa được phê duyệt hoạt động."
+                    );
+                }
+
+                if (!workerProfile.IsDepositPaid)
+                {
+                    return OperationResult<BookingDraftConfirmedDto>.Failure(
+                        "Kỹ thuật viên chưa hoàn tất ký quỹ dịch vụ, tạm thời không thể nhận lịch hẹn mới."
+                    );
+                }
+
+                if (!workerProfile.IsAcceptingJobs)
+                {
+                    return OperationResult<BookingDraftConfirmedDto>.Failure(
+                        "Kỹ thuật viên hiện đang tắt trạng thái nhận việc."
+                    );
+                }
+
                 var scheduledTime = draft.ScheduledAt ?? DateTime.UtcNow;
                 var availabilityResult = await _workerScheduleExceptionService.IsWorkerAvailableAsync(
                     workerProfile.Id,

@@ -51,5 +51,23 @@ namespace Application.Interfaces.Services
             string referenceId,
             CancellationToken cancellationToken
         );
+
+        // =============================
+        // Security Deposit (Tiền cọc ký quỹ)
+        // =============================
+
+        Task<OperationResult> DepositLockAsync(
+            Guid userId,
+            long amount,
+            string referenceId,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult> DepositRefundAsync(
+            Guid userId,
+            long amount,
+            string referenceId,
+            CancellationToken cancellationToken
+        );
     }
 }

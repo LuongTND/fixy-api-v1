@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.Interfaces;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -39,6 +39,7 @@ namespace Application.Services
 
         public async Task<OperationResult> CreateDefaultScheduleAsync(
             Guid workerProfileId,
+            bool saveChanges = true,
             CancellationToken cancellationToken = default
         )
         {
@@ -74,7 +75,11 @@ namespace Application.Services
 
             await _workerWeeklyScheduleRepository.AddRangeAsync(schedules);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
             return OperationResult.Success("Create default schedule successfully");
         }
 

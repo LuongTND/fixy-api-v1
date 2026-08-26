@@ -59,6 +59,7 @@ public class WalletService : IWalletService
             {
                 Id = wallet.Id,
                 Balance = wallet.Balance,
+                LockedBalance = wallet.LockedBalance,
                 LifetimeEarned = wallet.LifetimeEarned,
                 LifetimeSpent = wallet.LifetimeSpent,
                 RecentTransactions = recentTransactions
@@ -568,6 +569,7 @@ public class WalletService : IWalletService
         if (wallet == null)
             return OperationResult<WalletTransactionDto>.Failure("Wallet not found");
 
+        // Chỉ kiểm tra và trừ trên Balance thu nhập, TUYỆT ĐỐI không đụng vào LockedBalance (tiền cọc)
         if (wallet.Balance < amount)
             return OperationResult<WalletTransactionDto>.Failure("Insufficient balance");
 
@@ -615,6 +617,119 @@ public class WalletService : IWalletService
         {
             await _unitOfWork.RollbackTransactionAsync();
             return OperationResult<WalletTransactionDto>.Failure("Wallet conflict, retry again");
+        }
+    }
+
+    // =============================
+    // Security Deposit (Tiền cọc ký quỹ)
+    // =============================
+
+    public async Task<OperationResult> DepositLockAsync(
+        Guid userId,
+        long amount,
+        string referenceId,
+        CancellationToken cancellationToken
+    )
+    {
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                userId,
+                WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null)
+                return OperationResult.Failure("Worker wallet not found");
+
+            var lockedBefore = wallet.LockedBalance;
+
+            wallet.LockedBalance += amount;
+
+            var tx = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Type = WalletTransactionType.DepositLock,
+                Direction = WalletDirection.Credit,
+                Amount = amount,
+                BalanceBefore = wallet.Balance,
+                BalanceAfter = wallet.Balance, // Balance thu nhập không thay đổi
+                LockedBalanceBefore = lockedBefore,
+                LockedBalanceAfter = wallet.LockedBalance,
+                ReferenceId = referenceId,
+                Status = TransactionStatus.Success,
+            };
+
+            await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+            _walletRepository.Update(wallet);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return OperationResult.Success("Deposit locked successfully");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return OperationResult.Failure("Wallet conflict, retry again");
+        }
+    }
+
+    public async Task<OperationResult> DepositRefundAsync(
+        Guid userId,
+        long amount,
+        string referenceId,
+        CancellationToken cancellationToken
+    )
+    {
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                userId,
+                WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null)
+                return OperationResult.Failure("Worker wallet not found");
+
+            if (wallet.LockedBalance < amount)
+                return OperationResult.Failure("Insufficient locked deposit balance");
+
+            var lockedBefore = wallet.LockedBalance;
+
+            wallet.LockedBalance -= amount;
+
+            var tx = new WalletTransaction
+            {
+                WalletId = wallet.Id,
+                Type = WalletTransactionType.DepositRefund,
+                Direction = WalletDirection.Debit,
+                Amount = amount,
+                BalanceBefore = wallet.Balance,
+                BalanceAfter = wallet.Balance, // Balance thu nhập không thay đổi
+                LockedBalanceBefore = lockedBefore,
+                LockedBalanceAfter = wallet.LockedBalance,
+                ReferenceId = referenceId,
+                Status = TransactionStatus.Success,
+            };
+
+            await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+            _walletRepository.Update(wallet);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync();
+
+            return OperationResult.Success("Deposit refunded successfully");
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return OperationResult.Failure("Wallet conflict, retry again");
         }
     }
 }

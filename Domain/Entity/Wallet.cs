@@ -11,6 +11,8 @@ public class Wallet : BaseEntity
 
     public long Balance { get; set; }
 
+    public long LockedBalance { get; set; } // Tiền cọc ký quỹ (tách biệt hoàn toàn với Balance thu nhập)
+
     public long LifetimeEarned { get; set; }
 
     public long LifetimeSpent { get; set; }

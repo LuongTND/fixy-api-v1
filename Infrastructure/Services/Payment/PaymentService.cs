@@ -37,6 +37,10 @@ namespace Infrastructure.Services.Payment
 
         private readonly ILogger<PaymentService> _logger;
 
+        private readonly IWorkerProfileRepository _workerProfileRepository;
+
+        private readonly IWorkerServiceRepository _workerServiceRepository;
+
         public PaymentService(
             IPaymentOrderRepository paymentOrderRepository,
             ICustomerProfileRepository customerProfileRepository,
@@ -47,7 +51,9 @@ namespace Infrastructure.Services.Payment
             IBookingService bookingService,
             INotificationService notificationService,
             IHubContext<NotificationHub> hubContext,
-            ILogger<PaymentService> logger
+            ILogger<PaymentService> logger,
+            IWorkerProfileRepository workerProfileRepository,
+            IWorkerServiceRepository workerServiceRepository
         )
         {
             _paymentOrderRepository = paymentOrderRepository;
@@ -69,6 +75,10 @@ namespace Infrastructure.Services.Payment
             _hubContext = hubContext;
 
             _logger = logger;
+
+            _workerProfileRepository = workerProfileRepository;
+
+            _workerServiceRepository = workerServiceRepository;
         }
 
         public async Task<OperationResult<string>> CreateTopUpPaymentUrlAsync(
@@ -347,6 +357,32 @@ namespace Infrastructure.Services.Payment
 
                     break;
 
+                case PaymentOrderType.WorkerDeposit:
+
+                    await _walletService.DepositLockAsync(
+                        order.UserId,
+                        order.FinalAmount,
+                        $"Deposit #{order.Id}",
+                        cancellationToken
+                    );
+
+                    // Cập nhật WorkerProfile: đánh dấu đã nạp cọc & kích hoạt nhận việc
+                    var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(
+                        wp => wp.UserId == order.UserId,
+                        cancellationToken
+                    );
+
+                    if (workerProfile != null)
+                    {
+                        workerProfile.IsDepositPaid = true;
+                        workerProfile.DepositPaidAt = DateTime.UtcNow;
+                        workerProfile.IsAcceptingJobs = true;
+                        workerProfile.IsOnline = true;
+                        _workerProfileRepository.Update(workerProfile);
+                    }
+
+                    break;
+
                 default:
 
                     throw new Exception($"Unsupported payment type: {order.Type}");
@@ -483,13 +519,19 @@ namespace Infrastructure.Services.Payment
             // 7. Send Push Notification (Firebase FCM) + save to notification DB
             try
             {
-                var notifTitle = order.Type == PaymentOrderType.WalletTopUp
-                    ? "Nạp ví thành công!"
-                    : "Thanh toán thành công!";
+                var notifTitle = order.Type switch
+                {
+                    PaymentOrderType.WalletTopUp => "Nạp ví thành công!",
+                    PaymentOrderType.WorkerDeposit => "Nạp cọc kích hoạt thành công!",
+                    _ => "Thanh toán thành công!"
+                };
 
-                var notifBody = order.Type == PaymentOrderType.WalletTopUp
-                    ? $"Bạn đã nạp thành công {order.FinalAmount:N0}đ vào Ví Fixy qua PayOS."
-                    : $"Đơn dịch vụ của bạn đã được thanh toán {order.FinalAmount:N0}đ và đang chờ Kỹ thuật viên tiếp nhận.";
+                var notifBody = order.Type switch
+                {
+                    PaymentOrderType.WalletTopUp => $"Bạn đã nạp thành công {order.FinalAmount:N0}đ vào Ví Fixy qua PayOS.",
+                    PaymentOrderType.WorkerDeposit => $"Bạn đã nạp cọc ký quỹ {order.FinalAmount:N0}đ thành công. Tài khoản đã được kích hoạt nhận lịch hẹn Spa!",
+                    _ => $"Đơn dịch vụ của bạn đã được thanh toán {order.FinalAmount:N0}đ và đang chờ Kỹ thuật viên tiếp nhận."
+                };
 
                 var deepLink = order.BookingId.HasValue
                     ? $"/booking-detail?bookingId={order.BookingId.Value}"
@@ -520,6 +562,65 @@ namespace Infrastructure.Services.Payment
                 _logger.LogError(outerEx, "Unhandled exception in HandlePayOSCallbackAsync. Returning 200 OK to prevent webhook error 500.");
                 return OperationResult<bool>.Success(true, "Handled outer exception in webhook");
             }
+        }
+
+        public async Task<OperationResult<string>> CreateWorkerDepositPaymentUrlAsync(
+            Guid workerUserId,
+            PaymentMethod method,
+            CancellationToken cancellationToken
+        )
+        {
+            // 1. Tìm WorkerProfile
+            var workerProfile = await _workerProfileRepository.FirstOrDefaultAsync(
+                wp => wp.UserId == workerUserId,
+                cancellationToken
+            );
+
+            if (workerProfile == null)
+                return OperationResult<string>.Failure("Worker profile not found");
+
+            if (workerProfile.IsDepositPaid)
+                return OperationResult<string>.Failure("Deposit already paid");
+
+            // 2. Tìm dịch vụ Spa chính (IsPrimary) để lấy BasePrice làm mức cọc
+            var primaryService = await _workerServiceRepository.FirstOrDefaultAsync(
+                ws => ws.WorkerProfileId == workerProfile.Id && ws.IsPrimary,
+                cancellationToken
+            );
+
+            if (primaryService == null)
+                return OperationResult<string>.Failure("Primary service not found. Please set up your primary spa service first.");
+
+            var depositAmount = primaryService.BasePrice;
+
+            if (depositAmount <= 0)
+                return OperationResult<string>.Failure("Invalid deposit amount from primary service price");
+
+            // Cập nhật DepositRequiredAmount trên WorkerProfile
+            workerProfile.DepositRequiredAmount = depositAmount;
+            _workerProfileRepository.Update(workerProfile);
+
+            // 3. Tạo PaymentOrder loại WorkerDeposit
+            var order = new PaymentOrder
+            {
+                UserId = workerUserId,
+                Amount = depositAmount,
+                DiscountAmount = 0,
+                FinalAmount = depositAmount,
+                Method = method,
+                Status = PaymentStatus.Pending,
+                Type = PaymentOrderType.WorkerDeposit,
+            };
+
+            await _paymentOrderRepository.AddAsync(order, cancellationToken);
+
+            // 4. Sinh mã VietQR / Checkout URL qua cổng thanh toán
+            var gateway = _paymentGatewayFactory.Get(method);
+            var paymentUrl = await gateway.CreatePaymentUrlAsync(order, cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult<string>.Success(paymentUrl);
         }
     }
 }

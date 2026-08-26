@@ -38,6 +38,22 @@ namespace API.Controllers
             return HandleResult(result);
         }
 
+        [Authorize(Roles = "WORKER")]
+        [HttpPost("worker/deposit")]
+        public async Task<IActionResult> CreateWorkerDepositPayment(
+            [FromBody] CreateWorkerDepositPaymentRequestDto request,
+            CancellationToken cancellationToken
+        )
+        {
+            var result = await _paymentService.CreateWorkerDepositPaymentUrlAsync(
+                GetUserId(),
+                request.Method,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
         [Authorize(Roles = "CUSTOMER")]
         [HttpPost("booking/{bookingId}")]
         public async Task<IActionResult> CreateBookingPayment(

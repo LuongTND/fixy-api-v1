@@ -193,6 +193,38 @@ namespace API.Controllers
         }
 
         [Authorize(Roles = "WORKER")]
+        [HttpGet("me/deposit-status")]
+        public async Task<IActionResult> GetDepositStatus(CancellationToken cancellationToken)
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.GetDepositStatusAsync(
+                workerId,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
+        [HttpPost("me/request-offboarding")]
+        public async Task<IActionResult> RequestOffboarding(
+            [FromBody] RequestOffboardingDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var workerId = GetUserId();
+
+            var result = await _workerProfileService.RequestOffboardingAsync(
+                workerId,
+                dto,
+                cancellationToken
+            );
+
+            return HandleResult(result);
+        }
+
+        [Authorize(Roles = "WORKER")]
         [HttpPost("me/portfolio-images")]
         public async Task<IActionResult> UploadPortfolioImages(
             [FromForm] UploadPortfolioImagesRequestDto dto,

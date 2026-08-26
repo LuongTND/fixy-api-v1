@@ -12,6 +12,7 @@ using Application.Interfaces.Services.Media;
 using Domain.Entity;
 using Domain.Enum;
 using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services
 {
@@ -31,6 +32,10 @@ namespace Infrastructure.Services
         private readonly IBlobService _blobService;
         private readonly IWorkerWeeklyScheduleService _workerWeeklyScheduleService;
         private readonly IGoongService _goongService;
+        private readonly IBookingRepository _bookingRepository;
+        private readonly IPayoutRequestRepository _payoutRequestRepository;
+        private readonly IWorkerPayoutAccountRepository _workerPayoutAccountRepository;
+        private readonly IWalletTransactionRepository _walletTransactionRepository;
 
         public WorkerProfileService(
             IUserRepository userRepository,
@@ -44,7 +49,11 @@ namespace Infrastructure.Services
             IBlobService blobService,
             IWorkerWeeklyScheduleService workerWeeklyScheduleService,
             ICurrentUserService currentUserService,
-            IGoongService goongService
+            IGoongService goongService,
+            IBookingRepository bookingRepository,
+            IPayoutRequestRepository payoutRequestRepository,
+            IWorkerPayoutAccountRepository workerPayoutAccountRepository,
+            IWalletTransactionRepository walletTransactionRepository
         )
         {
             _userRepository = userRepository;
@@ -59,6 +68,10 @@ namespace Infrastructure.Services
             _workerWeeklyScheduleService = workerWeeklyScheduleService;
             _currentUserService = currentUserService;
             _goongService = goongService;
+            _bookingRepository = bookingRepository;
+            _payoutRequestRepository = payoutRequestRepository;
+            _workerPayoutAccountRepository = workerPayoutAccountRepository;
+            _walletTransactionRepository = walletTransactionRepository;
         }
 
         public async Task<OperationResult<PagedResponse<WorkerProfileDto>>> GetPagedWorkerProfiles(
@@ -372,12 +385,12 @@ namespace Infrastructure.Services
             }
 
             _userRepository.Update(user);
-            var existingWorker = await _workerProfileRepository.GetWorkerProfileDetailByUserIdAsync(
-                user.Id,
+            var hasExistingWorker = await _workerProfileRepository.ExistsAsync(
+                x => x.UserId == user.Id,
                 cancellationToken
             );
 
-            if (existingWorker != null)
+            if (hasExistingWorker)
             {
                 return OperationResult.Failure("Tài khoản này đã đăng ký hồ sơ kỹ thuật viên trước đó.");
             }
@@ -397,12 +410,13 @@ namespace Infrastructure.Services
             user.IsCitizenIdVerified = true;
             var uploadedUrls = new List<string>();
 
+            using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
             try
             {
                 // Create Worker Profile
-
                 var workerProfile = new WorkerProfile
                 {
+                    Id = Guid.NewGuid(),
                     UserId = user.Id,
                     Bio = dto.Bio,
                     ExperienceYears = dto.ExperienceYears,
@@ -419,6 +433,7 @@ namespace Infrastructure.Services
                 // Create Worker Schedule
                 await _workerWeeklyScheduleService.CreateDefaultScheduleAsync(
                     workerProfile.Id,
+                    false,
                     cancellationToken
                 );
                 // Create Worker Address
@@ -570,11 +585,13 @@ namespace Infrastructure.Services
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
 
                 return OperationResult.Success("Worker register successfully");
             }
             catch
             {
+                await transaction.RollbackAsync(cancellationToken);
                 foreach (var url in uploadedUrls)
                 {
                     await _blobService.DeleteImageAsync(url);
@@ -602,8 +619,9 @@ namespace Infrastructure.Services
 
             workerRegisterRequest.Status = WorkerStatus.Approved;
             workerRegisterRequest.ApprovedById = userId;
-            workerRegisterRequest.IsOnline = true;
-            workerRegisterRequest.IsAcceptingJobs = true;
+            workerRegisterRequest.ApprovedAt = DateTime.UtcNow;
+            workerRegisterRequest.IsOnline = false;
+            workerRegisterRequest.IsAcceptingJobs = false;
 
             if (workerRegisterRequest.User != null)
             {
@@ -1328,6 +1346,29 @@ namespace Infrastructure.Services
                 return OperationResult.Failure("Worker profile not found.");
             }
 
+            // Kiểm tra tiền cọc ký quỹ trước khi cho phép bật nhận việc
+            if (dto.IsAcceptingJobs.HasValue && dto.IsAcceptingJobs.Value)
+            {
+                if (!worker.IsDepositPaid)
+                {
+                    var wallet = await _walletRepository.GetByUserIdAsync(
+                        workerUserId,
+                        Domain.Enum.WalletOwnerType.Worker,
+                        cancellationToken
+                    );
+
+                    var currentLocked = wallet?.LockedBalance ?? 0;
+                    var required = worker.DepositRequiredAmount;
+
+                    if (currentLocked < required)
+                    {
+                        return OperationResult.Failure(
+                            $"Vui lòng nạp cọc ký quỹ để kích hoạt nhận lịch hẹn Spa. Mức cọc yêu cầu: {required:N0}đ, hiện có: {currentLocked:N0}đ."
+                        );
+                    }
+                }
+            }
+
             if (dto.IsAcceptingJobs.HasValue)
             {
                 worker.IsAcceptingJobs = dto.IsAcceptingJobs.Value;
@@ -1342,6 +1383,180 @@ namespace Infrastructure.Services
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return OperationResult.Success("Update working status successfully.");
+        }
+
+        public async Task<OperationResult<WorkerDepositStatusDto>> GetDepositStatusAsync(
+            Guid workerUserId,
+            CancellationToken cancellationToken
+        )
+        {
+            var worker = await _workerProfileRepository.FirstOrDefaultAsync(
+                x => x.UserId == workerUserId,
+                cancellationToken
+            );
+
+            if (worker == null)
+                return OperationResult<WorkerDepositStatusDto>.Failure("Worker profile not found.");
+
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                workerUserId,
+                Domain.Enum.WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            // Tìm dịch vụ Spa chính
+            var primaryService = (await _workerServiceRepository.FindAsync(
+                ws => ws.WorkerProfileId == worker.Id && ws.IsPrimary,
+                cancellationToken
+            )).FirstOrDefault();
+
+            var dto = new WorkerDepositStatusDto
+            {
+                PrimaryServiceId = primaryService?.Id,
+                PrimaryServiceName = primaryService?.Category?.Name,
+                ServiceCategoryName = primaryService?.Category?.Name,
+                DepositRequiredAmount = worker.DepositRequiredAmount > 0
+                    ? worker.DepositRequiredAmount
+                    : (primaryService?.BasePrice ?? 0),
+                LockedBalance = wallet?.LockedBalance ?? 0,
+                AvailableBalance = wallet?.Balance ?? 0,
+                IsDepositPaid = worker.IsDepositPaid,
+                DepositPaidAt = worker.DepositPaidAt,
+                CanRequestRefund = worker.IsDepositPaid && !worker.IsOffboardingRequested,
+            };
+
+            return OperationResult<WorkerDepositStatusDto>.Success(dto);
+        }
+
+        public async Task<OperationResult> RequestOffboardingAsync(
+            Guid workerUserId,
+            RequestOffboardingDto dto,
+            CancellationToken cancellationToken
+        )
+        {
+            var worker = await _workerProfileRepository.FirstOrDefaultAsync(
+                x => x.UserId == workerUserId,
+                cancellationToken
+            );
+
+            if (worker == null)
+                return OperationResult.Failure("Worker profile not found.");
+
+            if (!worker.IsDepositPaid)
+                return OperationResult.Failure("Bạn chưa nạp tiền cọc ký quỹ hoặc cọc đã được xử lý hoàn trả.");
+
+            if (worker.IsOffboardingRequested)
+                return OperationResult.Failure("Yêu cầu ngừng hợp tác và hoàn cọc của bạn đang được xử lý.");
+
+            // 1. Kiểm tra không có ca hẹn nào đang diễn ra
+            var activeBooking = await _bookingRepository.GetActiveBookingByWorkerProfileIdAsync(
+                worker.Id,
+                cancellationToken
+            );
+
+            if (activeBooking != null)
+            {
+                return OperationResult.Failure(
+                    "Bạn đang có ca hẹn Spa chưa hoàn thành. Vui lòng hoàn thành hoặc xử lý ca hẹn trước khi yêu cầu ngừng hợp tác."
+                );
+            }
+
+            // 2. Kiểm tra tài khoản nhận tiền
+            var payoutAccount = await _workerPayoutAccountRepository.GetByIdAsync(
+                dto.PayoutAccountId,
+                cancellationToken
+            );
+
+            if (payoutAccount == null || payoutAccount.WorkerProfileId != worker.Id)
+            {
+                return OperationResult.Failure("Tài khoản ngân hàng nhận tiền hoàn cọc không hợp lệ.");
+            }
+
+            // 3. Kiểm tra số dư cọc
+            var wallet = await _walletRepository.GetByUserIdAsync(
+                workerUserId,
+                Domain.Enum.WalletOwnerType.Worker,
+                cancellationToken
+            );
+
+            if (wallet == null || wallet.LockedBalance <= 0)
+            {
+                return OperationResult.Failure("Không tìm thấy số dư cọc ký quỹ hợp lệ.");
+            }
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                var refundAmount = wallet.LockedBalance;
+                var lockedBefore = wallet.LockedBalance;
+
+                // Tạm giữ cọc để chuyển sang PayoutRequest
+                wallet.LockedBalance = 0;
+
+                var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                var random = new Random();
+                var payoutCode = "WD" + new string(Enumerable.Range(0, 6).Select(_ => chars[random.Next(chars.Length)]).ToArray());
+                var bankCode = payoutAccount.BankCode ?? "";
+                var addInfo = Uri.EscapeDataString($"FIXY HOAN COC {payoutCode}");
+                var encodedAccountName = Uri.EscapeDataString(payoutAccount.AccountName);
+                var vietQrUrl = $"https://img.vietqr.io/image/{bankCode}-{payoutAccount.AccountNumber}-compact2.png?amount={refundAmount}&addInfo={addInfo}&accountName={encodedAccountName}";
+
+                var payoutRequest = new PayoutRequest
+                {
+                    WorkerProfileId = worker.Id,
+                    PayoutAccountId = dto.PayoutAccountId,
+                    Amount = refundAmount,
+                    Status = PayoutRequestStatus.Pending,
+                    PayoutCode = payoutCode,
+                    VietQrUrl = vietQrUrl,
+                };
+
+                await _payoutRequestRepository.AddAsync(payoutRequest, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                var tx = new WalletTransaction
+                {
+                    WalletId = wallet.Id,
+                    PayoutRequestId = payoutRequest.Id,
+                    Type = WalletTransactionType.DepositRefund,
+                    Direction = WalletDirection.Debit,
+                    Amount = refundAmount,
+                    BalanceBefore = wallet.Balance,
+                    BalanceAfter = wallet.Balance,
+                    LockedBalanceBefore = lockedBefore,
+                    LockedBalanceAfter = 0,
+                    Status = TransactionStatus.Pending,
+                    ReferenceId = $"Offboarding refund #{payoutRequest.Id}"
+                };
+
+                await _walletTransactionRepository.AddAsync(tx, cancellationToken);
+                _walletRepository.Update(wallet);
+
+                // Cập nhật trạng thái KTV
+                worker.IsOffboardingRequested = true;
+                worker.OffboardingRequestedAt = DateTime.UtcNow;
+                worker.IsAcceptingJobs = false;
+                worker.IsOnline = false;
+                worker.IsDepositPaid = false;
+
+                _workerProfileRepository.Update(worker);
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync();
+
+                return OperationResult.Success("Yêu cầu ngừng hợp tác và hoàn 100% tiền cọc ký quỹ đã được gửi thành công. Ban quản trị sẽ chuyển khoản về tài khoản ngân hàng của bạn.");
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return OperationResult.Failure("Xảy ra xung đột dữ liệu ví, vui lòng thử lại.");
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
     }
 }
