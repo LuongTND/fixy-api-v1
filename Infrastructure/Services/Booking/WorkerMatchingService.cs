@@ -109,14 +109,12 @@ namespace Infrastructure.Services.Booking
                 .Distinct()
                 .ToList();
 
-            // 2. Find worker profiles that are online, not busy, accepting jobs, and approved
+            // 2. Find worker profiles that are online, not busy, accepting jobs, approved, and deposit paid
             var activeWorkers = await _workerProfileRepository.FindAsync(
                 wp =>
                     eligibleWorkerProfileIds.Contains(wp.Id)
-                    && wp.Status == WorkerStatus.Approved,
-                    //&& wp.IsOnline
-                    //&& !wp.IsBusy
-                    //&& wp.IsAcceptingJobs,
+                    && wp.Status == WorkerStatus.Approved
+                    && wp.IsDepositPaid, // Chỉ KTV đã nạp đủ cọc ký quỹ mới được nhận ca
                 cancellationToken
             );
 

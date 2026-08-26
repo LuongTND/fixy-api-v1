@@ -157,7 +157,7 @@ namespace Infrastructure.Repositories
             CancellationToken cancellationToken
         )
         {
-            // 1. Base query: chỉ thợ đã duyệt, tài khoản hoạt động
+            // 1. Base query: chỉ thợ đã duyệt, đã đóng cọc ký quỹ, đang bật nhận việc và tài khoản hoạt động
             var queryDb = _dbSet
                 .Include(x => x.User)
                 .Include(x => x.Address)
@@ -168,6 +168,8 @@ namespace Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(x =>
                     x.Status == Domain.Enum.WorkerStatus.Approved
+                    && x.IsDepositPaid
+                    && x.IsAcceptingJobs
                     && x.User != null
                     && x.User.IsActive
                     && !x.User.IsDeleted

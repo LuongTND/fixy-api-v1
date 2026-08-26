@@ -17,6 +17,11 @@ public class WalletTransaction : BaseEntity
     public long BalanceBefore { get; set; }
 
     public long BalanceAfter { get; set; }
+
+    public long? LockedBalanceBefore { get; set; } // Số dư cọc trước giao dịch (nullable cho các giao dịch không liên quan đến cọc)
+
+    public long? LockedBalanceAfter { get; set; } // Số dư cọc sau giao dịch
+
     public long? PlatformFee { get; set; }
     public string? ExternalTransactionId { get; set; }
     public string? ReferenceId { get; set; }

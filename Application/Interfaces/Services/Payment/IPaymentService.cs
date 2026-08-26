@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Payment;
 using Domain.Entity;
 using Domain.Enum;
@@ -26,6 +26,12 @@ namespace Application.Interfaces.Services.Payment
         );
         Task<OperationResult<bool>> HandlePayOSCallbackAsync(
             PayOSCallbackDto callback,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult<string>> CreateWorkerDepositPaymentUrlAsync(
+            Guid workerUserId,
+            PaymentMethod method,
             CancellationToken cancellationToken
         );
     }

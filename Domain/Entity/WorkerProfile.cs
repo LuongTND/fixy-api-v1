@@ -76,6 +76,20 @@ namespace Domain.Entity
         public FeaturedPackage? FeaturedPackage { get; set; }
 
         // =========================
+        // Security Deposit (Tiền cọc ký quỹ)
+        // =========================
+
+        public bool IsDepositPaid { get; set; } = false;
+
+        public long DepositRequiredAmount { get; set; } // Bằng BasePrice dịch vụ Spa chính (IsPrimary)
+
+        public DateTime? DepositPaidAt { get; set; }
+
+        public bool IsOffboardingRequested { get; set; } = false;
+
+        public DateTime? OffboardingRequestedAt { get; set; }
+
+        // =========================
         // Approval
         // =========================
 

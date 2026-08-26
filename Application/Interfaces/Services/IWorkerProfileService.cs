@@ -76,5 +76,16 @@ namespace Application.Interfaces.Services
             UpdateWorkingStatusRequestDto dto,
             CancellationToken cancellationToken
         );
+
+        Task<OperationResult<WorkerDepositStatusDto>> GetDepositStatusAsync(
+            Guid workerUserId,
+            CancellationToken cancellationToken
+        );
+
+        Task<OperationResult> RequestOffboardingAsync(
+            Guid workerUserId,
+            RequestOffboardingDto dto,
+            CancellationToken cancellationToken
+        );
     }
 }

@@ -238,12 +238,12 @@ namespace Infrastructure.Services
             _walletRepository.Update(wallet);
 
             var tx = request.WalletTransactions.FirstOrDefault(x =>
-                x.Type == WalletTransactionType.Withdrawal
+                x.Type == WalletTransactionType.Withdrawal || x.Type == WalletTransactionType.DepositRefund
             );
 
             if (tx == null)
             {
-                return OperationResult.Failure("Withdrawal transaction not found");
+                return OperationResult.Failure("Transaction not found");
             }
 
             request.Status = PayoutRequestStatus.Approved;
@@ -282,12 +282,12 @@ namespace Infrastructure.Services
             }
 
             var tx = request.WalletTransactions.FirstOrDefault(x =>
-                x.Type == WalletTransactionType.Withdrawal
+                x.Type == WalletTransactionType.Withdrawal || x.Type == WalletTransactionType.DepositRefund
             );
 
             if (tx == null)
             {
-                return OperationResult.Failure("Withdrawal transaction not found");
+                return OperationResult.Failure("Transaction not found");
             }
 
             var wallet = await _walletRepository.GetByIdAsync(tx.WalletId, cancellationToken);
@@ -301,42 +301,65 @@ namespace Infrastructure.Services
 
             try
             {
-                var before = wallet.Balance;
-
-                // RETURN MONEY
-                wallet.Balance += request.Amount;
-
                 request.Status = PayoutRequestStatus.Rejected;
-
                 request.ReviewedById = reviewerId;
-
                 request.RejectReason = reason;
-
                 tx.Status = TransactionStatus.Failed;
 
-                var refundTx = new WalletTransaction
+                if (tx.Type == WalletTransactionType.DepositRefund)
                 {
-                    WalletId = wallet.Id,
+                    // Hoàn trả lại cọc vào LockedBalance và khôi phục trạng thái WorkerProfile
+                    var lockedBefore = wallet.LockedBalance;
+                    wallet.LockedBalance += request.Amount;
 
-                    PayoutRequestId = request.Id,
+                    if (request.WorkerProfile != null)
+                    {
+                        request.WorkerProfile.IsOffboardingRequested = false;
+                        request.WorkerProfile.IsDepositPaid = true;
+                        _workerProfileRepository.Update(request.WorkerProfile);
+                    }
 
-                    Type = WalletTransactionType.Refund,
-                    Direction = WalletDirection.Credit,
+                    var rollbackTx = new WalletTransaction
+                    {
+                        WalletId = wallet.Id,
+                        PayoutRequestId = request.Id,
+                        Type = WalletTransactionType.DepositLock,
+                        Direction = WalletDirection.Credit,
+                        Amount = request.Amount,
+                        BalanceBefore = wallet.Balance,
+                        BalanceAfter = wallet.Balance,
+                        LockedBalanceBefore = lockedBefore,
+                        LockedBalanceAfter = wallet.LockedBalance,
+                        Status = TransactionStatus.Success,
+                        ReferenceId = $"Rollback rejected offboarding #{request.Id}"
+                    };
 
-                    Amount = request.Amount,
+                    await _walletTransactionRepository.AddAsync(rollbackTx, cancellationToken);
+                }
+                else
+                {
+                    var before = wallet.Balance;
+                    // RETURN MONEY TO BALANCE
+                    wallet.Balance += request.Amount;
 
-                    BalanceBefore = before,
-                    BalanceAfter = wallet.Balance,
+                    var refundTx = new WalletTransaction
+                    {
+                        WalletId = wallet.Id,
+                        PayoutRequestId = request.Id,
+                        Type = WalletTransactionType.Refund,
+                        Direction = WalletDirection.Credit,
+                        Amount = request.Amount,
+                        BalanceBefore = before,
+                        BalanceAfter = wallet.Balance,
+                        Status = TransactionStatus.Success,
+                    };
 
-                    Status = TransactionStatus.Success,
-                };
-
-                await _walletTransactionRepository.AddAsync(refundTx, cancellationToken);
+                    await _walletTransactionRepository.AddAsync(refundTx, cancellationToken);
+                }
 
                 _walletRepository.Update(wallet);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
-
                 await _unitOfWork.CommitTransactionAsync();
 
                 return OperationResult.Success("Payout rejected successfully");
@@ -533,7 +556,7 @@ namespace Infrastructure.Services
             _walletRepository.Update(wallet);
 
             var tx = request.WalletTransactions.FirstOrDefault(x =>
-                x.Type == WalletTransactionType.Withdrawal
+                x.Type == WalletTransactionType.Withdrawal || x.Type == WalletTransactionType.DepositRefund
             );
             if (tx != null)
             {

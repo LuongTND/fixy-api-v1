@@ -1,109 +1,107 @@
-﻿@model Application.Common.Models.Email.OtpEmailModel
+@model Application.Common.Models.Email.OtpEmailModel
 
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Đăng ký Vua Thợ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực tài khoản FIXY Spa</title>
 </head>
-<body style="margin:0;padding:0;background-color:#fff5f0;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:0;background-color:#FBF9F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1C2526;-webkit-font-smoothing:antialiased;">
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:20px;background-color:#fff5f0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FBF9F5;padding:40px 15px;">
         <tr>
             <td align="center">
-
-                <table width="600" cellpadding="0" cellspacing="0"
-                       style="background-color:white;border-radius:12px;overflow:hidden;
-                              box-shadow:0 4px 12px rgba(255,140,0,0.1);">
-
-                    <!-- Header -->
+                <!-- Main Card Container -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,56,44,0.08);border:1px solid #EFECE6;">
+                    
+                    <!-- Header Section -->
                     <tr>
-                        <td style="padding:24px 32px;
-                                   background:linear-gradient(135deg,#ff8c00 0%,#ff7700 100%);">
-
-                            <h1 style="margin:0;color:white;font-size:28px;">
-                                🔧 Vua Thợ
+                        <td style="background:linear-gradient(135deg, #0F382C 0%, #1A5342 100%);padding:36px 32px 30px;text-align:center;">
+                            <!-- Brand Badge -->
+                            <div style="display:inline-block;padding:6px 16px;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.4);border-radius:50px;margin-bottom:12px;">
+                                <span style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#D4AF37;">
+                                    ✨ DỊCH VỤ SPA & CHĂM SÓC TẠI NHÀ
+                                </span>
+                            </div>
+                            <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:0.5px;">
+                                🌿 FIXY SPA
                             </h1>
-
                         </td>
                     </tr>
 
-                    <!-- Content -->
+                    <!-- Accent Gold Border Strip -->
                     <tr>
-                        <td style="padding:32px;">
+                        <td style="height:4px;background:linear-gradient(90deg, #D4AF37 0%, #F4E0A5 50%, #D4AF37 100%);"></td>
+                    </tr>
 
-                            <p style="font-size:16px;color:#4a4a4a;line-height:1.6;margin-bottom:28px;">
-                                Cảm ơn bạn đã đăng ký tài khoản tại <b>Vua Thợ</b>.
-                                Vui lòng sử dụng mã OTP bên dưới để hoàn tất quá trình đăng ký.
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding:40px 36px 32px;">
+                            <h2 style="margin:0 0 16px;color:#0F382C;font-size:22px;font-weight:700;text-align:center;">
+                                Xác thực đăng ký tài khoản
+                            </h2>
+
+                            <p style="font-size:15px;line-height:1.65;color:#4B5563;margin:0 0 24px;text-align:center;">
+                                Cảm ơn bạn đã lựa chọn tham gia cùng <strong>FIXY Spa</strong>. Để hoàn tất việc thiết lập và bảo mật tài khoản của bạn, vui lòng nhập mã xác thực OTP dưới đây:
                             </p>
 
                             <!-- OTP Box -->
-                            <div style="
-                                background:linear-gradient(135deg,#fff5f0 0%,#ffe8d6 100%);
-                                border:2px solid #ff8c00;
-                                border-radius:12px;
-                                padding:24px;
-                                text-align:center;
-                                margin:24px 0;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <div style="background-color:#F2F7F2;border:2px dashed #0F382C;border-radius:14px;padding:22px 30px;text-align:center;display:inline-block;min-width:240px;">
+                                            <span style="display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#818A91;margin-bottom:6px;">
+                                                Mã OTP Của Bạn
+                                            </span>
+                                            <span style="font-size:38px;font-weight:800;letter-spacing:10px;color:#0F382C;font-family:'Courier New',Courier,monospace;display:inline-block;padding-left:10px;">
+                                                @Model.Otp
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
 
-                                <p style="
-                                    font-size:40px;
-                                    font-weight:bold;
-                                    color:#ff6600;
-                                    margin:0;
-                                    letter-spacing:8px;">
-                                    @Model.Otp
-                                </p>
-
+                            <!-- Expiration Alert Box -->
+                            <div style="background-color:#FBF9F5;border-left:4px solid #D4AF37;border-radius:0 10px 10px 0;padding:14px 18px;margin:24px 0;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                                    <tr>
+                                        <td style="font-size:13px;color:#1C2526;line-height:1.5;">
+                                            <strong style="color:#0F382C;">⏳ Hiệu lực trong 5 phút:</strong> Vui lòng không chia sẻ mã OTP này với bất kỳ ai để đảm bảo an toàn tài khoản của bạn.
+                                        </td>
+                                    </tr>
+                                </table>
                             </div>
 
-                            <!-- Notice -->
-                            <div style="
-                                background-color:#fff5f0;
-                                border-left:4px solid #ff8c00;
-                                border-radius:0 8px 8px 0;
-                                padding:16px;
-                                margin:24px 0;">
-
-                                <p style="
-                                    font-size:14px;
-                                    color:#ff6600;
-                                    margin:0;
-                                    font-weight:500;">
-
-                                    ⏰ Mã OTP sẽ hết hạn sau 5 phút.
-
-                                </p>
-
-                            </div>
-
-                            <p style="font-size:14px;color:#888;margin-top:20px;">
-                                Nếu bạn không thực hiện đăng ký, vui lòng bỏ qua email này.
+                            <p style="font-size:13px;line-height:1.6;color:#818A91;margin:24px 0 0;text-align:center;">
+                                Nếu bạn không yêu cầu đăng ký tài khoản tại FIXY, bạn có thể yên tâm bỏ qua email này.
                             </p>
-
                         </td>
                     </tr>
 
-                    <!-- Footer -->
+                    <!-- Divider -->
                     <tr>
-                        <td style="
-                            padding:20px 32px;
-                            background:linear-gradient(135deg,#ff8c00 0%,#ff7700 100%);
-                            color:white;
-                            text-align:center;
-                            font-size:12px;">
+                        <td style="padding:0 36px;">
+                            <hr style="border:none;border-top:1px solid #EFECE6;margin:0;" />
+                        </td>
+                    </tr>
 
-                            <p style="margin:0;">© Vua Thợ</p>
-
-                            <p style="margin-top:6px;opacity:0.85;">
-                                Nền tảng kết nối thợ và khách hàng nhanh chóng, tiện lợi.
+                    <!-- Footer Section -->
+                    <tr>
+                        <td style="padding:28px 36px 32px;background-color:#FAFAF8;text-align:center;">
+                            <p style="margin:0 0 6px;color:#0F382C;font-size:13px;font-weight:600;">
+                                🌿 FIXY - Nền tảng Đặt Lịch & Dịch Vụ Spa Tại Nhà
                             </p>
-
+                            <p style="margin:0 0 16px;color:#818A91;font-size:12px;line-height:1.5;">
+                                Trải nghiệm thư giãn và chăm sóc sắc đẹp cao cấp, tiện lợi mọi lúc mọi nơi.
+                            </p>
+                            <p style="margin:0;color:#A0AAB0;font-size:11px;">
+                                © @DateTime.UtcNow.Year FIXY. Tất cả quyền được bảo lưu.
+                            </p>
                         </td>
                     </tr>
 
                 </table>
-
             </td>
         </tr>
     </table>

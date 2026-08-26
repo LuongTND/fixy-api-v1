@@ -10,5 +10,7 @@ namespace Domain.Enum
         Withdrawal, // thợ rút tiền
         Fee, // phí nền tảng (service fee)
         Adjustment, // admin chỉnh tay
+        DepositLock, // nạp tiền cọc ký quỹ kích hoạt nhận việc
+        DepositRefund, // hoàn trả 100% tiền cọc khi thôi việc
     }
 }
