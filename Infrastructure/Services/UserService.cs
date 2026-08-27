@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Profile;
 using Application.DTOs.User;
 using Application.Interfaces;
@@ -253,6 +253,27 @@ namespace Infrastructure.Services
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return OperationResult.Success("User deactivated successfully");
+        }
+
+        public async Task<OperationResult> DeleteAccountAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+
+            if (user == null)
+            {
+                return OperationResult.Failure("User not found");
+            }
+
+            user.IsActive = false;
+            user.DeletedBy = userId.ToString();
+            _userRepository.Remove(user);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return OperationResult.Success("Account deleted successfully");
         }
     }
 }

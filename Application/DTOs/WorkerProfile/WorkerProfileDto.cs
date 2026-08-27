@@ -24,6 +24,7 @@ namespace Application.DTOs.WorkerProfile
         public int? EstimatedArrivalMinutes { get; set; }
         public string? City { get; set; }
         public string? District { get; set; }
+        public bool IsOffboardingRequested { get; set; }
         public List<WorkerServiceDto> Services { get; set; } = new List<WorkerServiceDto>();
     }
 }

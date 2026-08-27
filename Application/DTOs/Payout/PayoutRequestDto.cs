@@ -27,5 +27,10 @@ namespace Application.DTOs.Payout
         public string? BankName { get; set; }
 
         public string? BankCode { get; set; }
+
+        /// <summary>
+        /// true = Hoàn cọc ký quỹ (thôi việc), false = Rút thu nhập thông thường
+        /// </summary>
+        public bool IsDepositRefund { get; set; }
     }
 }

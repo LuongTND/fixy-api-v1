@@ -98,7 +98,8 @@ namespace Infrastructure
 
             services.AddSingleton<IEmailQueue, EmailQueue>();
             services.AddHostedService<EmailBackgroundService>();
-            services.AddHostedService<BookingTimeoutBackgroundService>();
+            // REMOVED: BookingTimeoutBackgroundService - Không còn tự động timeout sau 15 phút.
+            // Đơn giữ nguyên trạng thái Pending cho đến khi KTV nhận/từ chối hoặc khách tự hủy.
             services.AddHostedService<VoucherCampaignSchedulerService>();
             services.AddHostedService<BookingReminderSchedulerService>();
             // Authentication

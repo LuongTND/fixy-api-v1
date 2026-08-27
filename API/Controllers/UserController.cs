@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Application.DTOs.Profile;
 using Application.DTOs.User;
 using Application.Interfaces.Services;
@@ -56,6 +56,17 @@ namespace API.Controllers
             var userId = GetUserId();
 
             var result = await _userService.UpdateProfileAsync(userId, dto, cancellationToken);
+
+            return HandleResult(result);
+        }
+
+        [Authorize]
+        [HttpDelete]
+        public async Task<IActionResult> DeleteAccount(CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+
+            var result = await _userService.DeleteAccountAsync(userId, cancellationToken);
 
             return HandleResult(result);
         }

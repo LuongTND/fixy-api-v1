@@ -315,16 +315,17 @@ namespace Infrastructure.Services.Booking
             }
             else
             {
-                // No more candidates — set booking back to Matching
-                booking.WorkerProfileId = null;
-                booking.Status = BookingStatus.Matching;
+                // No more candidates — cancel the booking instead of setting to Matching
+                booking.Status = BookingStatus.Cancelled;
+                booking.CancelReason = "Không có kỹ thuật viên nào nhận đơn đặt lịch.";
+                booking.CancelledAt = DateTime.UtcNow;
                 booking.UpdatedDate = DateTime.UtcNow;
                 _bookingRepository.Update(booking);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 _logger.LogWarning(
-                    "Booking {BookingId}: No more candidates available. Status set to Matching.",
+                    "Booking {BookingId}: No more candidates available. Booking cancelled.",
                     bookingId
                 );
 
@@ -333,15 +334,15 @@ namespace Infrastructure.Services.Booking
                     new BookingStatusUpdateDto
                     {
                         BookingId = bookingId,
-                        Status = BookingStatus.Matching.ToString(),
+                        Status = BookingStatus.Cancelled.ToString(),
                         UpdatedAt = DateTime.UtcNow,
                         Message =
-                            "No workers available at this time. The system is still searching.",
+                            "Không có kỹ thuật viên nào nhận đơn. Đơn đặt lịch đã được hủy.",
                     },
                     cancellationToken
                 );
 
-                return OperationResult.Failure("No workers available at this time");
+                return OperationResult.Failure("No workers available. Booking cancelled.");
             }
         }
 

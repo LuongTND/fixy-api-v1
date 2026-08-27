@@ -401,6 +401,10 @@ namespace Infrastructure.Services
                             BankName = x.PayoutAccount.BankName,
 
                             BankCode = x.PayoutAccount.BankCode,
+
+                            IsDepositRefund = x.WalletTransactions.Any(
+                                t => t.Type == WalletTransactionType.DepositRefund
+                            ),
                         })
                         .ToList(),
 
@@ -448,6 +452,10 @@ namespace Infrastructure.Services
                             BankName = x.PayoutAccount.BankName,
 
                             BankCode = x.PayoutAccount.BankCode,
+
+                            IsDepositRefund = x.WalletTransactions.Any(
+                                t => t.Type == WalletTransactionType.DepositRefund
+                            ),
                         })
                         .ToList(),
 
