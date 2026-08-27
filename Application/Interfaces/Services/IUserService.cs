@@ -1,4 +1,4 @@
-﻿using Application.Common;
+using Application.Common;
 using Application.DTOs.Profile;
 using Application.DTOs.User;
 
@@ -25,6 +25,11 @@ namespace Application.Interfaces.Services
         );
 
         Task<OperationResult> DeactivateUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<OperationResult> DeleteAccountAsync(
             Guid userId,
             CancellationToken cancellationToken = default
         );

@@ -489,19 +489,36 @@ namespace Infrastructure.Services.Booking
             queueEntry.RespondedAt = DateTime.UtcNow;
             _matchingQueueRepository.Update(queueEntry);
 
+            // Cancel the booking instead of auto-forwarding to another worker
+            booking.Status = BookingStatus.Cancelled;
+            booking.CancelReason = $"Kỹ thuật viên đã từ chối đơn. Lý do: {request.RejectReason ?? "Không có lý do"}";
+            booking.CancelledAt = DateTime.UtcNow;
+            booking.UpdatedDate = DateTime.UtcNow;
+            _bookingRepository.Update(booking);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
-                "Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}. Auto-forwarding to next worker.",
+                "Worker {WorkerId} declined booking {BookingId}. Reason: {Reason}. Booking cancelled.",
                 workerProfile.Id,
                 bookingId,
                 request.RejectReason
             );
 
-            // Auto-forward to next worker in the matching queue
-            await _workerMatchingService.OfferToNextWorkerAsync(bookingId, cancellationToken);
+            // Notify customer via SignalR that the booking has been cancelled
+            await _bookingHubService.SendStatusUpdateAsync(
+                bookingId,
+                new BookingStatusUpdateDto
+                {
+                    BookingId = bookingId,
+                    Status = BookingStatus.Cancelled.ToString(),
+                    UpdatedAt = DateTime.UtcNow,
+                    Message = "Kỹ thuật viên đã từ chối đơn đặt lịch của bạn.",
+                },
+                cancellationToken
+            );
 
-            return OperationResult.Success("Booking declined successfully");
+            return OperationResult.Success("Booking declined and cancelled successfully");
         }
 
         // =========================================================

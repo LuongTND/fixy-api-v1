@@ -26,6 +26,8 @@ public class WorkerAdminAndOwnerDetailDto
     public bool IsOnline { get; set; }
     public bool IsAcceptingJobs { get; set; }
     public bool IsBusy { get; set; }
+    public bool IsOffboardingRequested { get; set; }
+    public DateTime? OffboardingRequestedAt { get; set; }
 
     public string? Bio { get; set; }
 

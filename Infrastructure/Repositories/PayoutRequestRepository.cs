@@ -80,6 +80,7 @@ namespace Infrastructure.Repositories
             var data = _dbSet
                 .Include(x => x.WorkerProfile)
                 .Include(x => x.PayoutAccount)
+                .Include(x => x.WalletTransactions)
                 .AsQueryable();
 
             var total = await data.CountAsync(cancellationToken);
@@ -101,6 +102,7 @@ namespace Infrastructure.Repositories
             var data = _dbSet
                 .Include(x => x.PayoutAccount)
                     .ThenInclude(x => x!.WorkerProfile)
+                .Include(x => x.WalletTransactions)
                 .Where(x => x.WorkerProfile!.UserId == workerId)
                 .AsQueryable();
 

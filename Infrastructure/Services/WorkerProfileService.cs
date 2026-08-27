@@ -99,10 +99,12 @@ namespace Infrastructure.Services
                     DateOfBirth = i.User.DateOfBirth,
                     Gender = i.User.Gender.ToString(),
                     Status = i.Status.ToString(),
+                    IsOffboardingRequested = i.IsOffboardingRequested,
                     ExperienceYears = i.ExperienceYears,
                     RatingAvg = i.RatingAvg,
                     TotalReviews = i.TotalReviews,
                     TotalOrders = i.TotalOrders,
+                    City = i.Address?.City,
 
                     Services = i.Services.Select(MapWorkerService).ToList(),
                 })
@@ -233,6 +235,8 @@ namespace Infrastructure.Services
                     IsOnline = data.WorkerProfile.IsOnline,
                     IsAcceptingJobs = data.WorkerProfile.IsAcceptingJobs,
                     IsBusy = data.WorkerProfile.IsBusy,
+                    IsOffboardingRequested = data.WorkerProfile.IsOffboardingRequested,
+                    OffboardingRequestedAt = data.WorkerProfile.OffboardingRequestedAt,
 
                     Bio = data.WorkerProfile.Bio,
 
